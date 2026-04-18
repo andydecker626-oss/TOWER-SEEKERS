@@ -2,6 +2,6 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/pvp-battler/SwordAttackDemo.tsx": () => import("../components/mockups/pvp-battler/SwordAttackDemo.tsx"),
-  "./components/mockups/pvp-battler-copy-k549xEOY/PvpBattlerCopyK549xEOY.tsx": () => import("../components/mockups/pvp-battler-copy-k549xEOY/PvpBattlerCopyK549xEOY.tsx"),
-  "./components/mockups/pvp-battler-copy-IxMmBxPx/PvpBattlerCopyIxMmBxPx.tsx": () => import("../components/mockups/pvp-battler-copy-IxMmBxPx/PvpBattlerCopyIxMmBxPx.tsx")
+  "./components/mockups/pvp-battler-copy-IxMmBxPx/PvpBattlerCopyIxMmBxPx.tsx": () => import("../components/mockups/pvp-battler-copy-IxMmBxPx/PvpBattlerCopyIxMmBxPx.tsx"),
+  "./components/mockups/pvp-battler-copy-k549xEOY/PvpBattlerCopyK549xEOY.tsx": () => import("../components/mockups/pvp-battler-copy-k549xEOY/PvpBattlerCopyK549xEOY.tsx")
 };
