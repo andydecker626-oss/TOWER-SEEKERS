@@ -81,7 +81,7 @@ function AttackRunner() {
   return (
     <div className="runner active-unit">
       <div className="unit-shadow" />
-      <img className="myrmidon-attack-sprite" src="/__mockup/images/pvp-battler/myrmidon-sword-transparent.gif" alt="Myrmidon sword attack sprite animation" />
+      <img className="myrmidon-attack-sprite" src="/__mockup/images/pvp-battler/myrmidon-sword-regular-attack.gif" alt="Myrmidon sword attack sprite animation" />
     </div>
   );
 }
@@ -136,7 +136,7 @@ export function SwordAttackDemo() {
       <section className="cinematic-attack-layer" aria-hidden="true">
         <div className="cinematic-floor" />
         <div className="cinematic-attacker">
-          <img src="/__mockup/images/pvp-battler/myrmidon-sword-transparent.gif" alt="" />
+          <img src="/__mockup/images/pvp-battler/myrmidon-sword-regular-attack.gif" alt="" />
         </div>
         <div className="cinematic-target">
           <div className="target-shadow" />
