@@ -24,4 +24,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
+## Mockup Prototypes
+
+- `artifacts/mockup-sandbox/src/components/mockups/pvp-battler/SwordAttackDemo.tsx` — live canvas prototype for a 4v4 turn-based tactical battler showing a 4x4 grid and one melee sword attack animation.
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

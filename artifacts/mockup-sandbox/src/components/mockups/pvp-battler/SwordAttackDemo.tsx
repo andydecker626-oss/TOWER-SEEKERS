@@ -1,0 +1,681 @@
+import { useMemo } from "react";
+
+type Unit = {
+  name: string;
+  side: "ally" | "enemy";
+  x: number;
+  y: number;
+  role: string;
+  active?: boolean;
+  target?: boolean;
+};
+
+const allies: Unit[] = [
+  { name: "Astra", side: "ally", x: 0, y: 2, role: "Blade Knight", active: true },
+  { name: "Lyra", side: "ally", x: 0, y: 0, role: "Rune Archer" },
+  { name: "Mira", side: "ally", x: 1, y: 1, role: "Cleric" },
+  { name: "Rook", side: "ally", x: 1, y: 3, role: "Guardian" }
+];
+
+const enemies: Unit[] = [
+  { name: "Veyr", side: "enemy", x: 3, y: 1, role: "Fell Duelist", target: true },
+  { name: "Nox", side: "enemy", x: 3, y: 3, role: "Hex Mage" },
+  { name: "Kain", side: "enemy", x: 2, y: 0, role: "Lancer" },
+  { name: "Sera", side: "enemy", x: 2, y: 2, role: "Invoker" }
+];
+
+const allUnits = [...allies, ...enemies];
+
+function Tile({ index, x, y }: { index: number; x: number; y: number }) {
+  const isPath = (x === 0 && y === 2) || (x === 1 && y === 2) || (x === 2 && y === 1) || (x === 3 && y === 1);
+  const isImpact = x === 3 && y === 1;
+
+  return (
+    <div
+      className={`tile tile-${index} ${isPath ? "tile-path" : ""} ${isImpact ? "tile-impact" : ""}`}
+      style={{ gridColumn: x + 1, gridRow: y + 1 }}
+    >
+      <span>{x + 1},{y + 1}</span>
+    </div>
+  );
+}
+
+function PixelUnit({ unit }: { unit: Unit }) {
+  const tint = unit.side === "ally" ? "ally" : "enemy";
+  const style = {
+    left: `calc(${unit.x} * var(--tile-size) + ${unit.x} * var(--tile-gap) + var(--unit-offset-x))`,
+    top: `calc(${unit.y} * var(--tile-size) + ${unit.y} * var(--tile-gap) + var(--unit-offset-y))`
+  };
+
+  return (
+    <div className={`unit ${tint} ${unit.active ? "active-unit" : ""} ${unit.target ? "target-unit" : ""}`} style={style}>
+      <div className="unit-shadow" />
+      <div className="sprite">
+        <div className="cape" />
+        <div className="head" />
+        <div className="hair" />
+        <div className="body" />
+        <div className="arm arm-back" />
+        <div className="arm arm-front" />
+        <div className="leg leg-back" />
+        <div className="leg leg-front" />
+        <div className="weapon" />
+      </div>
+      <div className="unit-plate">
+        <strong>{unit.name}</strong>
+        <small>{unit.role}</small>
+      </div>
+    </div>
+  );
+}
+
+function AttackRunner() {
+  return (
+    <div className="runner active-unit">
+      <div className="unit-shadow" />
+      <div className="sprite runner-sprite">
+        <div className="cape" />
+        <div className="head" />
+        <div className="hair" />
+        <div className="body" />
+        <div className="arm arm-back" />
+        <div className="arm arm-front" />
+        <div className="leg leg-back" />
+        <div className="leg leg-front" />
+        <div className="weapon" />
+      </div>
+    </div>
+  );
+}
+
+function BattleGrid() {
+  const tiles = useMemo(
+    () => Array.from({ length: 16 }, (_, index) => ({ index, x: index % 4, y: Math.floor(index / 4) })),
+    []
+  );
+
+  return (
+    <div className="battle-stage">
+      <div className="battlefield">
+        <div className="grid-board">
+          {tiles.map((tile) => <Tile key={tile.index} {...tile} />)}
+        </div>
+        {allUnits.map((unit) => <PixelUnit key={unit.name} unit={unit} />)}
+        <AttackRunner />
+        <div className="slash slash-a" />
+        <div className="slash slash-b" />
+        <div className="impact impact-one" />
+        <div className="impact impact-two" />
+        <div className="damage-text">Base Sword Attack</div>
+        <div className="damage-number">42</div>
+      </div>
+    </div>
+  );
+}
+
+export function SwordAttackDemo() {
+  return (
+    <div className="demo-shell">
+      <style>{css}</style>
+      <div className="scene-glow" />
+      <section className="hud top-hud">
+        <div>
+          <p>Prototype Animation</p>
+          <h1>4v4 Tactical Sword Strike</h1>
+        </div>
+        <div className="turn-card">
+          <span>Turn 03</span>
+          <strong>Astra uses Slash</strong>
+        </div>
+      </section>
+      <BattleGrid />
+      <section className="hud bottom-hud">
+        <div className="team-panel allies-panel">
+          <span>Blue Team</span>
+          <strong>4 units ready</strong>
+        </div>
+        <div className="combat-log">
+          <span className="log-line log-1">Selecting attacker on tile 1,3</span>
+          <span className="log-line log-2">Path preview crosses the 4x4 grid</span>
+          <span className="log-line log-3">Dash, sword arc, impact, recoil</span>
+        </div>
+        <div className="team-panel enemies-panel">
+          <span>Crimson Team</span>
+          <strong>Target staggered</strong>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+const css = `
+  :root {
+    --tile-size: 104px;
+    --tile-gap: 12px;
+    --unit-offset-x: 22px;
+    --unit-offset-y: 7px;
+  }
+
+  .demo-shell {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(122, 91, 255, 0.24), transparent 34%),
+      radial-gradient(circle at 78% 68%, rgba(255, 84, 122, 0.16), transparent 27%),
+      linear-gradient(135deg, #0d1426 0%, #14122a 44%, #241027 100%);
+    color: #f8efe2;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .scene-glow {
+    position: absolute;
+    inset: auto -10% -40% -10%;
+    height: 70%;
+    background: radial-gradient(ellipse at center, rgba(234, 190, 92, 0.18), transparent 66%);
+    pointer-events: none;
+  }
+
+  .hud {
+    position: absolute;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    left: 52px;
+    right: 52px;
+  }
+
+  .top-hud {
+    top: 34px;
+  }
+
+  .bottom-hud {
+    bottom: 34px;
+    gap: 18px;
+  }
+
+  .hud p,
+  .hud span,
+  .unit-plate small {
+    margin: 0;
+    color: rgba(248, 239, 226, 0.66);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .hud h1 {
+    margin: 4px 0 0;
+    font-family: "Cinzel", Georgia, serif;
+    letter-spacing: -0.04em;
+    font-size: clamp(32px, 4vw, 58px);
+    line-height: 0.9;
+    text-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .turn-card,
+  .team-panel,
+  .combat-log {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(8, 12, 28, 0.66);
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(18px);
+    border-radius: 20px;
+  }
+
+  .turn-card {
+    padding: 15px 18px;
+    min-width: 220px;
+  }
+
+  .turn-card strong,
+  .team-panel strong {
+    display: block;
+    margin-top: 4px;
+    color: #fff8e8;
+    font-size: 16px;
+  }
+
+  .team-panel {
+    min-width: 210px;
+    padding: 16px 18px;
+  }
+
+  .allies-panel {
+    border-color: rgba(96, 179, 255, 0.32);
+  }
+
+  .enemies-panel {
+    border-color: rgba(255, 92, 121, 0.32);
+    text-align: right;
+  }
+
+  .combat-log {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .log-line {
+    opacity: 0;
+    animation: logPulse 4.4s infinite;
+  }
+
+  .log-2 { animation-delay: 0.6s; }
+  .log-3 { animation-delay: 1.3s; }
+
+  .battle-stage {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    perspective: 1200px;
+  }
+
+  .battlefield {
+    position: relative;
+    width: calc(4 * var(--tile-size) + 3 * var(--tile-gap));
+    height: calc(4 * var(--tile-size) + 3 * var(--tile-gap));
+    transform: rotateX(56deg) rotateZ(-38deg) translateY(40px);
+    transform-style: preserve-3d;
+    filter: drop-shadow(0 42px 60px rgba(0, 0, 0, 0.44));
+  }
+
+  .grid-board {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(4, var(--tile-size));
+    grid-template-rows: repeat(4, var(--tile-size));
+    gap: var(--tile-gap);
+    transform-style: preserve-3d;
+  }
+
+  .tile {
+    position: relative;
+    border-radius: 18px;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)),
+      linear-gradient(135deg, rgba(72, 86, 138, 0.72), rgba(26, 33, 67, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 0 #0b1127, 0 24px 24px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+  }
+
+  .tile span {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.34);
+    transform: rotateZ(38deg) rotateX(-56deg);
+  }
+
+  .tile::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .tile-path {
+    animation: pathGlow 4.4s infinite;
+  }
+
+  .tile-impact {
+    animation: targetPulse 4.4s infinite;
+  }
+
+  .unit,
+  .runner {
+    position: absolute;
+    width: 62px;
+    height: 96px;
+    transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg);
+    transform-style: preserve-3d;
+    z-index: 12;
+  }
+
+  .unit.target-unit {
+    animation: targetRecoil 4.4s infinite;
+  }
+
+  .unit.active-unit {
+    opacity: 0.12;
+  }
+
+  .runner {
+    left: calc(0 * var(--tile-size) + 0 * var(--tile-gap) + var(--unit-offset-x));
+    top: calc(2 * var(--tile-size) + 2 * var(--tile-gap) + var(--unit-offset-y));
+    z-index: 26;
+    animation: attackDash 4.4s cubic-bezier(0.2, 0.9, 0.16, 1) infinite;
+  }
+
+  .unit-shadow {
+    position: absolute;
+    left: 4px;
+    bottom: -7px;
+    width: 54px;
+    height: 15px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.44);
+    filter: blur(2px);
+  }
+
+  .sprite {
+    position: absolute;
+    left: 8px;
+    bottom: 0;
+    width: 46px;
+    height: 82px;
+    image-rendering: pixelated;
+    animation: idleBob 0.72s steps(2) infinite;
+  }
+
+  .runner-sprite {
+    animation: runCycle 0.28s steps(2) infinite;
+  }
+
+  .head,
+  .hair,
+  .body,
+  .cape,
+  .arm,
+  .leg,
+  .weapon {
+    position: absolute;
+    box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.22);
+  }
+
+  .head {
+    left: 15px;
+    top: 8px;
+    width: 20px;
+    height: 20px;
+    background: #ffd7a3;
+    border-radius: 7px 7px 5px 5px;
+    z-index: 6;
+  }
+
+  .hair {
+    left: 10px;
+    top: 3px;
+    width: 27px;
+    height: 17px;
+    background: #f2c14e;
+    border-radius: 11px 11px 4px 5px;
+    z-index: 7;
+  }
+
+  .body {
+    left: 11px;
+    top: 29px;
+    width: 28px;
+    height: 31px;
+    background: linear-gradient(#d9f1ff, #609cff 42%, #263b8f 43%);
+    border-radius: 7px 7px 6px 6px;
+    z-index: 5;
+  }
+
+  .enemy .body {
+    background: linear-gradient(#ffd0dc, #e84d6c 42%, #7d1834 43%);
+  }
+
+  .cape {
+    left: 5px;
+    top: 28px;
+    width: 35px;
+    height: 44px;
+    background: #304ad4;
+    border-radius: 11px 3px 12px 8px;
+    z-index: 1;
+    transform: skewX(-8deg);
+  }
+
+  .enemy .cape {
+    background: #9d1737;
+  }
+
+  .arm {
+    top: 34px;
+    width: 10px;
+    height: 28px;
+    background: #ffd7a3;
+    border-radius: 6px;
+    transform-origin: top center;
+    z-index: 7;
+  }
+
+  .arm-back { left: 5px; transform: rotate(18deg); }
+  .arm-front { right: 4px; transform: rotate(-20deg); }
+
+  .runner .arm-front {
+    animation: swordArm 4.4s infinite;
+  }
+
+  .leg {
+    top: 56px;
+    width: 10px;
+    height: 24px;
+    background: #242f6c;
+    border-radius: 5px;
+    z-index: 4;
+  }
+
+  .enemy .leg {
+    background: #581229;
+  }
+
+  .leg-back { left: 13px; }
+  .leg-front { right: 11px; }
+
+  .weapon {
+    right: -9px;
+    top: 22px;
+    width: 8px;
+    height: 54px;
+    background: linear-gradient(90deg, #c8f4ff, #ffffff, #81b5ff);
+    border-radius: 999px 999px 3px 3px;
+    transform: rotate(-28deg);
+    transform-origin: bottom center;
+    z-index: 9;
+    box-shadow: 0 0 18px rgba(177, 224, 255, 0.7);
+  }
+
+  .runner .weapon {
+    animation: swordSwing 4.4s infinite;
+  }
+
+  .unit-plate {
+    position: absolute;
+    left: 50%;
+    top: -34px;
+    width: 116px;
+    transform: translateX(-50%);
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(5, 8, 22, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    text-align: center;
+    box-shadow: 0 12px 22px rgba(0, 0, 0, 0.3);
+  }
+
+  .unit-plate strong {
+    display: block;
+    font-size: 12px;
+    line-height: 1;
+    color: #fff7df;
+  }
+
+  .unit-plate small {
+    display: block;
+    margin-top: 3px;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .slash {
+    position: absolute;
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 6px);
+    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 4px);
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    border: 7px solid transparent;
+    border-left-color: rgba(255, 255, 255, 0.96);
+    border-top-color: rgba(104, 218, 255, 0.86);
+    filter: drop-shadow(0 0 14px rgba(142, 228, 255, 0.82));
+    transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(0.2) rotate(-35deg);
+    opacity: 0;
+    z-index: 40;
+    animation: slashBurst 4.4s infinite;
+  }
+
+  .slash-b {
+    animation-delay: 0.06s;
+    transform: translateZ(144px) rotateZ(38deg) rotateX(-56deg) scale(0.16) rotate(25deg);
+    border-left-color: rgba(255, 219, 121, 0.92);
+    border-top-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .impact {
+    position: absolute;
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 28px);
+    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) + 30px);
+    width: 64px;
+    height: 64px;
+    background: radial-gradient(circle, #fff 0 12%, #ffe68f 13% 30%, rgba(255, 92, 121, 0.7) 31% 50%, transparent 51%);
+    clip-path: polygon(50% 0, 62% 31%, 98% 17%, 71% 48%, 100% 67%, 62% 64%, 54% 100%, 42% 65%, 5% 82%, 31% 51%, 0 34%, 38% 36%);
+    transform: translateZ(154px) rotateZ(38deg) rotateX(-56deg) scale(0);
+    opacity: 0;
+    z-index: 45;
+    animation: impactPop 4.4s infinite;
+  }
+
+  .impact-two {
+    animation-delay: 0.09s;
+    filter: hue-rotate(44deg);
+  }
+
+  .damage-text,
+  .damage-number {
+    position: absolute;
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 4px);
+    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 54px);
+    transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg);
+    opacity: 0;
+    z-index: 50;
+    text-align: center;
+    text-shadow: 0 5px 18px rgba(0, 0, 0, 0.7);
+  }
+
+  .damage-text {
+    width: 190px;
+    color: #ffe6a3;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    animation: textPop 4.4s infinite;
+  }
+
+  .damage-number {
+    width: 110px;
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 45px);
+    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 92px);
+    font-family: "Cinzel", Georgia, serif;
+    font-size: 54px;
+    font-weight: 900;
+    color: #fff;
+    animation: damageFloat 4.4s infinite;
+  }
+
+  @keyframes attackDash {
+    0%, 16% { transform: translate3d(0, 0, 74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
+    25% { transform: translate3d(84px, -18px, 96px) rotateZ(38deg) rotateX(-56deg) scale(1.04); opacity: 1; }
+    36%, 43% { transform: translate3d(338px, -118px, 112px) rotateZ(38deg) rotateX(-56deg) scale(1.12); opacity: 1; }
+    54% { transform: translate3d(220px, -76px, 96px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
+    70%, 100% { transform: translate3d(0, 0, 74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
+  }
+
+  @keyframes swordSwing {
+    0%, 28%, 34%, 100% { transform: rotate(-28deg); }
+    38% { transform: rotate(-118deg) translateY(-8px); }
+    43% { transform: rotate(68deg) translateY(8px); }
+    48% { transform: rotate(-18deg); }
+  }
+
+  @keyframes swordArm {
+    0%, 28%, 100% { transform: rotate(-20deg); }
+    38% { transform: rotate(-98deg); }
+    44% { transform: rotate(48deg); }
+    50% { transform: rotate(-20deg); }
+  }
+
+  @keyframes slashBurst {
+    0%, 35%, 48%, 100% { opacity: 0; transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(0.18) rotate(-35deg); }
+    39% { opacity: 1; transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(1.2) rotate(16deg); }
+    44% { opacity: 0; transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(1.9) rotate(74deg); }
+  }
+
+  @keyframes impactPop {
+    0%, 37%, 49%, 100% { opacity: 0; transform: translateZ(154px) rotateZ(38deg) rotateX(-56deg) scale(0); }
+    40% { opacity: 1; transform: translateZ(154px) rotateZ(38deg) rotateX(-56deg) scale(1.25); }
+    46% { opacity: 0; transform: translateZ(154px) rotateZ(38deg) rotateX(-56deg) scale(2); }
+  }
+
+  @keyframes targetRecoil {
+    0%, 36%, 100% { transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg); filter: brightness(1); }
+    41% { transform: translate3d(18px, -8px, 76px) rotateZ(38deg) rotateX(-56deg); filter: brightness(1.8); }
+    48% { transform: translate3d(-9px, 4px, 74px) rotateZ(38deg) rotateX(-56deg); filter: brightness(1); }
+    55% { transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg); }
+  }
+
+  @keyframes damageFloat {
+    0%, 39%, 56%, 100% { opacity: 0; transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg) translateY(16px) scale(0.8); }
+    43% { opacity: 1; transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg) translateY(-8px) scale(1.18); }
+    52% { opacity: 0; transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg) translateY(-46px) scale(1); }
+  }
+
+  @keyframes textPop {
+    0%, 34%, 58%, 100% { opacity: 0; transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg) translateY(18px); }
+    40%, 51% { opacity: 1; transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg) translateY(0); }
+  }
+
+  @keyframes idleBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  @keyframes runCycle {
+    0%, 100% { transform: translateY(0) skewX(-4deg); }
+    50% { transform: translateY(-5px) skewX(6deg); }
+  }
+
+  @keyframes pathGlow {
+    0%, 13%, 68%, 100% { background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)), linear-gradient(135deg, rgba(72, 86, 138, 0.72), rgba(26, 33, 67, 0.9)); }
+    20%, 49% { background: linear-gradient(135deg, rgba(139, 221, 255, 0.34), rgba(255, 234, 156, 0.14)), linear-gradient(135deg, rgba(60, 106, 172, 0.9), rgba(40, 38, 96, 0.98)); }
+  }
+
+  @keyframes targetPulse {
+    0%, 32%, 61%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 0 #0b1127, 0 24px 24px rgba(0, 0, 0, 0.28); }
+    38%, 48% { box-shadow: inset 0 0 0 2px rgba(255, 231, 150, 0.92), 0 12px 0 #0b1127, 0 0 46px rgba(255, 95, 122, 0.72); }
+  }
+
+  @keyframes logPulse {
+    0%, 9% { opacity: 0; transform: translateY(5px); }
+    18%, 72% { opacity: 1; transform: translateY(0); }
+    88%, 100% { opacity: 0.38; transform: translateY(0); }
+  }
+
+  @media (max-width: 900px) {
+    :root { --tile-size: 82px; --tile-gap: 9px; }
+    .hud { left: 24px; right: 24px; }
+    .bottom-hud { display: none; }
+    .turn-card { display: none; }
+  }
+`;
