@@ -133,6 +133,22 @@ export function SwordAttackDemo() {
         </div>
       </section>
       <BattleGrid />
+      <section className="cinematic-attack-layer" aria-hidden="true">
+        <div className="cinematic-floor" />
+        <div className="cinematic-attacker">
+          <img src="/__mockup/images/pvp-battler/myrmidon-sword-transparent.gif" alt="" />
+        </div>
+        <div className="cinematic-target">
+          <div className="target-shadow" />
+          <div className="target-body" />
+          <div className="target-head" />
+          <div className="target-sword" />
+        </div>
+        <div className="cinematic-slash cinematic-slash-one" />
+        <div className="cinematic-slash cinematic-slash-two" />
+        <div className="cinematic-hit-flash" />
+        <div className="cinematic-damage">42</div>
+      </section>
       <section className="hud bottom-hud">
         <div className="team-panel allies-panel">
           <span>Blue Team</span>
@@ -182,6 +198,161 @@ const css = `
     height: 70%;
     background: radial-gradient(ellipse at center, rgba(234, 190, 92, 0.18), transparent 66%);
     pointer-events: none;
+  }
+
+  .cinematic-attack-layer {
+    position: absolute;
+    inset: 120px 0 116px;
+    z-index: 24;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .cinematic-floor {
+    position: absolute;
+    left: 18%;
+    right: 16%;
+    bottom: 108px;
+    height: 38px;
+    border-radius: 999px;
+    background: radial-gradient(ellipse at center, rgba(255, 232, 167, 0.18), rgba(120, 169, 255, 0.08) 42%, transparent 72%);
+    filter: blur(5px);
+    animation: cinematicFloorPulse 4.4s infinite;
+  }
+
+  .cinematic-attacker {
+    position: absolute;
+    left: 17%;
+    bottom: 72px;
+    width: 360px;
+    height: 232px;
+    opacity: 0;
+    transform: translateX(-42px) scale(1);
+    transform-origin: bottom center;
+    animation: cinematicAttacker 4.4s cubic-bezier(0.18, 0.86, 0.18, 1) infinite;
+    filter: drop-shadow(0 22px 20px rgba(0, 0, 0, 0.58));
+  }
+
+  .cinematic-attacker img {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 372px;
+    height: auto;
+    transform: translateX(-50%);
+    image-rendering: pixelated;
+  }
+
+  .cinematic-target {
+    position: absolute;
+    right: 19.5%;
+    bottom: 86px;
+    width: 92px;
+    height: 150px;
+    opacity: 0;
+    transform-origin: bottom center;
+    animation: cinematicTarget 4.4s infinite;
+  }
+
+  .target-shadow {
+    position: absolute;
+    left: 4px;
+    right: 2px;
+    bottom: -5px;
+    height: 18px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.5);
+    filter: blur(3px);
+  }
+
+  .target-body,
+  .target-head,
+  .target-sword {
+    position: absolute;
+    image-rendering: pixelated;
+    box-shadow: inset -5px -5px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .target-body {
+    left: 24px;
+    bottom: 24px;
+    width: 42px;
+    height: 72px;
+    border-radius: 12px 12px 8px 8px;
+    background: linear-gradient(#ffd0dc 0 28%, #e84d6c 29% 62%, #64142b 63%);
+  }
+
+  .target-head {
+    left: 31px;
+    bottom: 94px;
+    width: 31px;
+    height: 31px;
+    border-radius: 10px 10px 8px 8px;
+    background: #ffd0a1;
+  }
+
+  .target-sword {
+    right: 4px;
+    bottom: 39px;
+    width: 8px;
+    height: 86px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #9de9ff, #fff, #9de9ff);
+    transform: rotate(-18deg);
+    box-shadow: 0 0 16px rgba(178, 235, 255, 0.5);
+  }
+
+  .cinematic-slash {
+    position: absolute;
+    right: 19%;
+    bottom: 118px;
+    width: 210px;
+    height: 210px;
+    border-radius: 50%;
+    border: 11px solid transparent;
+    border-left-color: rgba(255, 255, 255, 0.98);
+    border-top-color: rgba(119, 221, 255, 0.9);
+    opacity: 0;
+    transform: rotate(-30deg) scale(0.2);
+    filter: drop-shadow(0 0 22px rgba(138, 230, 255, 0.95));
+    animation: cinematicSlash 4.4s infinite;
+  }
+
+  .cinematic-slash-two {
+    bottom: 102px;
+    right: 18.2%;
+    width: 180px;
+    height: 180px;
+    border-left-color: rgba(255, 224, 132, 0.95);
+    border-top-color: rgba(255, 255, 255, 0.96);
+    animation-delay: 0.07s;
+  }
+
+  .cinematic-hit-flash {
+    position: absolute;
+    right: 22.5%;
+    bottom: 164px;
+    width: 98px;
+    height: 98px;
+    opacity: 0;
+    transform: scale(0);
+    background: radial-gradient(circle, #fff 0 12%, #ffe68f 13% 31%, rgba(255, 92, 121, 0.8) 32% 54%, transparent 55%);
+    clip-path: polygon(50% 0, 61% 31%, 98% 17%, 71% 48%, 100% 67%, 62% 64%, 54% 100%, 42% 65%, 5% 82%, 31% 51%, 0 34%, 38% 36%);
+    filter: drop-shadow(0 0 24px rgba(255, 223, 111, 0.95));
+    animation: cinematicHit 4.4s infinite;
+  }
+
+  .cinematic-damage {
+    position: absolute;
+    right: 21.7%;
+    bottom: 248px;
+    color: #fff8dc;
+    font-family: "Cinzel", Georgia, serif;
+    font-size: 68px;
+    font-weight: 900;
+    text-shadow: 0 8px 24px rgba(0, 0, 0, 0.72), 0 0 16px rgba(255, 217, 103, 0.6);
+    opacity: 0;
+    animation: cinematicDamage 4.4s infinite;
   }
 
   .hud {
@@ -787,10 +958,52 @@ const css = `
     88%, 100% { opacity: 0.38; transform: translateY(0); }
   }
 
+  @keyframes cinematicFloorPulse {
+    0%, 15%, 68%, 100% { opacity: 0.12; transform: scaleX(0.82); }
+    24%, 54% { opacity: 0.85; transform: scaleX(1); }
+  }
+
+  @keyframes cinematicAttacker {
+    0%, 14% { opacity: 1; transform: translateX(-90px) scale(0.92); }
+    18%, 25% { opacity: 1; transform: translateX(-20px) scale(1); }
+    34%, 45% { opacity: 1; transform: translateX(420px) scale(1.16); }
+    55% { opacity: 1; transform: translateX(210px) scale(1.03); }
+    66% { opacity: 0.35; transform: translateX(-20px) scale(0.96); }
+    75%, 100% { opacity: 0; transform: translateX(-90px) scale(0.92); }
+  }
+
+  @keyframes cinematicTarget {
+    0%, 18%, 68%, 100% { opacity: 1; transform: translateX(24px) scale(0.96); filter: brightness(1); }
+    23%, 36% { opacity: 1; transform: translateX(0) scale(1); filter: brightness(1); }
+    42% { opacity: 1; transform: translateX(36px) rotate(5deg) scale(1.02); filter: brightness(1.85); }
+    50% { opacity: 1; transform: translateX(-14px) rotate(-3deg) scale(1); filter: brightness(1); }
+    61% { opacity: 1; transform: translateX(0) rotate(0) scale(1); }
+  }
+
+  @keyframes cinematicSlash {
+    0%, 36%, 51%, 100% { opacity: 0; transform: rotate(-30deg) scale(0.16); }
+    41% { opacity: 1; transform: rotate(24deg) scale(1.1); }
+    47% { opacity: 0; transform: rotate(86deg) scale(1.85); }
+  }
+
+  @keyframes cinematicHit {
+    0%, 39%, 52%, 100% { opacity: 0; transform: scale(0); }
+    43% { opacity: 1; transform: scale(1.35); }
+    49% { opacity: 0; transform: scale(2.1); }
+  }
+
+  @keyframes cinematicDamage {
+    0%, 41%, 60%, 100% { opacity: 0; transform: translateY(18px) scale(0.82); }
+    46% { opacity: 1; transform: translateY(-8px) scale(1.18); }
+    56% { opacity: 0; transform: translateY(-62px) scale(1); }
+  }
+
   @media (max-width: 900px) {
     :root { --tile-size: 62px; --tile-gap: 7px; --grid-gap: 76px; }
     .hud { left: 24px; right: 24px; }
     .bottom-hud { display: none; }
     .turn-card { display: none; }
+    .cinematic-attacker { width: 260px; }
+    .cinematic-attacker img { width: 278px; }
   }
 `;

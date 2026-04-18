@@ -26,6 +26,6 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Mockup Prototypes
 
-- `artifacts/mockup-sandbox/src/components/mockups/pvp-battler/SwordAttackDemo.tsx` — live canvas prototype for a 4v4 turn-based tactical battler showing two separate 4x4 grids, one per team, and one melee sword attack animation crossing between them. Uses the user-provided FE-Repo Awakening-Style Myrmidon Alt [M] sword sprite assets with credits displayed in the preview.
+- `artifacts/mockup-sandbox/src/components/mockups/pvp-battler/SwordAttackDemo.tsx` — live canvas prototype for a 4v4 turn-based tactical battler showing two separate 4x4 grids, one per team, and one melee sword attack animation crossing between them. Uses the user-provided FE-Repo Awakening-Style Myrmidon Alt [M] sword sprite assets with credits displayed in the preview, plus a larger foreground battle-animation cut-in for clearer sword action.
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
