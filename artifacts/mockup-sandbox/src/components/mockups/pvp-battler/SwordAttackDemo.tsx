@@ -54,17 +54,21 @@ function PixelUnit({ unit }: { unit: Unit }) {
   return (
     <div className={`unit ${tint} ${unit.active ? "active-unit" : ""} ${unit.target ? "target-unit" : ""}`} style={style}>
       <div className="unit-shadow" />
-      <div className="sprite">
-        <div className="cape" />
-        <div className="head" />
-        <div className="hair" />
-        <div className="body" />
-        <div className="arm arm-back" />
-        <div className="arm arm-front" />
-        <div className="leg leg-back" />
-        <div className="leg leg-front" />
-        <div className="weapon" />
-      </div>
+      {unit.active ? (
+        <img className="idle-real-sprite" src="/__mockup/images/pvp-battler/myrmidon-idle-transparent.png" alt="" />
+      ) : (
+        <div className="sprite">
+          <div className="cape" />
+          <div className="head" />
+          <div className="hair" />
+          <div className="body" />
+          <div className="arm arm-back" />
+          <div className="arm arm-front" />
+          <div className="leg leg-back" />
+          <div className="leg leg-front" />
+          <div className="weapon" />
+        </div>
+      )}
       <div className="unit-plate">
         <strong>{unit.name}</strong>
         <small>{unit.role}</small>
@@ -77,17 +81,7 @@ function AttackRunner() {
   return (
     <div className="runner active-unit">
       <div className="unit-shadow" />
-      <div className="sprite runner-sprite">
-        <div className="cape" />
-        <div className="head" />
-        <div className="hair" />
-        <div className="body" />
-        <div className="arm arm-back" />
-        <div className="arm arm-front" />
-        <div className="leg leg-back" />
-        <div className="leg leg-front" />
-        <div className="weapon" />
-      </div>
+      <img className="myrmidon-attack-sprite" src="/__mockup/images/pvp-battler/myrmidon-sword-transparent.gif" alt="Myrmidon sword attack sprite animation" />
     </div>
   );
 }
@@ -154,6 +148,7 @@ export function SwordAttackDemo() {
           <strong>Target staggered</strong>
         </div>
       </section>
+      <div className="asset-credit">Sprite source: FE-Repo Awakening-Style Myrmidon Alt [M] — F2U/F2E credits: Iscaneus, Leo_link, Intestine</div>
     </div>
   );
 }
@@ -411,12 +406,17 @@ const css = `
   }
 
   .unit.active-unit {
-    opacity: 0.12;
+    opacity: 0.42;
   }
 
   .runner {
     left: calc(0 * var(--tile-size) + 0 * var(--tile-gap) + var(--unit-offset-x));
     top: calc(2 * var(--tile-size) + 2 * var(--tile-gap) + var(--unit-offset-y));
+    width: 174px;
+    height: 128px;
+    margin-left: -59px;
+    margin-top: -36px;
+    opacity: 1;
     z-index: 26;
     animation: attackDash 4.4s cubic-bezier(0.2, 0.9, 0.16, 1) infinite;
   }
@@ -444,6 +444,29 @@ const css = `
 
   .runner-sprite {
     animation: runCycle 0.28s steps(2) infinite;
+  }
+
+  .idle-real-sprite,
+  .myrmidon-attack-sprite {
+    position: absolute;
+    image-rendering: pixelated;
+    pointer-events: none;
+    filter: drop-shadow(0 13px 8px rgba(0, 0, 0, 0.38));
+  }
+
+  .idle-real-sprite {
+    left: -56px;
+    bottom: -13px;
+    width: 166px;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .myrmidon-attack-sprite {
+    left: -22px;
+    bottom: -14px;
+    width: 198px;
+    height: auto;
   }
 
   .head,
@@ -570,6 +593,17 @@ const css = `
     box-shadow: 0 12px 22px rgba(0, 0, 0, 0.3);
   }
 
+  .active-unit .unit-plate {
+    top: -28px;
+  }
+
+  .runner .unit-shadow {
+    left: 46px;
+    bottom: 2px;
+    width: 78px;
+    height: 18px;
+  }
+
   .unit-plate strong {
     display: block;
     font-size: 12px;
@@ -637,6 +671,16 @@ const css = `
     z-index: 50;
     text-align: center;
     text-shadow: 0 5px 18px rgba(0, 0, 0, 0.7);
+  }
+
+  .asset-credit {
+    position: absolute;
+    right: 54px;
+    bottom: 10px;
+    z-index: 35;
+    color: rgba(248, 239, 226, 0.46);
+    font-size: 10px;
+    letter-spacing: 0.04em;
   }
 
   .damage-text {
