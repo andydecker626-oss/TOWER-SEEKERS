@@ -18,24 +18,21 @@ const allies: Unit[] = [
 ];
 
 const enemies: Unit[] = [
-  { name: "Veyr", side: "enemy", x: 0, y: 1, role: "Fell Duelist", target: true },
+  { name: "Veyr", side: "enemy", x: 3, y: 1, role: "Fell Duelist", target: true },
   { name: "Nox", side: "enemy", x: 3, y: 3, role: "Hex Mage" },
   { name: "Kain", side: "enemy", x: 2, y: 0, role: "Lancer" },
-  { name: "Sera", side: "enemy", x: 1, y: 2, role: "Invoker" }
+  { name: "Sera", side: "enemy", x: 2, y: 2, role: "Invoker" }
 ];
 
 const allUnits = [...allies, ...enemies];
 
-function Tile({ index, x, y, side }: { index: number; x: number; y: number; side: "ally" | "enemy" }) {
-  const isPath =
-    side === "ally"
-      ? (x === 0 && y === 2) || (x === 1 && y === 2) || (x === 2 && y === 2) || (x === 3 && y === 2)
-      : (x === 0 && y === 1) || (x === 1 && y === 1);
-  const isImpact = side === "enemy" && x === 0 && y === 1;
+function Tile({ index, x, y }: { index: number; x: number; y: number }) {
+  const isPath = (x === 0 && y === 2) || (x === 1 && y === 2) || (x === 2 && y === 1) || (x === 3 && y === 1);
+  const isImpact = x === 3 && y === 1;
 
   return (
     <div
-      className={`tile tile-${index} ${side}-tile ${isPath ? "tile-path" : ""} ${isImpact ? "tile-impact" : ""}`}
+      className={`tile tile-${index} ${isPath ? "tile-path" : ""} ${isImpact ? "tile-impact" : ""}`}
       style={{ gridColumn: x + 1, gridRow: y + 1 }}
     >
       <span>{x + 1},{y + 1}</span>
@@ -45,9 +42,8 @@ function Tile({ index, x, y, side }: { index: number; x: number; y: number; side
 
 function PixelUnit({ unit }: { unit: Unit }) {
   const tint = unit.side === "ally" ? "ally" : "enemy";
-  const gridOffset = unit.side === "enemy" ? "var(--enemy-grid-x)" : "0px";
   const style = {
-    left: `calc(${gridOffset} + ${unit.x} * var(--tile-size) + ${unit.x} * var(--tile-gap) + var(--unit-offset-x))`,
+    left: `calc(${unit.x} * var(--tile-size) + ${unit.x} * var(--tile-gap) + var(--unit-offset-x))`,
     top: `calc(${unit.y} * var(--tile-size) + ${unit.y} * var(--tile-gap) + var(--unit-offset-y))`
   };
 
@@ -101,15 +97,9 @@ function BattleGrid() {
   return (
     <div className="battle-stage">
       <div className="battlefield">
-        <div className="grid-board ally-board">
-          {tiles.map((tile) => <Tile key={`ally-${tile.index}`} {...tile} side="ally" />)}
+        <div className="grid-board">
+          {tiles.map((tile) => <Tile key={tile.index} {...tile} />)}
         </div>
-        <div className="grid-board enemy-board">
-          {tiles.map((tile) => <Tile key={`enemy-${tile.index}`} {...tile} side="enemy" />)}
-        </div>
-        <div className="grid-label ally-label">Blue 16-Tile Grid</div>
-        <div className="grid-label enemy-label">Crimson 16-Tile Grid</div>
-        <div className="bridge-line" />
         {allUnits.map((unit) => <PixelUnit key={unit.name} unit={unit} />)}
         <AttackRunner />
         <div className="slash slash-a" />
@@ -123,7 +113,7 @@ function BattleGrid() {
   );
 }
 
-export function SwordAttackDemo() {
+export function PvpBattlerCopyIxMmBxPx() {
   return (
     <div className="demo-shell">
       <style>{css}</style>
@@ -146,7 +136,7 @@ export function SwordAttackDemo() {
         </div>
         <div className="combat-log">
           <span className="log-line log-1">Selecting attacker on tile 1,3</span>
-          <span className="log-line log-2">Attack crosses into enemy 4x4 grid</span>
+          <span className="log-line log-2">Path preview crosses the 4x4 grid</span>
           <span className="log-line log-3">Dash, sword arc, impact, recoil</span>
         </div>
         <div className="team-panel enemies-panel">
@@ -160,13 +150,10 @@ export function SwordAttackDemo() {
 
 const css = `
   :root {
-    --tile-size: 82px;
-    --tile-gap: 10px;
-    --grid-size: calc(4 * var(--tile-size) + 3 * var(--tile-gap));
-    --grid-gap: 132px;
-    --enemy-grid-x: calc(var(--grid-size) + var(--grid-gap));
+    --tile-size: 104px;
+    --tile-gap: 12px;
     --unit-offset-x: 22px;
-    --unit-offset-y: 0px;
+    --unit-offset-y: 7px;
   }
 
   .demo-shell {
@@ -290,8 +277,8 @@ const css = `
 
   .battlefield {
     position: relative;
-    width: calc(2 * var(--grid-size) + var(--grid-gap));
-    height: var(--grid-size);
+    width: calc(4 * var(--tile-size) + 3 * var(--tile-gap));
+    height: calc(4 * var(--tile-size) + 3 * var(--tile-gap));
     transform: rotateX(56deg) rotateZ(-38deg) translateY(40px);
     transform-style: preserve-3d;
     filter: drop-shadow(0 42px 60px rgba(0, 0, 0, 0.44));
@@ -299,54 +286,12 @@ const css = `
 
   .grid-board {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--grid-size);
-    height: var(--grid-size);
+    inset: 0;
     display: grid;
     grid-template-columns: repeat(4, var(--tile-size));
     grid-template-rows: repeat(4, var(--tile-size));
     gap: var(--tile-gap);
     transform-style: preserve-3d;
-  }
-
-  .enemy-board {
-    left: var(--enemy-grid-x);
-  }
-
-  .grid-label {
-    position: absolute;
-    top: -48px;
-    width: var(--grid-size);
-    transform: translateZ(96px) rotateZ(38deg) rotateX(-56deg);
-    color: rgba(255, 248, 224, 0.78);
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-    text-align: center;
-    text-transform: uppercase;
-    text-shadow: 0 8px 20px rgba(0, 0, 0, 0.65);
-  }
-
-  .ally-label {
-    left: 0;
-  }
-
-  .enemy-label {
-    left: var(--enemy-grid-x);
-  }
-
-  .bridge-line {
-    position: absolute;
-    left: calc(var(--grid-size) + 22px);
-    top: calc(2 * var(--tile-size) + 2 * var(--tile-gap) + 39px);
-    width: calc(var(--grid-gap) - 44px);
-    height: 8px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(99, 183, 255, 0), rgba(255, 238, 164, 0.72), rgba(255, 95, 122, 0));
-    box-shadow: 0 0 28px rgba(255, 221, 127, 0.42);
-    transform: translateZ(34px);
-    animation: bridgePulse 4.4s infinite;
   }
 
   .tile {
@@ -358,17 +303,6 @@ const css = `
     border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 0 #0b1127, 0 24px 24px rgba(0, 0, 0, 0.28);
     overflow: hidden;
-  }
-
-  .ally-tile {
-    border-color: rgba(96, 179, 255, 0.19);
-  }
-
-  .enemy-tile {
-    border-color: rgba(255, 92, 121, 0.2);
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
-      linear-gradient(135deg, rgba(102, 62, 97, 0.74), rgba(47, 24, 56, 0.94));
   }
 
   .tile span {
@@ -586,7 +520,7 @@ const css = `
 
   .slash {
     position: absolute;
-    left: calc(var(--enemy-grid-x) + 0 * var(--tile-size) + 0 * var(--tile-gap) + 6px);
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 6px);
     top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 4px);
     width: 112px;
     height: 112px;
@@ -610,7 +544,7 @@ const css = `
 
   .impact {
     position: absolute;
-    left: calc(var(--enemy-grid-x) + 0 * var(--tile-size) + 0 * var(--tile-gap) + 28px);
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 28px);
     top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) + 30px);
     width: 64px;
     height: 64px;
@@ -630,7 +564,7 @@ const css = `
   .damage-text,
   .damage-number {
     position: absolute;
-    left: calc(var(--enemy-grid-x) + 0 * var(--tile-size) + 0 * var(--tile-gap) + 4px);
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 4px);
     top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 54px);
     transform: translateZ(180px) rotateZ(38deg) rotateX(-56deg);
     opacity: 0;
@@ -651,7 +585,7 @@ const css = `
 
   .damage-number {
     width: 110px;
-    left: calc(var(--enemy-grid-x) + 0 * var(--tile-size) + 0 * var(--tile-gap) + 45px);
+    left: calc(3 * var(--tile-size) + 3 * var(--tile-gap) + 45px);
     top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 92px);
     font-family: "Cinzel", Georgia, serif;
     font-size: 54px;
@@ -662,9 +596,9 @@ const css = `
 
   @keyframes attackDash {
     0%, 16% { transform: translate3d(0, 0, 74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
-    25% { transform: translate3d(214px, -35px, 96px) rotateZ(38deg) rotateX(-56deg) scale(1.04); opacity: 1; }
-    36%, 43% { transform: translate3d(490px, -92px, 112px) rotateZ(38deg) rotateX(-56deg) scale(1.12); opacity: 1; }
-    54% { transform: translate3d(280px, -48px, 96px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
+    25% { transform: translate3d(84px, -18px, 96px) rotateZ(38deg) rotateX(-56deg) scale(1.04); opacity: 1; }
+    36%, 43% { transform: translate3d(338px, -118px, 112px) rotateZ(38deg) rotateX(-56deg) scale(1.12); opacity: 1; }
+    54% { transform: translate3d(220px, -76px, 96px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
     70%, 100% { transform: translate3d(0, 0, 74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
   }
 
@@ -732,11 +666,6 @@ const css = `
     38%, 48% { box-shadow: inset 0 0 0 2px rgba(255, 231, 150, 0.92), 0 12px 0 #0b1127, 0 0 46px rgba(255, 95, 122, 0.72); }
   }
 
-  @keyframes bridgePulse {
-    0%, 14%, 62%, 100% { opacity: 0.18; transform: translateZ(34px) scaleX(0.72); }
-    24%, 48% { opacity: 1; transform: translateZ(34px) scaleX(1); }
-  }
-
   @keyframes logPulse {
     0%, 9% { opacity: 0; transform: translateY(5px); }
     18%, 72% { opacity: 1; transform: translateY(0); }
@@ -744,7 +673,7 @@ const css = `
   }
 
   @media (max-width: 900px) {
-    :root { --tile-size: 62px; --tile-gap: 7px; --grid-gap: 76px; }
+    :root { --tile-size: 82px; --tile-gap: 9px; }
     .hud { left: 24px; right: 24px; }
     .bottom-hud { display: none; }
     .turn-card { display: none; }

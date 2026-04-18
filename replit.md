@@ -26,6 +26,6 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Mockup Prototypes
 
-- `artifacts/mockup-sandbox/src/components/mockups/pvp-battler/SwordAttackDemo.tsx` — live canvas prototype for a 4v4 turn-based tactical battler showing a 4x4 grid and one melee sword attack animation.
+- `artifacts/mockup-sandbox/src/components/mockups/pvp-battler/SwordAttackDemo.tsx` — live canvas prototype for a 4v4 turn-based tactical battler showing two separate 4x4 grids, one per team, and one melee sword attack animation crossing between them.
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
