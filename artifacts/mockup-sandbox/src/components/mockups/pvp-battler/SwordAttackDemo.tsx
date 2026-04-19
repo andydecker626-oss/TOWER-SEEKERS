@@ -122,12 +122,13 @@ function AnimeSprite({ side, cls }: { side: "ally" | "enemy"; cls: string }) {
 }
 
 function PixelUnit({ unit }: { unit: Unit }) {
+  const step = "calc(var(--tile-size) + var(--tile-gap))";
   const style = {
     left:
       unit.side === "enemy"
-        ? `calc(var(--enemy-grid-x) + ${unit.x} * var(--tile-size) + ${unit.x} * var(--tile-gap) + var(--unit-offset-x))`
-        : `calc(${unit.x} * var(--tile-size) + ${unit.x} * var(--tile-gap) + var(--unit-offset-x))`,
-    top: `calc(${unit.y} * var(--tile-size) + ${unit.y} * var(--tile-gap) + var(--unit-offset-y))`,
+        ? `calc(var(--enemy-grid-x) + ${unit.x} * ${step})`
+        : `calc(${unit.x} * ${step})`,
+    top: `calc(${unit.y} * ${step})`,
   };
   return (
     <div
@@ -227,11 +228,10 @@ const css = `
   :root {
     --tile-size: 82px;
     --tile-gap: 10px;
+    --tile-step: calc(var(--tile-size) + var(--tile-gap));
     --grid-size: calc(4 * var(--tile-size) + 3 * var(--tile-gap));
     --grid-gap: 132px;
     --enemy-grid-x: calc(var(--grid-size) + var(--grid-gap));
-    --unit-offset-x: 6px;
-    --unit-offset-y: -8px;
     --dur: 5.6s;
   }
 
@@ -352,29 +352,40 @@ const css = `
   .tile-impact { animation: targetPulse var(--dur) infinite; }
 
   /* ── Unit containers ── */
-  .unit, .runner {
+  /* Each unit container is exactly one tile. The sprite overflows upward;
+     feet sit at the tile bottom, character stands above. */
+  .unit {
     position: absolute;
-    width: 74px; height: 140px;
-    transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg);
+    width: var(--tile-size); height: var(--tile-size);
+    overflow: visible;
+    transform: translateZ(72px) rotateZ(38deg) rotateX(-56deg);
     transform-style: preserve-3d;
     z-index: 12;
   }
   .unit-target { animation: targetRecoil var(--dur) infinite; }
   .unit-active { opacity: 0.30; }
+
+  /* Runner is a separate larger element that travels across both grids */
   .runner {
-    left: calc(0 * var(--tile-size) + 0 * var(--tile-gap) + var(--unit-offset-x));
-    top:  calc(2 * var(--tile-size) + 2 * var(--tile-gap) + var(--unit-offset-y));
-    width: 200px; height: 160px;
-    margin-left: -60px; margin-top: -44px;
+    position: absolute;
+    left: 0;
+    top: calc(2 * var(--tile-step));
+    width: var(--tile-size); height: var(--tile-size);
+    overflow: visible;
+    transform: translateZ(72px) rotateZ(38deg) rotateX(-56deg);
+    transform-style: preserve-3d;
     z-index: 26;
     animation: attackDash var(--dur) cubic-bezier(0.2,0.9,0.16,1) infinite;
   }
+
+  /* Shadow sits at tile surface level */
   .unit-shadow {
-    position: absolute; left: 4px; bottom: -8px;
-    width: 62px; height: 14px;
-    border-radius: 999px; background: rgba(0,0,0,0.52); filter: blur(3px);
+    position: absolute;
+    left: 8px; bottom: 4px;
+    width: 66px; height: 12px;
+    border-radius: 999px; background: rgba(0,0,0,0.55); filter: blur(4px);
   }
-  .runner .unit-shadow { left: 56px; bottom: 0; width: 72px; height: 18px; }
+  .runner .unit-shadow { left: 8px; bottom: 4px; width: 66px; height: 12px; }
 
   /* ══════════════════════════════════════════════════════
      ANIME SPRITE  — 70 × 130 px base container
@@ -382,10 +393,11 @@ const css = `
   ══════════════════════════════════════════════════════ */
   .sprite {
     position: absolute;
-    left: 0; bottom: 6px;
+    left: 6px; bottom: 0;
     width: 70px; height: 130px;
     image-rendering: pixelated;
     animation: idleSword 0.9s steps(2) infinite;
+    /* sprite overflows the tile container upward — this is intentional */
   }
 
   /* ── Default idle overrides per class ── */
@@ -842,9 +854,12 @@ const css = `
     to   { transform: rotate(360deg); }
   }
 
-  /* ── Unit name plate ── */
+  /* ── Unit name plate ──
+     Container is 82×82px. Sprite extends 48px above container top
+     (sprite=130px, bottom:0, so sprite-top = 0 - 48 = -48px).
+     Plate sits above the sprite's top. */
   .unit-plate {
-    position: absolute; left: 50%; top: -34px;
+    position: absolute; left: 50%; top: -88px;
     width: 118px; transform: translateX(-50%);
     padding: 5px 8px; border-radius: 9px;
     background: rgba(5,8,22,0.80);
