@@ -383,6 +383,31 @@ const css = `
   }
   .runner .unit-shadow { left: 8px; bottom: 4px; width: 66px; height: 12px; }
 
+  /* ── Runner attack pose overrides ──
+     These fire on the same timeline as attackDash:
+       0-16%   idle at start
+       16-36%  dashing toward enemy
+       36-46%  AT enemy (impact zone: cut VFX at 38.5%)
+       46-72%  returning
+       72-100% idle at start
+  ── */
+
+  /* Body pose: bob while running, lunge on impact */
+  .runner .sprite {
+    animation: runnerAction var(--dur) ease-in-out infinite;
+  }
+
+  /* Sword: raise during approach, slash at impact, follow-through */
+  .runner .sp-weapon {
+    animation: swordSwing var(--dur) ease-in-out infinite;
+  }
+
+  /* Front arm mirrors the sword arc */
+  .runner .sp-arm-front {
+    transform-origin: top center;
+    animation: armSwing var(--dur) ease-in-out infinite;
+  }
+
   /* ══════════════════════════════════════════════════════
      ANIME SPRITE  — 70 × 130 px base container
      Colors and weapon shapes vary by .role-{cls}
@@ -993,6 +1018,45 @@ const css = `
     36%, 46%  { transform: translate3d(490px,-92px,112px) rotateZ(38deg) rotateX(-56deg) scale(1.12); opacity: 1; }
     57%       { transform: translate3d(280px,-48px,96px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
     72%, 100% { transform: translate3d(0,0,74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
+  }
+
+  /* Runner body pose — bob while running, lunge on impact */
+  @keyframes runnerAction {
+    0%, 14%  { transform: translateY(0); }
+    20%      { transform: translateY(-5px); }
+    26%      { transform: translateY(0); }
+    31%      { transform: translateY(-4px); }
+    35%      { transform: translateY(0) rotate(-5deg); }   /* lean back: wind-up */
+    36.5%   { transform: translateY(-3px) rotate(-7deg); } /* coiled */
+    38.5%   { transform: translateY(5px) rotate(14deg);  } /* LUNGE: body drives sword forward */
+    43%      { transform: translateY(3px) rotate(8deg);   } /* follow-through */
+    54%      { transform: translateY(0) rotate(0deg);     } /* recover */
+    64%, 100% { transform: translateY(0); }
+  }
+
+  /* Sword: raise on approach, slash at impact (38.5% = when cuts fire), follow-through */
+  @keyframes swordSwing {
+    0%, 22%  { transform: rotate(-22deg); filter: brightness(1); }
+    /* Wind-up: sword lifts toward vertical */
+    30%      { transform: rotate(-52deg); filter: brightness(1.3); }
+    35.5%    { transform: rotate(-85deg); filter: brightness(1.9) drop-shadow(0 0 16px rgba(180,230,255,1)); }
+    /* SLASH: rotates past target in one frame — synced to cut VFX at 38.5% */
+    38.5%    { transform: rotate(42deg);  filter: brightness(3.0) drop-shadow(0 0 26px rgba(210,245,255,1)); }
+    /* Follow-through: sword extended down-right */
+    44%      { transform: rotate(30deg);  filter: brightness(1.5) drop-shadow(0 0 10px rgba(160,215,255,0.7)); }
+    55%      { transform: rotate(-22deg); filter: brightness(1); }
+    100%     { transform: rotate(-22deg); filter: brightness(1); }
+  }
+
+  /* Front arm: raises with sword, drives forward on slash */
+  @keyframes armSwing {
+    0%, 22%  { transform: rotate(0deg); }
+    30%      { transform: rotate(-22deg); } /* arm lifts with sword */
+    35.5%    { transform: rotate(-38deg); } /* fully cocked */
+    38.5%    { transform: rotate(28deg);  } /* drives through */
+    44%      { transform: rotate(18deg);  } /* follow-through */
+    55%      { transform: rotate(0deg);   }
+    100%     { transform: rotate(0deg);   }
   }
 
   /* Target recoil */
