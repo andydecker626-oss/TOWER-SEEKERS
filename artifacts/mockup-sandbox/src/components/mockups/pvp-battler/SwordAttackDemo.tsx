@@ -174,15 +174,11 @@ function BattleGrid() {
         {allUnits.map((u) => <PixelUnit key={u.name} unit={u} />)}
         <AttackRunner />
 
-        {/* Impact VFX */}
-        <div className="slash slash-a" />
-        <div className="slash slash-b" />
-        <div className="slash slash-c" />
-        <div className="impact-flash" />
-        <div className="impact impact-one" />
-        <div className="impact impact-two" />
-        <div className="impact impact-three" />
-        <div className="damage-text">Blade Strike</div>
+        {/* Visceral slash VFX — tight on the target unit */}
+        <div className="hit-flash" />
+        <div className="cut cut-1" />
+        <div className="cut cut-2" />
+        <div className="cut cut-3" />
         <div className="damage-number">42</div>
       </div>
     </div>
@@ -874,88 +870,85 @@ const css = `
   }
 
   /* ══════════════════════════════════════════════
-     ATTACK VFX — bigger, more dramatic
+     VISCERAL SLASH VFX — all elements target
+     enemy tile (0,1): left=enemy-grid-x, top=tile-step
   ══════════════════════════════════════════════ */
 
-  /* ── Slash arcs ── 3 now, larger ── */
-  .slash {
+  /* Local white-to-red flash, tight around the sprite */
+  .hit-flash {
     position: absolute;
-    left: calc(var(--enemy-grid-x) + 0 * var(--tile-size) + 0 * var(--tile-gap) - 4px);
-    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 12px);
-    width: 180px; height: 180px;
-    border-radius: 50%;
-    border: 12px solid transparent;
-    border-left-color: rgba(255,255,255,0.98);
-    border-top-color: rgba(104,218,255,0.90);
-    filter: drop-shadow(0 0 18px rgba(142,228,255,0.95));
-    transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(0.14) rotate(-35deg);
-    opacity: 0; z-index: 40;
-    animation: slashBurst var(--dur) infinite;
-  }
-  .slash-b {
-    animation-delay: 0.07s;
-    transform: translateZ(144px) rotateZ(38deg) rotateX(-56deg) scale(0.12) rotate(28deg);
-    border-left-color: rgba(255,219,100,0.95);
-    border-top-color: rgba(255,255,255,0.95);
-    border-right-color: rgba(255,160,80,0.5);
-  }
-  .slash-c {
-    animation-delay: 0.14s;
-    left: calc(var(--enemy-grid-x) + 16px);
-    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) + 10px);
-    width: 140px; height: 140px;
-    border-left-color: rgba(200,240,255,0.92);
-    border-top-color: rgba(255,255,255,0.88);
-    transform: translateZ(148px) rotateZ(38deg) rotateX(-56deg) scale(0.12) rotate(-85deg);
+    left: var(--enemy-grid-x);
+    top: calc(1 * var(--tile-step));
+    width: 82px; height: 82px;
+    background: radial-gradient(ellipse 72% 80% at 50% 40%,
+      rgba(255,255,255,0.97),
+      rgba(255,190,210,0.85) 32%,
+      rgba(255,60,90,0.40) 58%,
+      transparent 78%);
+    transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg);
+    opacity: 0; z-index: 44;
+    animation: hitFlash var(--dur) infinite;
   }
 
-  /* ── Full-grid impact flash ── */
-  .impact-flash {
+  /* Shared cut positioning */
+  .cut {
     position: absolute;
-    left: var(--enemy-grid-x); top: 0;
-    width: var(--grid-size); height: var(--grid-size);
-    background: rgba(255,255,255,0.92);
-    transform: translateZ(60px) rotateZ(38deg) rotateX(-56deg);
-    opacity: 0; z-index: 35; border-radius: 12px;
-    animation: impactFlash var(--dur) infinite;
+    left: var(--enemy-grid-x);
+    top: calc(1 * var(--tile-step));
+    width: 82px; height: 82px;
+    transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg);
+    opacity: 0; z-index: 46;
+    animation: cutSlash var(--dur) infinite;
   }
 
-  /* ── Impact stars ── */
-  .impact {
-    position: absolute;
-    left: calc(var(--enemy-grid-x) + 14px);
-    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) + 20px);
-    width: 90px; height: 90px;
-    background: radial-gradient(circle, #fff 0 14%, #ffe68f 15% 32%, rgba(255,92,121,0.7) 33% 52%, transparent 53%);
-    clip-path: polygon(50% 0, 62% 31%, 98% 17%, 71% 48%, 100% 67%, 62% 64%, 54% 100%, 42% 65%, 5% 82%, 31% 51%, 0 34%, 38% 36%);
-    transform: translateZ(158px) rotateZ(38deg) rotateX(-56deg) scale(0);
-    opacity: 0; z-index: 45;
-    animation: impactPop var(--dur) infinite;
+  /* Cut 1 — main diagonal slash (top-right → bottom-left), cyan-white */
+  .cut-1 {
+    background: linear-gradient(130deg,
+      transparent 8%,
+      rgba(255,255,255,0.98) 28%,
+      rgba(160,226,255,0.92) 52%,
+      rgba(70,150,255,0.60) 72%,
+      transparent 88%);
+    clip-path: polygon(36% 0%, 86% 0%, 64% 100%, 14% 100%);
+    filter: drop-shadow(0 0 9px rgba(130,200,255,0.95));
   }
-  .impact-two   { animation-delay: 0.10s; filter: hue-rotate(44deg); left: calc(var(--enemy-grid-x) + 42px); top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) + 42px); }
-  .impact-three { animation-delay: 0.20s; filter: hue-rotate(188deg); width: 64px; height: 64px; left: calc(var(--enemy-grid-x) + 60px); top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) + 10px); }
 
-  /* ── Damage text ── */
-  .damage-text, .damage-number {
-    position: absolute;
-    left: calc(var(--enemy-grid-x) + 4px);
-    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 60px);
-    transform: translateZ(190px) rotateZ(38deg) rotateX(-56deg);
-    opacity: 0; z-index: 50; text-align: center;
-    text-shadow: 0 5px 18px rgba(0,0,0,0.7);
+  /* Cut 2 — secondary slash, narrower, warm white-rose */
+  .cut-2 {
+    background: linear-gradient(128deg,
+      transparent 14%,
+      rgba(255,255,255,0.90) 36%,
+      rgba(255,210,230,0.85) 58%,
+      rgba(255,70,100,0.45) 76%,
+      transparent 90%);
+    clip-path: polygon(54% 0%, 80% 0%, 63% 100%, 37% 100%);
+    filter: drop-shadow(0 0 6px rgba(255,90,130,0.75));
+    animation-delay: 0.04s;
   }
-  .damage-text {
-    width: 200px; color: #ffe6a3;
-    font-size: 14px; font-weight: 900;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    animation: textPop var(--dur) infinite;
+
+  /* Cut 3 — small accent slash, upper corner, golden-white */
+  .cut-3 {
+    background: linear-gradient(118deg,
+      transparent 20%,
+      rgba(255,255,200,0.95) 42%,
+      rgba(255,240,120,0.80) 62%,
+      transparent 80%);
+    clip-path: polygon(62% 2%, 88% 2%, 83% 42%, 57% 42%);
+    filter: drop-shadow(0 0 5px rgba(255,230,80,0.85));
+    animation-delay: 0.08s;
   }
+
+  /* Damage number */
   .damage-number {
-    width: 120px;
-    left: calc(var(--enemy-grid-x) + 44px);
-    top: calc(1 * var(--tile-size) + 1 * var(--tile-gap) - 106px);
+    position: absolute;
+    width: 110px;
+    left: calc(var(--enemy-grid-x) + 36px);
+    top: calc(1 * var(--tile-step) - 100px);
+    transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg);
+    opacity: 0; z-index: 50; text-align: center;
     font-family: "Cinzel", Georgia, serif;
-    font-size: 62px; font-weight: 900; color: #fff;
+    font-size: 58px; font-weight: 900; color: #fff;
+    text-shadow: 0 0 18px rgba(255,100,130,0.7), 0 5px 18px rgba(0,0,0,0.8);
     animation: damageFloat var(--dur) infinite;
   }
 
@@ -1011,39 +1004,39 @@ const css = `
     58%            { transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg); }
   }
 
-  /* Slash burst — bigger peak, freeze held longer */
-  @keyframes slashBurst {
-    0%, 34%, 52%, 100% { opacity: 0; transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(0.14) rotate(-35deg); }
-    37%   { opacity: 1;   transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(1.4) rotate(8deg); }
-    44%   { opacity: 0.8; transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(1.5) rotate(22deg); }
-    50%   { opacity: 0;   transform: translateZ(142px) rotateZ(38deg) rotateX(-56deg) scale(2.1) rotate(76deg); }
+  /* Slash cut — appears as sword impact, lingers briefly, disperses */
+  @keyframes cutSlash {
+    0%, 37%, 50%, 100% {
+      opacity: 0;
+      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(0.35);
+    }
+    38.5% {
+      opacity: 1;
+      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(1.06);
+    }
+    42% {
+      opacity: 0.82;
+      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(1.10);
+    }
+    48% {
+      opacity: 0;
+      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(1.22);
+    }
   }
 
-  /* Grid flash */
-  @keyframes impactFlash {
-    0%, 38%, 42%, 100% { opacity: 0; }
-    39%                { opacity: 0.85; }
-    41%                { opacity: 0.25; }
-  }
-
-  /* Impact star */
-  @keyframes impactPop {
-    0%, 37%, 54%, 100% { opacity: 0; transform: translateZ(158px) rotateZ(38deg) rotateX(-56deg) scale(0); }
-    40%   { opacity: 1;   transform: translateZ(158px) rotateZ(38deg) rotateX(-56deg) scale(1.35); }
-    47%   { opacity: 0.9; transform: translateZ(158px) rotateZ(38deg) rotateX(-56deg) scale(1.5); }
-    52%   { opacity: 0;   transform: translateZ(158px) rotateZ(38deg) rotateX(-56deg) scale(2.2); }
+  /* Localized flash on hit — sharp burst then fades */
+  @keyframes hitFlash {
+    0%, 37.5%, 45%, 100% { opacity: 0; transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(0.8); }
+    38.5% { opacity: 0.96; transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(1.0); }
+    40.5% { opacity: 0.50; transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(1.1); }
+    43%   { opacity: 0;    transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(1.2); }
   }
 
   /* Damage float */
   @keyframes damageFloat {
-    0%, 40%, 60%, 100% { opacity: 0; transform: translateZ(190px) rotateZ(38deg) rotateX(-56deg) translateY(18px) scale(0.8); }
-    44%   { opacity: 1; transform: translateZ(190px) rotateZ(38deg) rotateX(-56deg) translateY(-8px) scale(1.22); }
-    55%   { opacity: 0; transform: translateZ(190px) rotateZ(38deg) rotateX(-56deg) translateY(-52px) scale(1); }
-  }
-
-  @keyframes textPop {
-    0%, 36%, 62%, 100% { opacity: 0; transform: translateZ(190px) rotateZ(38deg) rotateX(-56deg) translateY(18px); }
-    41%, 54%           { opacity: 1; transform: translateZ(190px) rotateZ(38deg) rotateX(-56deg) translateY(0); }
+    0%, 40%, 60%, 100% { opacity: 0; transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg) translateY(14px) scale(0.8); }
+    43%   { opacity: 1; transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg) translateY(-6px) scale(1.2); }
+    55%   { opacity: 0; transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg) translateY(-44px) scale(1); }
   }
 
   /* Tile glow + path */
