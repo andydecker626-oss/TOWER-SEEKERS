@@ -138,8 +138,7 @@ function PixelUnit({ unit }: { unit: Unit }) {
       <div className="unit-shadow" />
       <AnimeSprite side={unit.side} cls={unit.cls} />
       <div className="unit-plate">
-        <strong>{unit.name}</strong>
-        <small>{unit.role}</small>
+        <strong>{unit.role}</strong>
       </div>
     </div>
   );
@@ -232,7 +231,8 @@ const css = `
   }
 
   .demo-shell {
-    position: relative; min-height: 100vh; overflow: hidden;
+    position: relative; height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column;
     background:
       radial-gradient(circle at 50% 28%, rgba(122,91,255,0.22), transparent 34%),
       radial-gradient(circle at 78% 68%, rgba(255,84,122,0.14), transparent 27%),
@@ -248,12 +248,12 @@ const css = `
 
   /* ── HUD ── */
   .hud {
-    position: absolute; z-index: 40;
+    position: relative; z-index: 40; flex-shrink: 0;
     display: flex; align-items: center; justify-content: space-between;
-    left: 52px; right: 52px;
+    padding: 22px 52px;
   }
-  .top-hud    { top: 34px; }
-  .bottom-hud { bottom: 34px; gap: 18px; }
+  .top-hud    { padding-bottom: 0; }
+  .bottom-hud { padding-top: 0; gap: 18px; }
   .hud p, .hud span, .unit-plate small {
     margin: 0; color: rgba(248,239,226,0.60);
     letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; font-weight: 800;
@@ -273,20 +273,21 @@ const css = `
   .team-panel { min-width: 210px; padding: 16px 18px; }
   .allies-panel  { border-color: rgba(96,179,255,0.32); }
   .enemies-panel { border-color: rgba(255,92,121,0.32); text-align: right; }
-  .combat-log { flex: 1; display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 14px; }
+  .combat-log { flex: 1; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 14px 22px; }
   .log-line { opacity: 0; animation: logPulse var(--dur) infinite; }
   .log-2 { animation-delay: 0.6s; }
   .log-3 { animation-delay: 1.3s; }
 
   /* ── Isometric grid ── */
   .battle-stage {
-    min-height: 100vh; display: grid; place-items: center; perspective: 1200px;
+    flex: 1; min-height: 0;
+    display: grid; place-items: center; perspective: 1100px;
   }
   .battlefield {
     position: relative;
     width: calc(2 * var(--grid-size) + var(--grid-gap));
     height: var(--grid-size);
-    transform: rotateX(56deg) rotateZ(-38deg) translateY(40px);
+    transform: rotateX(28deg) rotateZ(-28deg) translateY(0px);
     transform-style: preserve-3d;
     filter: drop-shadow(0 42px 60px rgba(0,0,0,0.44));
   }
@@ -301,7 +302,7 @@ const css = `
   .enemy-board { left: var(--enemy-grid-x); }
   .grid-label {
     position: absolute; top: -48px; width: var(--grid-size);
-    transform: translateZ(96px) rotateZ(38deg) rotateX(-56deg);
+    transform: translateZ(96px) rotateZ(28deg) rotateX(-28deg);
     color: rgba(255,248,224,0.78); font-size: 12px; font-weight: 900;
     letter-spacing: 0.12em; text-align: center; text-transform: uppercase;
     text-shadow: 0 8px 20px rgba(0,0,0,0.65);
@@ -338,7 +339,7 @@ const css = `
   .tile span {
     position: absolute; left: 10px; bottom: 8px;
     font-size: 11px; color: rgba(255,255,255,0.28);
-    transform: rotateZ(38deg) rotateX(-56deg);
+    transform: rotateZ(28deg) rotateX(-28deg);
   }
   .tile::after {
     content: ""; position: absolute; inset: 8px;
@@ -354,7 +355,7 @@ const css = `
     position: absolute;
     width: var(--tile-size); height: var(--tile-size);
     overflow: visible;
-    transform: translateZ(72px) rotateZ(38deg) rotateX(-56deg);
+    transform: translateZ(72px) rotateZ(28deg) rotateX(-28deg);
     transform-style: preserve-3d;
     z-index: 12;
   }
@@ -368,7 +369,7 @@ const css = `
     top: calc(2 * var(--tile-step));
     width: var(--tile-size); height: var(--tile-size);
     overflow: visible;
-    transform: translateZ(72px) rotateZ(38deg) rotateX(-56deg);
+    transform: translateZ(72px) rotateZ(28deg) rotateX(-28deg);
     transform-style: preserve-3d;
     z-index: 26;
     animation: attackDash var(--dur) cubic-bezier(0.2,0.9,0.16,1) infinite;
@@ -880,18 +881,17 @@ const css = `
      (sprite=130px, bottom:0, so sprite-top = 0 - 48 = -48px).
      Plate sits above the sprite's top. */
   .unit-plate {
-    position: absolute; left: 50%; top: -88px;
-    width: 118px; transform: translateX(-50%);
-    padding: 5px 8px; border-radius: 9px;
-    background: rgba(5,8,22,0.80);
+    position: absolute; left: 50%; top: -64px;
+    width: 108px; transform: translateX(-50%);
+    padding: 4px 8px; border-radius: 7px;
+    background: rgba(5,8,22,0.82);
     border: 1px solid rgba(255,255,255,0.12);
-    text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.34);
+    text-align: center; box-shadow: 0 8px 18px rgba(0,0,0,0.34);
   }
-  .unit-plate strong { display: block; font-size: 11px; line-height: 1; color: #fff7df; }
-  .unit-plate small  {
-    display: block; margin-top: 2px;
-    color: rgba(248,239,226,0.55); font-size: 8px;
-    letter-spacing: 0.04em; text-transform: uppercase; font-weight: 800;
+  .unit-plate strong {
+    display: block; font-size: 9px; line-height: 1.2;
+    color: rgba(248,239,226,0.72);
+    letter-spacing: 0.07em; text-transform: uppercase; font-weight: 900;
   }
 
   /* ══════════════════════════════════════════════
@@ -910,7 +910,7 @@ const css = `
       rgba(255,190,210,0.85) 32%,
       rgba(255,60,90,0.40) 58%,
       transparent 78%);
-    transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg);
+    transform: translateZ(150px) rotateZ(28deg) rotateX(-28deg);
     opacity: 0; z-index: 44;
     animation: hitFlash var(--dur) infinite;
   }
@@ -921,7 +921,7 @@ const css = `
     left: var(--enemy-grid-x);
     top: calc(1 * var(--tile-step));
     width: 82px; height: 82px;
-    transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg);
+    transform: translateZ(160px) rotateZ(28deg) rotateX(-28deg);
     opacity: 0; z-index: 46;
     animation: cutSlash var(--dur) infinite;
   }
@@ -969,7 +969,7 @@ const css = `
     width: 110px;
     left: calc(var(--enemy-grid-x) + 36px);
     top: calc(1 * var(--tile-step) - 100px);
-    transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg);
+    transform: translateZ(195px) rotateZ(28deg) rotateX(-28deg);
     opacity: 0; z-index: 50; text-align: center;
     font-family: "Cinzel", Georgia, serif;
     font-size: 58px; font-weight: 900; color: #fff;
@@ -1013,11 +1013,11 @@ const css = `
 
   /* Attack dash */
   @keyframes attackDash {
-    0%, 16%   { transform: translate3d(0,0,74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
-    25%       { transform: translate3d(214px,-35px,96px) rotateZ(38deg) rotateX(-56deg) scale(1.04); opacity: 1; }
-    36%, 46%  { transform: translate3d(490px,-92px,112px) rotateZ(38deg) rotateX(-56deg) scale(1.12); opacity: 1; }
-    57%       { transform: translate3d(280px,-48px,96px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
-    72%, 100% { transform: translate3d(0,0,74px) rotateZ(38deg) rotateX(-56deg); opacity: 1; }
+    0%, 16%   { transform: translate3d(0,0,74px) rotateZ(28deg) rotateX(-28deg); opacity: 1; }
+    25%       { transform: translate3d(214px,-35px,96px) rotateZ(28deg) rotateX(-28deg) scale(1.04); opacity: 1; }
+    36%, 46%  { transform: translate3d(490px,-92px,112px) rotateZ(28deg) rotateX(-28deg) scale(1.12); opacity: 1; }
+    57%       { transform: translate3d(280px,-48px,96px) rotateZ(28deg) rotateX(-28deg); opacity: 1; }
+    72%, 100% { transform: translate3d(0,0,74px) rotateZ(28deg) rotateX(-28deg); opacity: 1; }
   }
 
   /* Runner body pose — bob while running, lunge on impact */
@@ -1061,46 +1061,46 @@ const css = `
 
   /* Target recoil */
   @keyframes targetRecoil {
-    0%, 36%, 100%  { transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg); filter: brightness(1); }
-    40%            { transform: translate3d(20px,-10px,76px) rotateZ(38deg) rotateX(-56deg); filter: brightness(3.5); }
-    43%            { transform: translate3d(22px,-12px,78px) rotateZ(38deg) rotateX(-56deg); filter: brightness(2.5); }
-    50%            { transform: translate3d(-10px,5px,74px) rotateZ(38deg) rotateX(-56deg); filter: brightness(1); }
-    58%            { transform: translateZ(74px) rotateZ(38deg) rotateX(-56deg); }
+    0%, 36%, 100%  { transform: translateZ(74px) rotateZ(28deg) rotateX(-28deg); filter: brightness(1); }
+    40%            { transform: translate3d(20px,-10px,76px) rotateZ(28deg) rotateX(-28deg); filter: brightness(3.5); }
+    43%            { transform: translate3d(22px,-12px,78px) rotateZ(28deg) rotateX(-28deg); filter: brightness(2.5); }
+    50%            { transform: translate3d(-10px,5px,74px) rotateZ(28deg) rotateX(-28deg); filter: brightness(1); }
+    58%            { transform: translateZ(74px) rotateZ(28deg) rotateX(-28deg); }
   }
 
   /* Slash cut — appears as sword impact, lingers briefly, disperses */
   @keyframes cutSlash {
     0%, 37%, 50%, 100% {
       opacity: 0;
-      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(0.35);
+      transform: translateZ(160px) rotateZ(28deg) rotateX(-28deg) scaleX(0.35);
     }
     38.5% {
       opacity: 1;
-      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(1.06);
+      transform: translateZ(160px) rotateZ(28deg) rotateX(-28deg) scaleX(1.06);
     }
     42% {
       opacity: 0.82;
-      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(1.10);
+      transform: translateZ(160px) rotateZ(28deg) rotateX(-28deg) scaleX(1.10);
     }
     48% {
       opacity: 0;
-      transform: translateZ(160px) rotateZ(38deg) rotateX(-56deg) scaleX(1.22);
+      transform: translateZ(160px) rotateZ(28deg) rotateX(-28deg) scaleX(1.22);
     }
   }
 
   /* Localized flash on hit — sharp burst then fades */
   @keyframes hitFlash {
-    0%, 37.5%, 45%, 100% { opacity: 0; transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(0.8); }
-    38.5% { opacity: 0.96; transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(1.0); }
-    40.5% { opacity: 0.50; transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(1.1); }
-    43%   { opacity: 0;    transform: translateZ(150px) rotateZ(38deg) rotateX(-56deg) scale(1.2); }
+    0%, 37.5%, 45%, 100% { opacity: 0; transform: translateZ(150px) rotateZ(28deg) rotateX(-28deg) scale(0.8); }
+    38.5% { opacity: 0.96; transform: translateZ(150px) rotateZ(28deg) rotateX(-28deg) scale(1.0); }
+    40.5% { opacity: 0.50; transform: translateZ(150px) rotateZ(28deg) rotateX(-28deg) scale(1.1); }
+    43%   { opacity: 0;    transform: translateZ(150px) rotateZ(28deg) rotateX(-28deg) scale(1.2); }
   }
 
   /* Damage float */
   @keyframes damageFloat {
-    0%, 40%, 60%, 100% { opacity: 0; transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg) translateY(14px) scale(0.8); }
-    43%   { opacity: 1; transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg) translateY(-6px) scale(1.2); }
-    55%   { opacity: 0; transform: translateZ(195px) rotateZ(38deg) rotateX(-56deg) translateY(-44px) scale(1); }
+    0%, 40%, 60%, 100% { opacity: 0; transform: translateZ(195px) rotateZ(28deg) rotateX(-28deg) translateY(14px) scale(0.8); }
+    43%   { opacity: 1; transform: translateZ(195px) rotateZ(28deg) rotateX(-28deg) translateY(-6px) scale(1.2); }
+    55%   { opacity: 0; transform: translateZ(195px) rotateZ(28deg) rotateX(-28deg) translateY(-44px) scale(1); }
   }
 
   /* Tile glow + path */
