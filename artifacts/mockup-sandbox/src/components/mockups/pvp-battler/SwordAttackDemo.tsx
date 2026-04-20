@@ -133,6 +133,7 @@ function PixelUnit({ unit }: { unit: Unit }) {
   return (
     <div
       className={`unit unit-${unit.side} ${unit.active ? "unit-active" : ""} ${unit.target ? "unit-target" : ""}`}
+      data-row={unit.y}
       style={style}
     >
       <div className="unit-shadow" />
@@ -160,6 +161,10 @@ function BattleGrid() {
   );
   return (
     <div className="battle-stage">
+      <div className="arena-bg">
+        <div className="arena-bokeh" />
+        <div className="arena-floor" />
+      </div>
       <div className="battlefield">
         <div className="grid-board ally-board">
           {tiles.map((t) => <Tile key={`a${t.index}`} {...t} side="ally" />)}
@@ -232,15 +237,74 @@ const css = `
     position: relative; height: 100vh; overflow: hidden;
     display: flex; flex-direction: column;
     background:
-      radial-gradient(circle at 50% 28%, rgba(122,91,255,0.22), transparent 34%),
-      radial-gradient(circle at 78% 68%, rgba(255,84,122,0.14), transparent 27%),
-      linear-gradient(135deg, #0d1426 0%, #14122a 44%, #241027 100%);
+      radial-gradient(ellipse 80% 55% at 50% 62%, rgba(60,40,110,0.55), transparent 65%),
+      radial-gradient(circle at 22% 55%, rgba(40,80,220,0.22), transparent 38%),
+      radial-gradient(circle at 78% 55%, rgba(220,40,70,0.18), transparent 38%),
+      linear-gradient(180deg, #040610 0%, #080c1e 30%, #0e0a20 60%, #060410 100%);
     color: #f8efe2;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   .scene-glow {
-    position: absolute; inset: auto -10% -40% -10%; height: 70%;
-    background: radial-gradient(ellipse at center, rgba(234,190,92,0.16), transparent 66%);
+    position: absolute; left: 10%; right: 10%; top: 30%; height: 50%;
+    background: radial-gradient(ellipse at 50% 60%, rgba(180,140,255,0.14), transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ══ HD-2D ARENA ENVIRONMENT ══════════════════════════════════════ */
+  .battle-stage { position: relative; }
+
+  /* Full-stage backdrop for the 3D world feel */
+  .arena-bg {
+    position: absolute; inset: 0;
+    z-index: 0; pointer-events: none; overflow: hidden;
+  }
+
+  /* Bokeh: blurred light circles suggesting depth behind the scene */
+  .arena-bokeh {
+    position: absolute;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: transparent; top: 0; left: 0;
+    box-shadow:
+      /* Blue team side glow */
+      190px 280px 38px 10px rgba(80,160,255,0.22),
+      260px 240px 28px  6px rgba(120,180,255,0.18),
+      130px 320px 50px 12px rgba(60,120,220,0.16),
+      /* Crimson team side glow */
+      1050px 270px 42px 10px rgba(255,80,100,0.20),
+      990px  230px 30px  8px rgba(255,120,140,0.16),
+      1110px 330px 48px 14px rgba(220,50,80,0.18),
+      /* Neutral center horizon glow */
+      600px  360px 60px 20px rgba(200,170,255,0.14),
+      640px  290px 40px 10px rgba(220,200,255,0.10),
+      /* Scattered ambient bokeh */
+      380px 200px 24px  6px rgba(140,120,220,0.16),
+      820px 210px 28px  8px rgba(200,100,120,0.14),
+      500px 420px 36px 10px rgba(150,130,200,0.12),
+      720px 180px 20px  4px rgba(255,220,240,0.18),
+      310px 400px 32px  8px rgba(100,140,255,0.14),
+      900px 390px 34px 10px rgba(255,140,160,0.12);
+    filter: blur(2px);
+    opacity: 0.9;
+  }
+
+  /* Ground plane — faint stone floor pattern receding into the background */
+  .arena-floor {
+    position: absolute;
+    left: -5%; right: -5%; bottom: 0; height: 55%;
+    background:
+      linear-gradient(180deg,
+        transparent 0%,
+        rgba(20,16,40,0.55) 40%,
+        rgba(10,8,22,0.90) 100%
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        transparent 78px,
+        rgba(255,255,255,0.025) 78px,
+        rgba(255,255,255,0.025) 80px
+      );
+    border-top: 1px solid rgba(180,160,255,0.10);
     pointer-events: none;
   }
 
@@ -418,8 +482,36 @@ const css = `
     width: 70px; height: 130px;
     image-rendering: pixelated;
     animation: idleSword 0.9s steps(2) infinite;
+    /* Pixel-art flat 2D outline — drop-shadow in 4 directions */
+    filter:
+      drop-shadow( 1px  0   0  rgba(0,0,0,0.95))
+      drop-shadow(-1px  0   0  rgba(0,0,0,0.95))
+      drop-shadow( 0    1px 0  rgba(0,0,0,0.95))
+      drop-shadow( 0   -1px 0  rgba(0,0,0,0.95));
     /* sprite overflows the tile container upward — this is intentional */
   }
+
+  /* ── HD-2D: Depth-of-field ──
+     Back rows (y=2,3) are progressively softened, front row sharp.
+     The far back row also dims slightly, as if in shadow/depth. */
+  .unit[data-row="2"] .sprite {
+    filter:
+      drop-shadow( 1px  0   0  rgba(0,0,0,0.95))
+      drop-shadow(-1px  0   0  rgba(0,0,0,0.95))
+      drop-shadow( 0    1px 0  rgba(0,0,0,0.95))
+      drop-shadow( 0   -1px 0  rgba(0,0,0,0.95))
+      blur(0.5px);
+  }
+  .unit[data-row="2"] { filter: brightness(0.92); }
+  .unit[data-row="3"] .sprite {
+    filter:
+      drop-shadow( 1px  0   0  rgba(0,0,0,0.95))
+      drop-shadow(-1px  0   0  rgba(0,0,0,0.95))
+      drop-shadow( 0    1px 0  rgba(0,0,0,0.95))
+      drop-shadow( 0   -1px 0  rgba(0,0,0,0.95))
+      blur(1.2px);
+  }
+  .unit[data-row="3"] { filter: brightness(0.80) saturate(0.85); }
 
   /* ── Default idle overrides per class ── */
   .sprite.role-cleric,
