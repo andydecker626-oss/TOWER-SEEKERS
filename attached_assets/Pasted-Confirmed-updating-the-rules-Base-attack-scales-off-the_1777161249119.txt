@@ -1,0 +1,45 @@
+Confirmed, updating the rules:
+
+Base attack scales off the unit's primary attack stat (PhysAtk for melee types, SpAtk for ranged types), but at a fixed lower power so it's always softer than even the cheapest skill
+Action order: Move → Attack → Defend → Wait → Skill
+Still waiting on your Warlock notes — whenever you're ready, send them and we'll lock that unit in and move to Paladin.
+
+(When I say action order, I just mean how they're displayed, top down; they should be in the order I wrote them.)
+
+5 days ago
+
+Show less
+
+Confirming UI display order
+Understood — purely a display order thing, top to bottom in the action panel. Got it.
+
+Still holding for your Warlock notes!
+
+For warlocks, lower the special attack by 15, and increase the physical defense by 15.
+
+let's change the passive to something about AP.... like a disruptor. Any ideas? What are some options to where warlock can affect ap
+
+5 days ago
+
+Show less
+
+Choosing Warlock passive ability (8 seconds)
+Updated stats locked in:
+
+SpAtk: 70 (was 85)
+PhysDef: 40 (was 25)
+For an AP-disruptor passive, here are some directions:
+
+Option A — Spite: Whenever the Warlock is hit by any attack, the attacker loses 1 AP. Turns the Warlock into a painful target — enemies pay a toll for focusing it.
+
+Option B — Curse Toll: While an enemy is under any of the Warlock's debuffs, they lose 1 AP at the start of their turn. Rewards stacking debuffs with a persistent drain.
+
+Option C — Siphon: Each time the Warlock applies a debuff, the target loses 1 AP immediately. Front-loaded disruption — punishes the turn the debuff lands.
+
+Option D — Hex Toll: Debuffed enemies must spend 1 extra AP to use any skill. Doesn't drain their pool but makes skills more expensive — can push enemies into Wait turns.
+
+Option E — Arcane Leech: Whenever any enemy uses a skill (spends 2+ AP), Warlock gains 1 AP. Rewards playing against skill-heavy opponents passively.
+
+My lean is B or D — they reward the Warlock's debuff gameplan the most and create genuine pressure. Which direction speaks to you?
+
+Let's go with option A. And keep option D on retainer as an additional option. (Units will have multiple passives to pick from, but only 1 to be equipped at a time)

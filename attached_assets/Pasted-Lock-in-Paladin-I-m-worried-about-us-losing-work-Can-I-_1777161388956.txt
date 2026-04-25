@@ -1,0 +1,122 @@
+Lock in Paladin. I'm worried about us losing work... Can I have a doc that outlines all game rules, and our current refined classes?
+
+4 days ago
+
+Show less
+
+Planning document content generation (24 seconds)
+Paladin locked. I'm currently in a read-only mode so I can't write a file right now, but I'll get it saved to disk as soon as we're back in Build mode. For now, here's the full living document in the chat so nothing is lost:
+
+Game Design Reference
+Core Structure
+Each player brings 6 units to a match
+After seeing the opponent's full roster, each player secretly picks 4 to bring into the game
+Players then place their 4 units on their own 4×4 grid
+Two grids face each other; units cannot cross to the opponent's grid
+Action Menu (displayed top to bottom)
+Move — reposition within Move Distance, costs 1 AP flat
+Attack — use base attack, costs 1 AP, power 20 (scales off primary stat)
+Defend — damage mitigation that turn, 0 AP change (no gain, no loss)
+Wait — do nothing, gain +1 AP
+Skill — use one of 4 equipped skills, variable AP cost
+AP Economy
+All units start at 1 AP, cap 10, carries between turns
+Successful hit grants attacker +2 AP after resolution
+Move costs 1 AP flat (any distance within Move Distance)
+Attack costs 1 AP; Defend = 0 AP change; Wait = +1 AP
+Skills have individual AP costs (1–5)
+Turn Structure
+Both players simultaneously select actions for all their units
+Actions resolve in descending Speed order (highest Speed acts first)
+Ties broken by a stable secondary key
+Base Attacks
+Every unit has a base attack — always available, always 20 power, 1 AP
+Scales off the unit's primary attack stat (PhysAtk for melee, SpAtk for ranged)
+Weaker than any skill by design
+Base Attack Type is a unit stat with three options:
+Melee — reaches up to 4 tiles, blocked by units in direct line
+Ranged Direct — reaches up to 7 tiles, blocked by frontal defenders
+Ranged Volley — reaches up to 7 tiles, bypasses frontal defenders (lobs over)
+Skill Attack Styles
+Melee-Direct — up to 4 tiles, blocked by intervening units
+Melee-Piercing — up to 4 tiles, passes through units
+Ranged-Direct — up to 8 tiles, blocked by frontal defenders
+Ranged-Volleyed — up to 8 tiles, bypasses frontal defenders
+Ranged-Piercing — up to 8 tiles, passes through all units in a line
+Skill — custom AoE/range defined per move
+Blocking Rules
+A unit in a straight line (vertical or diagonal) between attacker and target blocks any Direct or standard Melee attack
+Piercing and Volleyed attacks are never blocked
+Units cannot deal damage to tiles adjacent to themselves — AoE always targets outward
+Damage Formula
+Damage = floor( ((22 × Power × AtkStat / DefStat) / 50 + 2) × rng )
+
+rng = random float in [0.85, 1.00]
+Physical moves: PhysAtk / PhysDef
+Special moves: SpAtk / SpDef
+Level fixed at 50 for all units
+Unit Structure
+Stats: HP, PhysAtk, SpAtk, PhysDef, SpDef, Speed, MoveDistance, Evasion, Base Attack Type
+Skill pool: 8 moves available, player equips 4
+Passive pool: 3 options, player equips 1
+Roster
+12 Classes
+Warlock · Paladin · Knight · Cleric · Mage · Rogue · Archer · Berserker · Lancer · Wanderer · Shaman · Bard
+
+Unit 1 · Warlock ✓
+Stat	Value
+HP	65
+Phys Atk	15
+Spec Atk	70
+Phys Def	40
+Spec Def	60
+Speed	35
+Move Dist	2
+Evasion	15%
+Base Attack Type	Ranged Volley
+Passive pool (pick 1):
+
+Spite — Attacker loses 1 AP whenever they hit Warlock
+Hex Toll — Debuffed enemies spend +1 extra AP to use any skill
+Eldritch Blast — Warlock fires two base attacks in one Attack action, each at 75% damage
+Skill pool (pick 4):
+
+Move	Type	Power	AP	Style	Effect
+Drain Life	Special	55	3	Ranged-Direct	Heals Warlock 50% of damage dealt
+Curse	—	—	2	Ranged-Direct	Target takes +20% damage from all sources for 2 turns
+Wither	—	—	3	Ranged-Volleyed	AoE 2×2 — SpAtk −20% on all hit for 2 turns
+Soul Rend	Special	70	3	Ranged-Volleyed	+15 damage per active debuff on target
+Doom	—	—	3	Ranged-Direct	Target takes 20 damage/turn for 3 turns
+Necrotic Burst	Special	65	5	Ranged-Volleyed	AoE full row
+Spellblade	—	—	4	Self	Swaps SpAtk ↔ PhysAtk; base attacks become melee (ethereal blade); can base attack one additional time per turn — lasts 5 turns
+Soul Siphon	—	—	3	Ranged-Direct	Permanently drains 20 SpAtk from target, added to Warlock's SpAtk until defeated
+Unit 2 · Paladin ✓
+Stat	Value
+HP	100
+Phys Atk	60
+Spec Atk	40
+Phys Def	65
+Spec Def	50
+Speed	25
+Move Dist	2
+Evasion	8%
+Base Attack Type	Melee
+Passive pool (pick 1):
+
+Holy Presence — Adjacent allies take −15% damage from all sources
+Devotion — Gains +1 AP the first time each turn Paladin buffs or heals a teammate
+Sacred Vow — When any ally drops to 0 HP, Paladin gains +2 AP immediately
+Skill pool (pick 4):
+
+Move	Type	Power	AP	Style	Effect
+Holy Strike	Physical	55	1	Melee-Direct	Basic blessed swing
+Inspiring Strike	Physical	30	2	Melee-Direct	If landed, adjacent allies gain +50% evasion for 2 turns
+Shield Slam	Physical	50	2	Melee-Direct	Target PhysDef −20% for 2 turns
+Consecrating Slam	Special	45	4	Melee-Direct	AoE 2×2 on opponent's side within melee reach
+Smite	Physical	75	3	Melee-Direct	+30% damage vs debuffed targets
+Aegis	—	—	2	Single Ally	Target ally takes −40% damage until the end of the following turn
+Divine Aura	—	—	5	Self + AoE	Paladin and adjacent allies gain +25% evasion and +25% PhysAtk for 5 turns
+Blessed Ground	Healing	—	4	AoE	2×2 blessed field; allies inside heal 10 HP/turn for 3 turns
+Units 3–12 pending. Ready for Knight whenever you are.
+
+ready for knight

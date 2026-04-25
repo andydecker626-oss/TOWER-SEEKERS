@@ -1,0 +1,42 @@
+Added. Warlock passive pool is now 3 options:
+
+Spite — Attacker loses 1 AP whenever they hit Warlock
+Hex Toll — Debuffed enemies spend +1 extra AP to use any skill
+Eldritch Blast — Warlock fires two base attacks in one Attack action, each at 75% damage
+Warlock fully locked ✓ — on to Paladin.
+
+Unit 2 · Paladin
+Identity: Frontline melee fighter with a support backbone. Wears heavy armor, hits hard enough to be a threat, but also keeps allies standing through heals and auras. Not a pure tank but not a pure damage dealer — the glue unit.
+
+Type: Melee
+
+Stat	Value
+HP	100
+Phys Atk	60
+Spec Atk	40
+Phys Def	65
+Spec Def	50
+Speed	25
+Move Dist	2
+Evasion	8%
+Base Attack Type	Melee
+Passive pool (pick 1):
+
+Divine Aura — Adjacent allies take −15% damage from all sources
+Retribution — When Paladin uses Defend, deals 20 damage back to any unit that hits them that turn
+Sacred Vow — When any ally drops to 0 HP, Paladin gains +2 AP immediately
+Skill pool (pick 4):
+
+Move	Type	Power	AP	Style	Effect
+Holy Strike	Physical	55	1	Melee-Direct	Basic blessed swing
+Lay on Hands	Healing	—	2	Single Ally	Restores 35 HP to any ally
+Shield Slam	Physical	50	2	Melee-Direct	Reduces target PhysDef −20% for 2 turns
+Consecrate	Special	45	2	Melee-Direct	AoE 2×2 around Paladin; holy damage to all enemies in range
+Smite	Special	75	3	Ranged-Direct	Bonus +30% damage vs debuffed targets
+Aegis	—	—	2	Single Ally	Target ally takes −40% damage until their next turn
+Divine Judgment	Physical	90	4	Melee-Direct	Heavy single-target hit; heals Paladin for 20% of damage dealt
+Benediction	Healing	—	4	AoE	2×2 area — restores 20 HP to all allies hit
+What would you change?
+
+lets go back to the warlocks moves before we go onto paladin. Make drain life 55 power, but have it cost 3 ap. Wither needs to cost 3 ap. Necrotic Burst should cost 5 AP (it is doing large damage over a large and very beneficial AoE). Remove Dark Shroud. Add a move called Spellblade - swap Sp Attack and Physical Attack, basic attacks now turn to melees with an ethereal blade, and can now base attack one additional time. This one should cost 4. Then add a move where the warlock can sap an opponents special attack for itself.
+
