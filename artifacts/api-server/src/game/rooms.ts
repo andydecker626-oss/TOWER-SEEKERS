@@ -63,10 +63,11 @@ export function registerSocketHandlers(io: Server): void {
       const allIds = shuffleArray(ALL_UNITS.map((u) => u.id));
       const finalRosterB = allIds.filter((id) => !room.sideA.roster.includes(id)).slice(0, 6);
 
+      const normalizedCode = code.toUpperCase();
       room.sideB = { socketId: socket.id, roster: finalRosterB };
       room.phase = "preselection";
-      socketToRoom.set(socket.id, { code, side: "B" });
-      socket.join(code);
+      socketToRoom.set(socket.id, { code: normalizedCode, side: "B" });
+      socket.join(normalizedCode);
 
       const rosterADefs = getRosterDefs(room.sideA.roster);
       const rosterBDefs = getRosterDefs(finalRosterB);
