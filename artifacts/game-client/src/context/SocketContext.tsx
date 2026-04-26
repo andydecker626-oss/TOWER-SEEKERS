@@ -217,7 +217,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = io({
+    const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+    const socket = io(apiBase, {
       path: "/api/socket.io",
       autoConnect: true,
       reconnectionAttempts: 5,

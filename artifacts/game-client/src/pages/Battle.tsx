@@ -566,7 +566,12 @@ function UnitToken({
             }}
           />
         </div>
-        <div className="b-nameplate-stats">{unit.hp}/{unit.maxHp} · {unit.ap}AP</div>
+        <div className="b-nameplate-stats">{unit.hp}/{unit.maxHp}</div>
+        <div className="b-nameplate-ap">
+          {Array.from({ length: AP_MAX }).map((_, i) => (
+            <div key={i} className={`b-np-pip${i < unit.ap ? " filled" : " empty"}`} />
+          ))}
+        </div>
       </div>
 
       {/* Floating texts */}
@@ -686,7 +691,7 @@ function battleCSS() {
 
     .b-battlefield {
       position: relative;
-      transform: rotateX(18deg);
+      transform: rotateX(22deg);
       transform-style: preserve-3d;
     }
 
@@ -767,6 +772,14 @@ function battleCSS() {
     .b-nameplate-stats {
       font-size: 0.48rem; color: rgba(200,180,100,0.55);
     }
+    .b-nameplate-ap {
+      display: flex; gap: 1px; justify-content: center; margin-top: 2px;
+    }
+    .b-np-pip {
+      width: 4px; height: 4px; border-radius: 50%;
+    }
+    .b-np-pip.filled { background: #60aaff; box-shadow: 0 0 3px rgba(96,170,255,0.7); }
+    .b-np-pip.empty  { background: rgba(96,170,255,0.18); }
 
     .b-float-text {
       position: absolute;
