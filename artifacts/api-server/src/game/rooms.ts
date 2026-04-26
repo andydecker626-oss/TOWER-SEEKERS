@@ -96,12 +96,13 @@ export function registerSocketHandlers(io: Server): void {
       const sideState = info.side === "A" ? room.sideA : room.sideB;
       if (!sideState) return;
 
-      const validPicks = picks.filter((id) => sideState.roster.includes(id)).slice(0, 4);
-      if (validPicks.length !== 4) {
-        socket.emit("error", { message: "Must pick exactly 4 units from your roster" });
+      // Enforce exactly 4 distinct picks from own roster
+      const uniquePicks = [...new Set(picks.filter((id) => sideState.roster.includes(id)))].slice(0, 4);
+      if (uniquePicks.length !== 4) {
+        socket.emit("error", { message: "Must pick exactly 4 distinct units from your roster" });
         return;
       }
-      sideState.picks = validPicks;
+      sideState.picks = uniquePicks;
 
       const otherSideState = info.side === "A" ? room.sideB : room.sideA;
       if (otherSideState && otherSideState.picks) {
@@ -141,6 +142,11 @@ export function registerSocketHandlers(io: Server): void {
         const invalidUnit = placement.find((p) => !picks.includes(p.unitId));
         if (invalidUnit) {
           socket.emit("error", { message: `Unit ${invalidUnit.unitId} was not in your picks` });
+          return;
+        }
+        const unitIdSet = new Set(placement.map((p) => p.unitId));
+        if (unitIdSet.size !== placement.length) {
+          socket.emit("error", { message: "Duplicate unit in placement" });
           return;
         }
         const posSet = new Set(placement.map((p) => `${p.x},${p.y}`));
@@ -195,6 +201,26 @@ export function registerSocketHandlers(io: Server): void {
 
       const sideState = info.side === "A" ? room.sideA : room.sideB;
       if (!sideState) return;
+
+      // Validate: actions must be for alive owned units only, no duplicates, exact count
+      const ownedAliveIds = room.battleState
+        .filter((u) => u.side === info.side && u.alive)
+        .map((u) => u.instanceId);
+      const actionUnitIds = actions.map((a) => a.unitInstanceId);
+      const foreignAction = actionUnitIds.find((id) => !ownedAliveIds.includes(id));
+      if (foreignAction) {
+        socket.emit("error", { message: `Unit ${foreignAction} is not your alive unit` });
+        return;
+      }
+      const uniqueActingIds = new Set(actionUnitIds);
+      if (uniqueActingIds.size !== actionUnitIds.length) {
+        socket.emit("error", { message: "Duplicate actions for the same unit" });
+        return;
+      }
+      if (actions.length !== ownedAliveIds.length) {
+        socket.emit("error", { message: `Must submit exactly ${ownedAliveIds.length} actions (one per alive unit)` });
+        return;
+      }
       sideState.actions = actions;
 
       const otherSide = info.side === "A" ? room.sideB : room.sideA;
