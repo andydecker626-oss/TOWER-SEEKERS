@@ -301,7 +301,7 @@ export function resolveTurn(
 export function checkWinner(state: GridUnit[]): Side | null {
   const aliveA = state.some((u) => u.side === "A" && u.alive);
   const aliveB = state.some((u) => u.side === "B" && u.alive);
-  if (!aliveA && !aliveB) return "A";
+  if (!aliveA && !aliveB) return Math.random() < 0.5 ? "A" : "B";
   if (!aliveA) return "B";
   if (!aliveB) return "A";
   return null;
