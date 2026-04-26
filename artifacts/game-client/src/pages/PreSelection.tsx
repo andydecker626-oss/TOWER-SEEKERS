@@ -55,6 +55,7 @@ export default function PreSelection() {
   const myRoster = state.myRoster;
   const enemyRoster = state.enemyRoster;
   const waiting = state.isWaitingForOpponent;
+  const opponentLocked = state.opponentPicksLocked;
 
   function togglePick(id: string) {
     if (waiting) return;
@@ -332,7 +333,14 @@ export default function PreSelection() {
         <div className="panel-divider" />
 
         <div className="presel-panel">
-          <div className="panel-label opp">Opponent's Roster</div>
+          <div className="panel-label opp" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            Opponent's Roster
+            {opponentLocked && (
+              <span style={{ fontSize: "0.6rem", background: "#c04040", color: "#fff", borderRadius: 3, padding: "1px 6px", fontFamily: "Cinzel, serif", letterSpacing: "0.05em", verticalAlign: "middle" }}>
+                LOCKED IN
+              </span>
+            )}
+          </div>
           <div className="unit-grid">
             {enemyRoster.length > 0
               ? enemyRoster.map((unit) => (

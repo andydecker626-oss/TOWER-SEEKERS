@@ -577,6 +577,7 @@ function UnitToken({
         zIndex: isSelected ? 20 : unit.y + 5,
         cursor: isAlly && !isKo ? "pointer" : "default",
         transition: "left 0.45s ease, top 0.45s ease",
+        filter: unit.y === 0 ? "blur(0.6px) brightness(0.78)" : unit.y === 1 ? "blur(0.25px) brightness(0.9)" : "none",
       }}
       onClick={onClick}
     >

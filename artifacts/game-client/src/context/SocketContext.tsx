@@ -32,12 +32,14 @@ interface GameState {
   pendingEvents: TurnEvent[] | null;
   /** Set when server signals game-over; Battle stays mounted to play final animations */
   pendingGameOver: Side | null;
+  opponentPicksLocked: boolean;
   errorMsg: string | null;
 }
 
 const initial: GameState = {
   phase: "lobby",
   pendingGameOver: null,
+  opponentPicksLocked: false,
   roomCode: null,
   mySide: null,
   myRoster: [],
@@ -125,7 +127,7 @@ function reducer(state: GameState, action: Action): GameState {
     case "PICKS_SUBMITTED":
       return { ...state, isWaitingForOpponent: true };
     case "OPPONENT_PICKS_LOCKED":
-      return state;
+      return { ...state, opponentPicksLocked: true };
     case "PICKS_READY":
       return {
         ...state,
@@ -133,6 +135,7 @@ function reducer(state: GameState, action: Action): GameState {
         myPicks: action.myPicks,
         enemyPicks: action.enemyPicks,
         isWaitingForOpponent: false,
+        opponentPicksLocked: false,
       };
     case "PLACEMENT_SUBMITTED":
       return { ...state, isWaitingForOpponent: true };
