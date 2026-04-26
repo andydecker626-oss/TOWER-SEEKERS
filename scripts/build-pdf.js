@@ -12,7 +12,15 @@ const CHROMIUM_PATH = '/nix/store/qa9cnw4v5xkxyip6mb9kxqfq1z4x2dx1-chromium-138.
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true });
 
 const source = readFileSync(resolve(ROOT, '.local/game-design.md'), 'utf8');
-const body = md.render(source);
+const rawBody = md.render(source);
+
+// Inject a page-break marker before every h2 except the very first,
+// so each major section starts on a fresh page.
+let firstH2 = true;
+const body = rawBody.replace(/<h2/g, () => {
+  if (firstH2) { firstH2 = false; return '<h2'; }
+  return '<div class="section-break"></div><h2';
+});
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Source+Code+Pro:wght@400;500&display=swap');
@@ -73,27 +81,37 @@ const CSS = `
   }
   .cover h1 {
     font-family: 'Cinzel', 'Trajan Pro', serif;
-    font-size: 62pt;
+    font-size: 88pt;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--gold);
-    text-shadow: 0 0 40px #c9a84c55, 0 4px 20px #00000088;
-    margin-bottom: 6px;
-    line-height: 1.05;
+    letter-spacing: 0.1em;
+    color: transparent;
+    background: linear-gradient(135deg, #e8c96a 0%, #c9a84c 40%, #f5e09a 65%, #b8922a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 6px 24px #c9a84c44);
+    margin-bottom: 0;
+    line-height: 0.95;
+    text-transform: uppercase;
   }
   .cover-subtitle {
     font-family: 'Cinzel', serif;
-    font-size: 14pt;
-    letter-spacing: 0.2em;
+    font-size: 15pt;
+    letter-spacing: 0.28em;
     color: #8ab4c4;
-    margin-bottom: 40px;
+    margin-bottom: 44px;
+    margin-top: 14px;
     text-transform: uppercase;
+    border-top: 1px solid #8ab4c433;
+    border-bottom: 1px solid #8ab4c433;
+    padding: 8px 0;
+    display: inline-block;
   }
   .cover-rule {
-    width: 80px;
+    width: 100px;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    margin: 0 0 32px;
+    margin: 0 0 36px;
   }
   .cover blockquote {
     font-style: italic;
@@ -239,12 +257,19 @@ const CSS = `
   .toc-section a  { color: var(--teal); }
 
   /* ── Page breaks ─────────────────────────────────── */
-  h2 { page-break-before: auto; }
+  .section-break    { page-break-after: always; break-after: page; height: 0; }
+  h3, h4            { page-break-after: avoid; break-after: avoid; }
+  h3 + table,
+  h4 + table,
+  h3 + ul,
+  h4 + ul           { page-break-before: avoid; break-before: avoid; }
+  p, li             { orphans: 3; widows: 3; }
 
   @media print {
     body  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     thead { display: table-header-group; }
-    tr    { page-break-inside: avoid; }
+    tr    { page-break-inside: avoid; break-inside: avoid; }
+    table { page-break-inside: auto; }
   }
 `;
 
@@ -263,8 +288,8 @@ const fullHtml = `<!DOCTYPE html>
 <body>
 <div class="cover">
   <p class="cover-eyebrow">Competitive Turn-Based Battler</p>
-  <h1>Tower<br>Seekers</h1>
-  <p class="cover-subtitle">Game Bible</p>
+  <h1>TOWER<br>SEEKERS</h1>
+  <p class="cover-subtitle">Game&nbsp;&nbsp;Bible</p>
   <div class="cover-rule"></div>
   <blockquote>"Deep unit mastery. Pure counterplay.<br>The JRPG reimagined for competitive play."</blockquote>
 </div>
@@ -289,6 +314,34 @@ const browser = await puppeteer.launch({
 
 const page = await browser.newPage();
 await page.setContent(fullHtml, { waitUntil: 'domcontentloaded' });
+
+// Group all content into per-section divs and set page-break-after on each.
+// Chromium reliably breaks between block-level containers with explicit inline styles.
+await page.evaluate(() => {
+  const content = document.querySelector('.content');
+  const children = Array.from(content.children); // element nodes only
+
+  // Build groups: every H2 starts a new group; preamble goes in group 0
+  const groups = [[]];
+  children.forEach(child => {
+    if (child.tagName === 'H2') groups.push([]);
+    groups[groups.length - 1].push(child.cloneNode(true));
+  });
+
+  // Re-render as wrapped section divs
+  content.innerHTML = '';
+  groups.forEach((group, i) => {
+    if (!group.length) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'section-page';
+    // Every group except the last gets a hard page break after it
+    if (i < groups.length - 1) {
+      wrapper.style.cssText = 'display:block;page-break-after:always;break-after:page;';
+    }
+    group.forEach(el => wrapper.appendChild(el));
+    content.appendChild(wrapper);
+  });
+});
 
 const outPath = resolve(ROOT, '.local/game-bible.pdf');
 await page.pdf({
