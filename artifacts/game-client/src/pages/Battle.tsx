@@ -60,6 +60,11 @@ export default function Battle() {
   const pendingGameOverRef = useRef(state.pendingGameOver);
   useEffect(() => { pendingGameOverRef.current = state.pendingGameOver; }, [state.pendingGameOver]);
 
+  // Unmount: cancel all queued animation timers to prevent stale state updates
+  useEffect(() => {
+    return () => { animTimers.current.forEach(clearTimeout); };
+  }, []);
+
   const aliveMyUnits = myUnits.filter((u) => u.alive);
   const aliveEnemies = enemyUnits.filter((u) => u.alive);
   const allQueued = aliveMyUnits.every((u) => queued[u.instanceId]);
@@ -83,7 +88,10 @@ export default function Battle() {
     if (events.length === 0) {
       setMyUnits(finalMy);
       setEnemyUnits(finalEnemy);
-      if (pendingGameOverRef.current) setTimeout(() => confirmGameOver(), 400);
+      if (pendingGameOverRef.current) {
+        const goTimer = setTimeout(() => confirmGameOver(), 400);
+        animTimers.current.push(goTimer);
+      }
       return;
     }
     setAnimating(true);
@@ -95,14 +103,17 @@ export default function Battle() {
       const t = setTimeout(() => {
         applyEventAnimation(ev);
         if (i === events.length - 1) {
-          setTimeout(() => {
+          const finishTimer = setTimeout(() => {
             setMyUnits(finalMy);
             setEnemyUnits(finalEnemy);
             setFlashUnits({});
             setAnimating(false);
-            // After final turn animations resolve, transition to GameOver screen
-            if (pendingGameOverRef.current) setTimeout(() => confirmGameOver(), 800);
+            if (pendingGameOverRef.current) {
+              const goTimer = setTimeout(() => confirmGameOver(), 800);
+              animTimers.current.push(goTimer);
+            }
           }, DELAY);
+          animTimers.current.push(finishTimer);
         }
       }, i * DELAY);
       animTimers.current.push(t);
