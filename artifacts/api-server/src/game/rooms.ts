@@ -334,6 +334,7 @@ export function registerSocketHandlers(io: Server): void {
               rooms.delete(info.code);
             } else {
               io.to(info.code).emit("opponentDisconnected", {});
+              rooms.delete(info.code);
             }
           }
         }, 8000);
