@@ -297,7 +297,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socket.on("opponentDisconnected", () =>
       dispatch({ type: "OPPONENT_DISCONNECTED" })
     );
-    socket.on("error", ({ message }: { message: string }) => {
+    socket.on("gameError", ({ message }: { message: string }) => {
       dispatch({ type: "ERROR", message });
     });
 

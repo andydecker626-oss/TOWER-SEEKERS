@@ -1,6 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SocketProvider, useSocket } from "@/context/SocketContext";
+import type { Phase } from "@/lib/types";
 import Lobby from "@/pages/Lobby";
 import PreSelection from "@/pages/PreSelection";
 import Placement from "@/pages/Placement";
@@ -9,16 +11,24 @@ import GameOver from "@/pages/GameOver";
 
 const queryClient = new QueryClient();
 
-function GameRouter() {
-  const { state } = useSocket();
-  const phase = state.phase;
+const PHASE_ROUTES: Record<Phase, string> = {
+  lobby: "/lobby",
+  waiting: "/lobby",
+  preselection: "/preselect",
+  placement: "/place",
+  battle: "/battle",
+  gameover: "/gameover",
+};
 
-  if (phase === "lobby" || phase === "waiting") return <Lobby />;
-  if (phase === "preselection") return <PreSelection />;
-  if (phase === "placement") return <Placement />;
-  if (phase === "battle") return <Battle />;
-  if (phase === "gameover") return <GameOver />;
-  return <Lobby />;
+function PhaseNavigator() {
+  const { state } = useSocket();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    navigate(PHASE_ROUTES[state.phase] ?? "/lobby", { replace: true });
+  }, [state.phase]);
+
+  return null;
 }
 
 function App() {
@@ -27,9 +37,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={base}>
         <SocketProvider>
+          <PhaseNavigator />
           <Routes>
-            <Route path="/" element={<GameRouter />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/lobby" element={<Lobby />} />
+            <Route path="/preselect" element={<PreSelection />} />
+            <Route path="/place" element={<Placement />} />
+            <Route path="/battle" element={<Battle />} />
+            <Route path="/gameover" element={<GameOver />} />
+            <Route path="*" element={<Navigate to="/lobby" replace />} />
           </Routes>
         </SocketProvider>
       </BrowserRouter>

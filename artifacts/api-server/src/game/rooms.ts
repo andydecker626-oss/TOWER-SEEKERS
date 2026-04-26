@@ -48,15 +48,15 @@ export function registerSocketHandlers(io: Server): void {
     socket.on("joinRoom", ({ code }: { code: string }) => {
       const room = rooms.get(code.toUpperCase());
       if (!room) {
-        socket.emit("error", { message: "Room not found" });
+        socket.emit("gameError", { message: "Room not found" });
         return;
       }
       if (room.sideB) {
-        socket.emit("error", { message: "Room is full" });
+        socket.emit("gameError", { message: "Room is full" });
         return;
       }
       if (room.phase !== "waiting") {
-        socket.emit("error", { message: "Game already started" });
+        socket.emit("gameError", { message: "Game already started" });
         return;
       }
 
@@ -100,7 +100,7 @@ export function registerSocketHandlers(io: Server): void {
       // Enforce exactly 4 distinct picks from own roster
       const uniquePicks = [...new Set(picks.filter((id) => sideState.roster.includes(id)))].slice(0, 4);
       if (uniquePicks.length !== 4) {
-        socket.emit("error", { message: "Must pick exactly 4 distinct units from your roster" });
+        socket.emit("gameError", { message: "Must pick exactly 4 distinct units from your roster" });
         return;
       }
       sideState.picks = uniquePicks;
@@ -137,27 +137,27 @@ export function registerSocketHandlers(io: Server): void {
 
         const picks = sideState.picks ?? [];
         if (placement.length !== 4) {
-          socket.emit("error", { message: "Must place exactly 4 units" });
+          socket.emit("gameError", { message: "Must place exactly 4 units" });
           return;
         }
         const invalidUnit = placement.find((p) => !picks.includes(p.unitId));
         if (invalidUnit) {
-          socket.emit("error", { message: `Unit ${invalidUnit.unitId} was not in your picks` });
+          socket.emit("gameError", { message: `Unit ${invalidUnit.unitId} was not in your picks` });
           return;
         }
         const unitIdSet = new Set(placement.map((p) => p.unitId));
         if (unitIdSet.size !== placement.length) {
-          socket.emit("error", { message: "Duplicate unit in placement" });
+          socket.emit("gameError", { message: "Duplicate unit in placement" });
           return;
         }
         const posSet = new Set(placement.map((p) => `${p.x},${p.y}`));
         if (posSet.size !== 4) {
-          socket.emit("error", { message: "Duplicate placement positions" });
+          socket.emit("gameError", { message: "Duplicate placement positions" });
           return;
         }
         const outOfBounds = placement.find((p) => p.x < 0 || p.x > 3 || p.y < 0 || p.y > 3);
         if (outOfBounds) {
-          socket.emit("error", { message: `Placement position out of bounds` });
+          socket.emit("gameError", { message: `Placement position out of bounds` });
           return;
         }
 
@@ -210,16 +210,16 @@ export function registerSocketHandlers(io: Server): void {
       const actionUnitIds = actions.map((a) => a.unitInstanceId);
       const foreignAction = actionUnitIds.find((id) => !ownedAliveIds.includes(id));
       if (foreignAction) {
-        socket.emit("error", { message: `Unit ${foreignAction} is not your alive unit` });
+        socket.emit("gameError", { message: `Unit ${foreignAction} is not your alive unit` });
         return;
       }
       const uniqueActingIds = new Set(actionUnitIds);
       if (uniqueActingIds.size !== actionUnitIds.length) {
-        socket.emit("error", { message: "Duplicate actions for the same unit" });
+        socket.emit("gameError", { message: "Duplicate actions for the same unit" });
         return;
       }
       if (actions.length !== ownedAliveIds.length) {
-        socket.emit("error", { message: `Must submit exactly ${ownedAliveIds.length} actions (one per alive unit)` });
+        socket.emit("gameError", { message: `Must submit exactly ${ownedAliveIds.length} actions (one per alive unit)` });
         return;
       }
       sideState.actions = actions;
