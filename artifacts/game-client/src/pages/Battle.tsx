@@ -5,6 +5,18 @@ import type { GridUnit, PlayerAction, TurnEvent, SkillDef } from "@/lib/types";
 
 type SelectMode = "none" | "move" | "attack" | "skill";
 
+const AP_MAX = 10;
+
+function crossGridDist(allyX: number, allyY: number, enemyX: number, enemyY: number): number {
+  return (4 + enemyX - allyX) + Math.abs(allyY - enemyY);
+}
+
+function getAttackRange(style: string): number {
+  if (style === "melee") return 4;
+  if (style === "ranged-volley") return 6;
+  return 8;
+}
+
 interface QueuedAction {
   unitInstanceId: string;
   type: "move" | "attack" | "skill" | "wait" | "defend";
@@ -189,8 +201,19 @@ export default function Battle() {
 
   function handleAttack() {
     if (!selectedId) return;
+    const unit = myUnits.find((u) => u.instanceId === selectedId);
+    if (!unit) return;
+    const def = getUnitDef(unit.defId);
+    if (!def) return;
+    const range = getAttackRange(def.baseAttackStyle);
+    const validTargets = aliveEnemies.filter((e) => {
+      const dist = state.mySide === "A"
+        ? crossGridDist(unit.x, unit.y, e.x, e.y)
+        : crossGridDist(e.x, e.y, unit.x, unit.y);
+      return dist <= range;
+    });
     setSelectMode("attack");
-    setHighlights(aliveEnemies.map((e) => ({ x: e.x, y: e.y, onEnemy: true })));
+    setHighlights(validTargets.map((e) => ({ x: e.x, y: e.y, onEnemy: true })));
     setSkillMenuOpen(null);
   }
 
@@ -274,9 +297,14 @@ export default function Battle() {
 
   const STEP = 78;
   const TILE = 70;
-  const GAP = 8;
   const ENEMY_OFFSET = 4 * STEP + 36;
   const BOARD_H = 4 * STEP;
+
+  const turnOrder = [...aliveMyUnits, ...aliveEnemies].sort((a, b) => {
+    const spA = getUnitDef(a.defId)?.speed ?? 0;
+    const spB = getUnitDef(b.defId)?.speed ?? 0;
+    return spB - spA;
+  });
 
   return (
     <div className="battle-root">
@@ -293,6 +321,24 @@ export default function Battle() {
         <div className="b-side-label b-side-opp">OPP</div>
       </div>
 
+      {/* Turn-order strip */}
+      <div className="b-order-strip">
+        <div className="b-order-label">Speed Order</div>
+        <div className="b-order-units">
+          {turnOrder.map((u, i) => {
+            const def = getUnitDef(u.defId);
+            const isAlly = u.side === state.mySide;
+            return (
+              <div key={u.instanceId} className={`b-order-chip${isAlly ? " b-order-ally" : " b-order-enemy"}`} title={def?.name}>
+                <span className="b-order-num">{i + 1}</span>
+                <span className="b-order-name">{def?.name.slice(0, 4)}</span>
+                <span className="b-order-spd">{def?.speed}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Battlefield stage */}
       <div className="b-stage">
         <div className="b-arena-bg">
@@ -307,9 +353,13 @@ export default function Battle() {
                 return (
                   <div
                     key={`at-${col}-${row}`}
+                    role={hl ? "button" : undefined}
+                    aria-label={`Ally grid column ${col + 1} row ${row + 1}`}
+                    tabIndex={hl ? 0 : -1}
                     className={`b-tile${hl ? " b-tile-hl" : ""}`}
                     style={{ left: col * STEP, top: row * STEP, width: TILE, height: TILE }}
                     onClick={() => hl && handleTileClick(col, row, false)}
+                    onKeyDown={(e) => e.key === "Enter" && hl && handleTileClick(col, row, false)}
                   />
                 );
               })
@@ -321,9 +371,13 @@ export default function Battle() {
                 return (
                   <div
                     key={`et-${col}-${row}`}
+                    role={hl ? "button" : undefined}
+                    aria-label={`Enemy grid column ${col + 1} row ${row + 1}`}
+                    tabIndex={hl ? 0 : -1}
                     className={`b-tile b-tile-enemy${hl ? " b-tile-hl" : ""}`}
-                    style={{ left: ENEMY_OFFSET + col * STEP, top: row * STEP, width: TILE, height: TILE }}
+                    style={{ left: ENEMY_OFFSET + col * STEP, top: row * STEP, width: TILE, height: TILE, zIndex: hl ? 25 : undefined }}
                     onClick={() => hl && handleTileClick(col, row, true)}
+                    onKeyDown={(e) => e.key === "Enter" && hl && handleTileClick(col, row, true)}
                   />
                 );
               })
@@ -386,12 +440,14 @@ export default function Battle() {
                 return (
                   <div
                     key={unit.instanceId}
+                    role="button"
+                    aria-label={`Unit card ${def.name}`}
                     className={`b-unit-card${isSelected ? " b-unit-card-sel" : ""}${qAction ? " b-unit-card-queued" : ""}`}
                     onClick={() => handleSelectUnit(unit.instanceId)}
                   >
                     <div className="b-uc-sprite">
                       <div className={`sprite sprite--${def.cls} sprite-ally sprite-idle`} />
-                      {qAction && <div className="b-action-badge">{actionLabel(qAction)}</div>}
+                      {qAction && <div className="b-action-badge" aria-hidden="true">{actionLabel(qAction)}</div>}
                     </div>
                     <div className="b-uc-name">{def.name}</div>
                     <div className="b-uc-bars">
@@ -400,20 +456,20 @@ export default function Battle() {
                       </div>
                       <div className="b-hp-text">{unit.hp}/{unit.maxHp}</div>
                     </div>
-                    <div className="b-ap-row">
-                      {Array.from({ length: Math.min(unit.ap, 10) }).map((_, i) => (
-                        <div key={i} className="b-ap-pip" />
+                    <div className="b-ap-row" aria-label={`${unit.ap} AP`}>
+                      {Array.from({ length: AP_MAX }).map((_, i) => (
+                        <div key={i} className={`b-ap-pip${i < unit.ap ? " filled" : " empty"}`} />
                       ))}
-                      <span className="b-ap-label">{unit.ap} AP</span>
                     </div>
 
                     {isSelected && (
                       <div className="b-action-menu" onClick={(e) => e.stopPropagation()}>
-                        <button className={`b-act-btn${selectMode === "move" ? " active" : ""}`} onClick={handleMove}>Move</button>
-                        <button className={`b-act-btn${selectMode === "attack" ? " active" : ""}`} onClick={handleAttack}>Attack</button>
+                        <button className={`b-act-btn${selectMode === "move" ? " active" : ""}`} aria-label={`Move ${def.name}`} onClick={handleMove}>Move</button>
+                        <button className={`b-act-btn${selectMode === "attack" ? " active" : ""}`} aria-label={`Attack ${def.name}`} onClick={handleAttack}>Attack</button>
                         <div className="b-skill-wrap">
                           <button
                             className={`b-act-btn${selectMode === "skill" ? " active" : ""}`}
+                            aria-label={`Skill ${def.name}`}
                             onClick={() => setSkillMenuOpen(skillMenuOpen === unit.instanceId ? null : unit.instanceId)}
                           >
                             Skill ▾
@@ -434,8 +490,8 @@ export default function Battle() {
                             </div>
                           )}
                         </div>
-                        <button className="b-act-btn" onClick={handleWait}>Wait</button>
-                        <button className="b-act-btn" onClick={handleDefend}>Defend</button>
+                        <button className="b-act-btn" aria-label={`Wait ${def.name}`} onClick={handleWait}>Wait</button>
+                        <button className="b-act-btn" aria-label={`Defend ${def.name}`} onClick={handleDefend}>Defend</button>
                       </div>
                     )}
                   </div>
@@ -449,6 +505,7 @@ export default function Battle() {
               </div>
               <button
                 className="b-submit-btn"
+                aria-label="End Turn"
                 disabled={!allQueued}
                 onClick={handleSubmit}
               >
@@ -789,8 +846,38 @@ function battleCSS() {
     .b-hp-fill { height: 100%; background: #40c060; border-radius: 2px; transition: width 0.4s; }
     .b-hp-text { font-size: 0.58rem; color: rgba(200,180,100,0.5); text-align: center; margin-top: 1px; }
     .b-ap-row { display: flex; align-items: center; gap: 2px; margin-top: 0.25rem; flex-wrap: wrap; }
-    .b-ap-pip { width: 5px; height: 5px; background: #4080ff; border-radius: 1px; }
-    .b-ap-label { font-size: 0.55rem; color: rgba(100,160,255,0.7); margin-left: 2px; }
+    .b-ap-pip { width: 5px; height: 5px; border-radius: 1px; }
+    .b-ap-pip.filled { background: #4080ff; }
+    .b-ap-pip.empty { background: rgba(40,60,120,0.35); border: 1px solid rgba(64,128,255,0.18); }
+
+    /* Turn-order strip */
+    .b-order-strip {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 1rem;
+      background: rgba(4,3,12,0.9);
+      border-bottom: 1px solid rgba(240,192,64,0.1);
+      overflow-x: auto; flex-shrink: 0;
+    }
+    .b-order-strip::-webkit-scrollbar { height: 2px; }
+    .b-order-strip::-webkit-scrollbar-thumb { background: rgba(240,192,64,0.2); }
+    .b-order-label {
+      font-family: 'Cinzel', serif; font-size: 0.58rem;
+      color: rgba(200,170,100,0.4); letter-spacing: 0.15em;
+      text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+    }
+    .b-order-units { display: flex; gap: 4px; align-items: center; }
+    .b-order-chip {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 3px 6px; border-radius: 5px;
+      font-family: 'Cinzel', serif;
+      border: 1px solid; flex-shrink: 0;
+      min-width: 36px;
+    }
+    .b-order-ally { border-color: rgba(80,160,255,0.4); background: rgba(40,80,200,0.12); }
+    .b-order-enemy { border-color: rgba(200,60,60,0.35); background: rgba(160,30,30,0.1); }
+    .b-order-num { font-size: 0.45rem; color: rgba(200,170,100,0.45); line-height: 1; }
+    .b-order-name { font-size: 0.58rem; font-weight: 600; color: #e8d880; line-height: 1.2; }
+    .b-order-spd { font-size: 0.45rem; color: rgba(200,170,100,0.5); }
 
     .b-action-badge {
       position: absolute; top: -4px; right: -4px;

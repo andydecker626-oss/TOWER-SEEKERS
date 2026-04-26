@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSocket } from "@/context/SocketContext";
-import type { UnitDef } from "@/lib/types";
 
 interface PlacedUnit {
   unitId: string;
@@ -11,7 +10,7 @@ interface PlacedUnit {
 export default function Placement() {
   const { state, submitPlacement } = useSocket();
   const [placed, setPlaced] = useState<PlacedUnit[]>([]);
-  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const dragUnitId = useRef<string | null>(null);
 
   const picks = state.myPicks;
   const waiting = state.isWaitingForOpponent;
@@ -27,25 +26,18 @@ export default function Placement() {
     return placed.find((p) => p.unitId === unitId);
   }
 
-  function handleTileClick(x: number, y: number) {
-    if (waiting || !selectedUnit) return;
-    const occupant = getPlacedAt(x, y);
-    if (occupant) {
-      if (occupant.unitId === selectedUnit) {
-        setPlaced(placed.filter((p) => p.unitId !== selectedUnit));
-        return;
-      }
-      const newPlaced = placed
-        .filter((p) => p.unitId !== selectedUnit && !(p.x === x && p.y === y))
-        .concat([{ unitId: selectedUnit, x, y }]);
-      setPlaced(newPlaced);
-    } else {
-      setPlaced([
-        ...placed.filter((p) => p.unitId !== selectedUnit),
-        { unitId: selectedUnit, x, y },
-      ]);
-    }
-    setSelectedUnit(null);
+  function handleDrop(x: number, y: number) {
+    const unitId = dragUnitId.current;
+    if (!unitId || waiting) return;
+    dragUnitId.current = null;
+    setPlaced((prev) => {
+      const without = prev.filter((p) => p.unitId !== unitId && !(p.x === x && p.y === y));
+      return [...without, { unitId, x, y }];
+    });
+  }
+
+  function handleRemove(unitId: string) {
+    setPlaced((prev) => prev.filter((p) => p.unitId !== unitId));
   }
 
   function handleConfirm() {
@@ -115,23 +107,27 @@ export default function Placement() {
           border: 1px solid rgba(240,192,64,0.12);
           border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
           transition: all 0.15s;
           position: relative; overflow: hidden;
         }
-        .pl-tile:hover:not(.empty-disabled) {
-          border-color: rgba(240,192,64,0.5);
-          background: rgba(240,192,64,0.08);
+        .pl-tile.drag-over {
+          border-color: rgba(240,192,64,0.7);
+          background: rgba(240,192,64,0.14);
+          box-shadow: inset 0 0 14px rgba(240,192,64,0.15);
         }
-        .pl-tile.targeted {
-          border-color: rgba(240,192,64,0.8);
-          background: rgba(240,192,64,0.12);
-          box-shadow: inset 0 0 12px rgba(240,192,64,0.12);
+        .pl-tile.occupied {
+          border-color: rgba(80,200,120,0.35);
         }
-        .pl-tile.occupied-selected {
-          border-color: rgba(100,200,255,0.7);
-          background: rgba(100,200,255,0.1);
+        .pl-tile-remove {
+          position: absolute; top: 2px; right: 3px;
+          font-size: 0.55rem;
+          color: rgba(240,100,100,0.6);
+          cursor: pointer;
+          line-height: 1;
+          padding: 2px;
+          z-index: 2;
         }
+        .pl-tile-remove:hover { color: #f87171; }
 
         .tile-col-label {
           font-family: 'Cinzel', serif; font-size: 0.6rem;
@@ -143,7 +139,7 @@ export default function Placement() {
         }
 
         .pl-units {
-          display: flex; flex-direction: column; gap: 0.6rem;
+          display: flex; flex-direction: column; gap: 0.5rem;
           min-width: 160px;
         }
         .pl-units-label {
@@ -157,18 +153,21 @@ export default function Placement() {
           border: 1px solid rgba(240,192,64,0.15);
           border-radius: 8px;
           padding: 0.5rem 0.75rem;
-          cursor: pointer;
+          cursor: grab;
           transition: all 0.15s;
           width: 100%;
           text-align: left;
+          user-select: none;
         }
         .pl-unit-btn:hover { border-color: rgba(240,192,64,0.45); background: rgba(20,14,40,0.9); }
-        .pl-unit-btn.active {
-          border-color: #f0c040;
-          background: rgba(240,192,64,0.1);
-          box-shadow: 0 0 12px rgba(240,192,64,0.2);
+        .pl-unit-btn.placed { border-color: rgba(80,200,120,0.45); opacity: 0.65; cursor: grab; }
+        .pl-unit-btn:active { cursor: grabbing; }
+        .pl-drag-hint {
+          font-size: 0.62rem; color: rgba(200,170,100,0.35);
+          text-align: center; margin-top: 0.25rem;
+          font-family: 'Cinzel', serif;
+          font-style: italic;
         }
-        .pl-unit-btn.placed { border-color: rgba(80,200,120,0.45); }
         .pl-unit-name {
           font-family: 'Cinzel', serif; font-size: 0.8rem;
           font-weight: 600; color: #f0e0a0; flex: 1;
@@ -206,16 +205,6 @@ export default function Placement() {
         }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-        .grid-row-label {
-          position: absolute; left: -20px; top: 50%; transform: translateY(-50%);
-          font-size: 0.6rem; color: rgba(200,170,100,0.3);
-          font-family: 'Cinzel', serif;
-        }
-        .front-label {
-          font-family: 'Cinzel', serif; font-size: 0.62rem;
-          color: rgba(240,192,64,0.5); letter-spacing: 0.15em;
-          text-transform: uppercase;
-        }
         .back-label {
           font-family: 'Cinzel', serif; font-size: 0.62rem;
           color: rgba(200,170,100,0.3); letter-spacing: 0.15em;
@@ -231,7 +220,7 @@ export default function Placement() {
 
       <div className="pl-header">
         <h2 className="pl-title">Deploy Your Forces</h2>
-        <div className="pl-subtitle">Place your 4 units on the battlefield</div>
+        <div className="pl-subtitle">Drag units onto the battlefield grid</div>
       </div>
 
       <div className="pl-body">
@@ -257,22 +246,34 @@ export default function Placement() {
                 {Array.from({ length: ROWS }).map((_, r) =>
                   Array.from({ length: COLS }).map((_, c) => {
                     const p = getPlacedAt(c, r);
-                    const isTargeted = !p && !!selectedUnit;
-                    const isOccupiedSelected = p && p.unitId === selectedUnit;
                     const unit = p ? picks.find((u) => u.id === p.unitId) : null;
                     return (
                       <div
                         key={`${r}-${c}`}
                         role="button"
                         aria-label={`Grid tile column ${c + 1} row ${r + 1}${unit ? ` (${unit.name})` : ""}`}
-                        tabIndex={selectedUnit ? 0 : -1}
-                        className={`pl-tile${isTargeted ? " targeted" : ""}${isOccupiedSelected ? " occupied-selected" : ""}`}
-                        style={{ cursor: selectedUnit ? "pointer" : "default" }}
-                        onClick={() => handleTileClick(c, r)}
-                        onKeyDown={(e) => e.key === "Enter" && handleTileClick(c, r)}
+                        className={`pl-tile${p ? " occupied" : ""}`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.classList.add("drag-over");
+                        }}
+                        onDragLeave={(e) => {
+                          e.currentTarget.classList.remove("drag-over");
+                        }}
+                        onDrop={(e) => {
+                          e.currentTarget.classList.remove("drag-over");
+                          handleDrop(c, r);
+                        }}
                       >
                         {unit && (
-                          <div className={`sprite sprite--${unit.cls} sprite-ally sprite-idle`} />
+                          <>
+                            <div className={`sprite sprite--${unit.cls} sprite-ally sprite-idle`} />
+                            <button
+                              className="pl-tile-remove"
+                              onClick={(e) => { e.stopPropagation(); handleRemove(unit.id); }}
+                              title="Remove"
+                            >✕</button>
+                          </>
                         )}
                       </div>
                     );
@@ -288,24 +289,23 @@ export default function Placement() {
           <div className="pl-units-label">Your Units</div>
           {picks.map((unit) => {
             const p = getUnitPlacement(unit.id);
-            const isActive = selectedUnit === unit.id;
             return (
-              <button
+              <div
                 key={unit.id}
-                className={`pl-unit-btn${isActive ? " active" : ""}${p ? " placed" : ""}`}
-                onClick={() => setSelectedUnit(isActive ? null : unit.id)}
+                className={`pl-unit-btn${p ? " placed" : ""}`}
+                draggable
+                onDragStart={() => { dragUnitId.current = unit.id; }}
+                onDragEnd={() => { dragUnitId.current = null; }}
               >
                 <div className={`sprite sprite--${unit.cls} sprite-ally sprite-idle`} style={{ transform: "scale(0.6)", transformOrigin: "center" }} />
                 <div className="pl-unit-name">{unit.name}</div>
                 <div className={`pl-unit-status${p ? " placed-ok" : ""}`}>
-                  {p ? `(${p.x},${p.y}) ✓` : "—"}
+                  {p ? `✓` : "—"}
                 </div>
-              </button>
+              </div>
             );
           })}
-          <div style={{ fontSize: "0.7rem", color: "rgba(200,170,100,0.4)", textAlign: "center", marginTop: "0.5rem", fontFamily: "Cinzel, serif" }}>
-            Col 3 = front row
-          </div>
+          <div className="pl-drag-hint">Drag units to the grid</div>
         </div>
       </div>
 

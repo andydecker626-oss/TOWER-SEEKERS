@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useSocket } from "@/context/SocketContext";
 import type { UnitDef } from "@/lib/types";
 
-function StatBar({ val, max = 100 }: { val: number; max?: number }) {
-  const pct = Math.round((val / max) * 100);
+function StatBar({ val, max = 160 }: { val: number; max?: number }) {
+  const pct = Math.min(100, Math.round((val / max) * 100));
   return (
-    <div style={{ width: "100%", height: 4, background: "rgba(255,255,255,0.1)", borderRadius: 2 }}>
+    <div style={{ width: "100%", height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 2 }}>
       <div style={{ width: `${pct}%`, height: "100%", background: "#f0c040", borderRadius: 2 }} />
     </div>
   );
@@ -14,34 +14,33 @@ function StatBar({ val, max = 100 }: { val: number; max?: number }) {
 function UnitCard({
   unit,
   selected,
-  canSelect,
+  locked,
+  enemy,
   onClick,
 }: {
   unit: UnitDef;
-  selected: boolean;
-  canSelect: boolean;
-  onClick: () => void;
+  selected?: boolean;
+  locked?: boolean;
+  enemy?: boolean;
+  onClick?: () => void;
 }) {
-  const statMax = 160;
   return (
     <div
-      className={`unit-card${selected ? " selected" : ""}${!canSelect && !selected ? " disabled" : ""}`}
-      onClick={onClick}
-      style={{ cursor: canSelect || selected ? "pointer" : "not-allowed" }}
+      className={`unit-card${selected ? " selected" : ""}${locked ? " locked" : ""}${enemy ? " enemy-card" : ""}`}
+      onClick={locked ? undefined : onClick}
+      style={{ cursor: locked ? "default" : "pointer" }}
     >
       <div className="uc-sprite-wrap">
-        <div className={`sprite sprite--${unit.cls} sprite-ally sprite-idle`} />
+        <div className={`sprite sprite--${unit.cls} ${enemy ? "sprite-enemy" : "sprite-ally"} sprite-idle`} />
         {selected && <div className="uc-check">✓</div>}
       </div>
       <div className="uc-name">{unit.name}</div>
       <div className="uc-cls">{unit.cls.replace(/-/g, " ")}</div>
       <div className="uc-stats">
         <div className="uc-stat-row"><span>HP</span><span>{unit.baseHp}</span></div>
-        <StatBar val={unit.baseHp} max={statMax} />
+        <StatBar val={unit.baseHp} />
         <div className="uc-stat-row"><span>ATK</span><span>{Math.max(unit.physAtk, unit.magAtk)}</span></div>
-        <StatBar val={Math.max(unit.physAtk, unit.magAtk)} max={statMax} />
-        <div className="uc-stat-row"><span>DEF</span><span>{Math.max(unit.physDef, unit.magDef)}</span></div>
-        <StatBar val={Math.max(unit.physDef, unit.magDef)} max={statMax} />
+        <StatBar val={Math.max(unit.physAtk, unit.magAtk)} />
         <div className="uc-stat-row"><span>SPD</span><span>{unit.speed}</span></div>
         <StatBar val={unit.speed} max={100} />
       </div>
@@ -53,7 +52,8 @@ export default function PreSelection() {
   const { state, submitPicks } = useSocket();
   const [picks, setPicks] = useState<string[]>([]);
 
-  const roster = state.myRoster;
+  const myRoster = state.myRoster;
+  const enemyRoster = state.enemyRoster;
   const waiting = state.isWaitingForOpponent;
 
   function togglePick(id: string) {
@@ -77,7 +77,7 @@ export default function PreSelection() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 2rem 1rem 6rem;
+          padding: 1.5rem 1rem 7rem;
           position: relative;
           overflow-x: hidden;
         }
@@ -88,13 +88,13 @@ export default function PreSelection() {
 
         .presel-header {
           text-align: center;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
           position: relative;
           z-index: 1;
         }
         .presel-title {
           font-family: 'Cinzel Decorative', serif;
-          font-size: 1.8rem;
+          font-size: 1.6rem;
           font-weight: 700;
           color: #f0c040;
           text-shadow: 0 0 20px rgba(240,192,64,0.4);
@@ -102,35 +102,79 @@ export default function PreSelection() {
         }
         .presel-subtitle {
           font-family: 'Cinzel', serif;
-          font-size: 0.8rem;
+          font-size: 0.78rem;
           color: rgba(200,170,100,0.6);
-          letter-spacing: 0.25em;
+          letter-spacing: 0.22em;
           text-transform: uppercase;
           margin-top: 0.3rem;
         }
 
         .presel-counter {
           font-family: 'Cinzel', serif;
-          font-size: 1.1rem;
+          font-size: 1rem;
           font-weight: 700;
           color: #f0c040;
           background: rgba(240,192,64,0.08);
           border: 1px solid rgba(240,192,64,0.25);
           border-radius: 8px;
-          padding: 0.5rem 1.5rem;
-          margin-bottom: 1.5rem;
+          padding: 0.4rem 1.2rem;
+          margin-bottom: 1.2rem;
           position: relative; z-index: 1;
+        }
+
+        .presel-panels {
+          display: flex;
+          gap: 1.5rem;
+          align-items: flex-start;
+          position: relative; z-index: 1;
+          flex-wrap: wrap;
+          justify-content: center;
+          width: 100%;
+          max-width: 1100px;
+        }
+
+        .presel-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          flex: 1;
+          min-width: 280px;
+          max-width: 500px;
+        }
+
+        .panel-label {
+          font-family: 'Cinzel', serif;
+          font-size: 0.72rem;
+          letter-spacing: 0.25em;
+          text-transform: uppercase;
+          text-align: center;
+          padding: 0.35rem 0.75rem;
+          border-radius: 6px;
+        }
+        .panel-label.mine {
+          color: #f0c040;
+          background: rgba(240,192,64,0.08);
+          border: 1px solid rgba(240,192,64,0.2);
+        }
+        .panel-label.opp {
+          color: rgba(180,120,200,0.8);
+          background: rgba(140,60,200,0.06);
+          border: 1px solid rgba(140,60,200,0.2);
+        }
+
+        .panel-divider {
+          width: 1px;
+          background: linear-gradient(to bottom, transparent, rgba(240,192,64,0.2) 30%, rgba(240,192,64,0.2) 70%, transparent);
+          align-self: stretch;
+          margin-top: 2rem;
         }
 
         .unit-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 0.8rem;
-          max-width: 720px;
-          width: 100%;
-          position: relative; z-index: 1;
+          gap: 0.6rem;
         }
-        @media (max-width: 600px) {
+        @media (max-width: 500px) {
           .unit-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
@@ -138,15 +182,15 @@ export default function PreSelection() {
           background: rgba(15,10,30,0.8);
           border: 1px solid rgba(240,192,64,0.15);
           border-radius: 10px;
-          padding: 0.8rem 0.7rem 0.75rem;
+          padding: 0.75rem 0.6rem 0.65rem;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 0.3rem;
+          gap: 0.25rem;
           transition: all 0.18s;
           backdrop-filter: blur(8px);
         }
-        .unit-card:hover:not(.disabled) {
+        .unit-card:hover:not(.locked) {
           border-color: rgba(240,192,64,0.45);
           background: rgba(20,14,40,0.9);
           transform: translateY(-2px);
@@ -157,41 +201,44 @@ export default function PreSelection() {
           background: rgba(240,192,64,0.08);
           box-shadow: 0 0 20px rgba(240,192,64,0.2), inset 0 0 10px rgba(240,192,64,0.05);
         }
-        .unit-card.disabled { opacity: 0.45; }
+        .unit-card.locked { opacity: 0.55; cursor: default !important; }
+        .unit-card.enemy-card {
+          border-color: rgba(140,60,200,0.2);
+        }
 
         .uc-sprite-wrap {
           position: relative;
-          width: 56px; height: 64px;
+          width: 48px; height: 56px;
           display: flex; align-items: center; justify-content: center;
-          margin-bottom: 0.2rem;
+          margin-bottom: 0.15rem;
         }
         .uc-check {
           position: absolute; top: -4px; right: -4px;
-          width: 20px; height: 20px;
+          width: 18px; height: 18px;
           background: #f0c040;
           border-radius: 50%;
-          font-size: 11px;
+          font-size: 10px;
           color: #0a0810;
           display: flex; align-items: center; justify-content: center;
           font-weight: 700;
         }
         .uc-name {
           font-family: 'Cinzel', serif;
-          font-size: 0.8rem;
+          font-size: 0.72rem;
           font-weight: 700;
           color: #f0e0a0;
           text-align: center;
         }
         .uc-cls {
-          font-size: 0.65rem;
+          font-size: 0.58rem;
           color: rgba(200,170,100,0.5);
           text-transform: capitalize;
-          margin-bottom: 0.2rem;
+          margin-bottom: 0.15rem;
         }
         .uc-stats { width: 100%; display: flex; flex-direction: column; gap: 3px; }
         .uc-stat-row {
           display: flex; justify-content: space-between;
-          font-size: 0.62rem;
+          font-size: 0.58rem;
           color: rgba(200,170,100,0.65);
         }
 
@@ -199,26 +246,26 @@ export default function PreSelection() {
           position: fixed;
           bottom: 0; left: 0; right: 0;
           background: linear-gradient(to top, rgba(8,6,15,0.98) 70%, transparent);
-          padding: 1rem 1.5rem 1.5rem;
+          padding: 0.75rem 1.5rem 1.25rem;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.6rem;
           z-index: 10;
         }
 
         .selected-row {
           display: flex;
-          gap: 0.5rem;
+          gap: 0.4rem;
           justify-content: center;
         }
         .selected-slot {
-          width: 48px; height: 48px;
+          width: 44px; height: 44px;
           background: rgba(15,10,30,0.8);
           border: 1px solid rgba(240,192,64,0.3);
           border-radius: 8px;
           display: flex; align-items: center; justify-content: center;
-          font-size: 0.6rem;
+          font-size: 0.58rem;
           color: rgba(200,170,100,0.4);
           font-family: 'Cinzel', serif;
           overflow: hidden;
@@ -231,14 +278,14 @@ export default function PreSelection() {
 
         .btn-confirm {
           font-family: 'Cinzel', serif;
-          font-size: 1rem;
+          font-size: 0.95rem;
           font-weight: 700;
           letter-spacing: 0.1em;
           background: linear-gradient(135deg, #c89000, #f0c040, #c89000);
           color: #0a0810;
           border: none;
           border-radius: 8px;
-          padding: 0.9rem 2.5rem;
+          padding: 0.8rem 2.5rem;
           cursor: pointer;
           transition: all 0.2s;
           box-shadow: 0 4px 20px rgba(240,192,64,0.3);
@@ -261,34 +308,56 @@ export default function PreSelection() {
 
       <div className="presel-header">
         <h2 className="presel-title">Choose Your Champions</h2>
-        <div className="presel-subtitle">Select 4 units from your roster</div>
+        <div className="presel-subtitle">Select 4 from your roster · Opponent's roster shown for scouting</div>
       </div>
 
       <div className="presel-counter">{picks.length} / 4 selected</div>
 
-      <div className="unit-grid">
-        {roster.map((unit) => (
-          <UnitCard
-            key={unit.id}
-            unit={unit}
-            selected={picks.includes(unit.id)}
-            canSelect={picks.length < 4}
-            onClick={() => togglePick(unit.id)}
-          />
-        ))}
+      <div className="presel-panels">
+        <div className="presel-panel">
+          <div className="panel-label mine">Your Roster — Pick 4</div>
+          <div className="unit-grid">
+            {myRoster.map((unit) => (
+              <UnitCard
+                key={unit.id}
+                unit={unit}
+                selected={picks.includes(unit.id)}
+                locked={waiting || (!picks.includes(unit.id) && picks.length >= 4)}
+                onClick={() => togglePick(unit.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="panel-divider" />
+
+        <div className="presel-panel">
+          <div className="panel-label opp">Opponent's Roster</div>
+          <div className="unit-grid">
+            {enemyRoster.length > 0
+              ? enemyRoster.map((unit) => (
+                  <UnitCard key={unit.id} unit={unit} locked enemy />
+                ))
+              : Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="unit-card locked" style={{ minHeight: 120, opacity: 0.25 }}>
+                    <div style={{ fontSize: "0.65rem", color: "rgba(200,170,100,0.4)", fontFamily: "Cinzel, serif", textAlign: "center", padding: "1rem" }}>?</div>
+                  </div>
+                ))}
+          </div>
+        </div>
       </div>
 
       <div className="presel-footer">
         <div className="selected-row">
           {Array.from({ length: 4 }).map((_, i) => {
             const pickedId = picks[i];
-            const pickedUnit = pickedId ? roster.find((u) => u.id === pickedId) : null;
+            const pickedUnit = pickedId ? myRoster.find((u) => u.id === pickedId) : null;
             return (
               <div key={i} className={`selected-slot${pickedUnit ? " filled" : ""}`}>
                 {pickedUnit ? (
                   <div
                     className={`sprite sprite--${pickedUnit.cls} sprite-ally sprite-idle`}
-                    style={{ transform: "scale(0.55)", transformOrigin: "center" }}
+                    style={{ transform: "scale(0.5)", transformOrigin: "center" }}
                   />
                 ) : (
                   <span>{i + 1}</span>

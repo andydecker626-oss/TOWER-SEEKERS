@@ -133,6 +133,27 @@ export function registerSocketHandlers(io: Server): void {
         const sideState = info.side === "A" ? room.sideA : room.sideB;
         if (!sideState) return;
 
+        const picks = sideState.picks ?? [];
+        if (placement.length !== 4) {
+          socket.emit("error", { message: "Must place exactly 4 units" });
+          return;
+        }
+        const invalidUnit = placement.find((p) => !picks.includes(p.unitId));
+        if (invalidUnit) {
+          socket.emit("error", { message: `Unit ${invalidUnit.unitId} was not in your picks` });
+          return;
+        }
+        const posSet = new Set(placement.map((p) => `${p.x},${p.y}`));
+        if (posSet.size !== 4) {
+          socket.emit("error", { message: "Duplicate placement positions" });
+          return;
+        }
+        const outOfBounds = placement.find((p) => p.x < 0 || p.x > 3 || p.y < 0 || p.y > 3);
+        if (outOfBounds) {
+          socket.emit("error", { message: `Placement position out of bounds` });
+          return;
+        }
+
         sideState.placement = placement;
 
         const otherSide = info.side === "A" ? room.sideB : room.sideA;

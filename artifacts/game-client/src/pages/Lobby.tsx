@@ -4,6 +4,15 @@ import { useSocket } from "@/context/SocketContext";
 export default function Lobby() {
   const { state, connected, createRoom, joinRoom, reset } = useSocket();
   const [joinCode, setJoinCode] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  function copyCode() {
+    if (!state.roomCode) return;
+    navigator.clipboard.writeText(state.roomCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   const isWaiting = state.phase === "waiting";
 
@@ -246,6 +255,21 @@ export default function Lobby() {
           margin-top: 0.5rem;
           font-style: italic;
         }
+        .copy-btn {
+          font-family: 'Cinzel', serif;
+          font-size: 0.75rem;
+          letter-spacing: 0.1em;
+          background: rgba(240,192,64,0.1);
+          color: rgba(240,192,64,0.8);
+          border: 1px solid rgba(240,192,64,0.3);
+          border-radius: 6px;
+          padding: 0.35rem 0.9rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-top: 0.3rem;
+        }
+        .copy-btn:hover { background: rgba(240,192,64,0.2); border-color: rgba(240,192,64,0.6); color: #f0c040; }
+        .copy-btn.copied { color: #86efac; border-color: rgba(134,239,172,0.5); background: rgba(134,239,172,0.08); }
 
         .pulse-dot {
           display: inline-block;
@@ -293,6 +317,9 @@ export default function Lobby() {
               <div className="waiting-label">Waiting for opponent</div>
               <div className="waiting-code">{state.roomCode}</div>
               <div className="waiting-label">Room Code</div>
+              <button className={`copy-btn${copied ? " copied" : ""}`} onClick={copyCode}>
+                {copied ? "Copied!" : "Copy Code"}
+              </button>
               <div className="pulse-dot" />
               <div className="waiting-hint">Share this code with a friend to join</div>
             </div>

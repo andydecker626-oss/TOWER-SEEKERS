@@ -11,7 +11,14 @@ export function createGridUnits(
   placements: { unitId: string; x: number; y: number }[],
   side: Side
 ): GridUnit[] {
+  if (placements.length !== 4) throw new Error("Must place exactly 4 units");
+  const posKeys = new Set<string>();
   return placements.map((p) => {
+    if (!picks.includes(p.unitId)) throw new Error(`Unit ${p.unitId} not in picks`);
+    if (p.x < 0 || p.x > 3 || p.y < 0 || p.y > 3) throw new Error(`Position out of bounds: (${p.x},${p.y})`);
+    const key = `${p.x},${p.y}`;
+    if (posKeys.has(key)) throw new Error(`Duplicate placement at (${p.x},${p.y})`);
+    posKeys.add(key);
     const def = getUnitDef(p.unitId);
     if (!def) throw new Error(`Unknown unit: ${p.unitId}`);
     return {
@@ -121,8 +128,10 @@ export function resolveTurn(
         const targetDef = getUnitDef(target.defId);
         if (!targetDef) break;
 
-        const range = actorDef.baseAttackStyle === "melee" ? 4 : 8;
-        const dist = manhattan(actor.x, actor.y, target.x, target.y);
+        const range = getAttackRange(actorDef.baseAttackStyle);
+        const dist = actor.side === "A"
+          ? crossGridDist(actor.x, actor.y, target.x, target.y)
+          : crossGridDist(target.x, target.y, actor.x, actor.y);
         if (dist > range) break;
 
         if (!rollHit(BASE_ATTACK_ACCURACY, targetDef.evasion)) {
@@ -265,12 +274,6 @@ export function resolveTurn(
     }
   }
 
-  state.forEach((u) => {
-    if (u.alive && u.ap < 10) {
-      u.ap = Math.min(10, u.ap + 0);
-    }
-  });
-
   return { events, newState: state };
 }
 
@@ -303,20 +306,36 @@ export function getValidMoves(
   return results;
 }
 
+export function crossGridDist(
+  allyX: number, allyY: number,
+  enemyX: number, enemyY: number
+): number {
+  // Combined grid: ally at column allyX, enemy at column (4 + enemyX)
+  // Distance = (4 + enemyX - allyX) + |allyY - enemyY|
+  return (4 + enemyX - allyX) + Math.abs(allyY - enemyY);
+}
+
+export function getAttackRange(style: string): number {
+  if (style === "melee") return 4;
+  if (style === "ranged-volley") return 6;
+  return 8; // ranged-direct
+}
+
 export function getValidAttacks(
   unit: GridUnit,
   enemies: GridUnit[]
 ): { x: number; y: number }[] {
   const def = getUnitDef(unit.defId);
   if (!def) return [];
-  const range = def.baseAttackStyle === "melee" ? 4 : 8;
+  const range = getAttackRange(def.baseAttackStyle);
   const results: { x: number; y: number }[] = [];
 
   for (const enemy of enemies) {
     if (!enemy.alive) continue;
-    const dist = manhattan(unit.x, unit.y, enemy.x, enemy.y) + (unit.side === "A" ? enemy.x + 1 : (3 - enemy.x + 1));
-    const fullDist = Math.abs(unit.x - enemy.x) + (unit.side === "A" ? enemy.x + 1 : (3 - enemy.x)) + Math.abs(unit.y - enemy.y);
-    if (fullDist <= range) {
+    const dist = unit.side === "A"
+      ? crossGridDist(unit.x, unit.y, enemy.x, enemy.y)
+      : crossGridDist(enemy.x, enemy.y, unit.x, unit.y);
+    if (dist <= range) {
       results.push({ x: enemy.x, y: enemy.y });
     }
   }
