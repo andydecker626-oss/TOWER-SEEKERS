@@ -104,6 +104,7 @@ export function resolveTurn(
 
       case "move": {
         if (action.targetX === undefined || action.targetY === undefined) break;
+        if (action.targetX < 0 || action.targetX > 3 || action.targetY < 0 || action.targetY > 3) break;
         // Only same-side units block movement; opponents live on a separate grid
         const occupied = unitAt(state, action.targetX, action.targetY, actor.side);
         if (occupied) break;
@@ -129,6 +130,7 @@ export function resolveTurn(
 
       case "attack": {
         if (action.targetX === undefined || action.targetY === undefined) break;
+        if (action.targetX < 0 || action.targetX > 3 || action.targetY < 0 || action.targetY > 3) break;
         // Attack targets must be on the opposing side's grid
         const target = unitAt(state, action.targetX, action.targetY, enemySide(actor.side));
         if (!target) break;
@@ -190,6 +192,10 @@ export function resolveTurn(
         const skill = actorDef.skills.find((s) => s.id === action.skillId);
         if (!skill) break;
         if (actor.ap < skill.ap) break;
+        if (
+          action.targetX !== undefined &&
+          (action.targetX < 0 || action.targetX > 3 || (action.targetY ?? 0) < 0 || (action.targetY ?? 0) > 3)
+        ) break;
 
         actor.ap = Math.max(0, actor.ap - skill.ap);
 
