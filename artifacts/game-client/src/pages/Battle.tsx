@@ -52,6 +52,10 @@ export default function Battle() {
   const [flashUnits, setFlashUnits] = useState<Record<string, string>>({});
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Always-current unit state for animation closures (avoids stale state desync)
+  const latestUnitsRef = useRef<{ my: GridUnit[]; enemy: GridUnit[] }>({ my: state.myUnits, enemy: state.enemyUnits });
+  useEffect(() => { latestUnitsRef.current = { my: myUnits, enemy: enemyUnits }; }, [myUnits, enemyUnits]);
+
   const aliveMyUnits = myUnits.filter((u) => u.alive);
   const aliveEnemies = enemyUnits.filter((u) => u.alive);
   const allQueued = aliveMyUnits.every((u) => queued[u.instanceId]);
@@ -99,7 +103,7 @@ export default function Battle() {
   }
 
   function applyEventAnimation(ev: TurnEvent) {
-    const allUnits = [...myUnits, ...enemyUnits];
+    const allUnits = [...latestUnitsRef.current.my, ...latestUnitsRef.current.enemy];
     const actor = allUnits.find((u) => u.instanceId === ev.unitInstanceId);
     const target = ev.targetUnitId ? allUnits.find((u) => u.instanceId === ev.targetUnitId) : null;
 
@@ -232,11 +236,20 @@ export default function Battle() {
     }
     if (skill.style === "ally" || skill.type === "healing") {
       setSelectMode("skill");
+      // Support/healing skills highlight all alive allies (full-field support range)
       setHighlights(myUnits.filter((u) => u.alive).map((u) => ({ x: u.x, y: u.y, onEnemy: false })));
       return;
     }
+    // Enemy-targeting: filter by the skill's attack range (side-aware)
+    const range = getAttackRange(skill.style);
+    const validTargets = aliveEnemies.filter((e) => {
+      const dist = state.mySide === "A"
+        ? crossGridDist(unit.x, unit.y, e.x, e.y)
+        : crossGridDist(e.x, e.y, unit.x, unit.y);
+      return dist <= range;
+    });
     setSelectMode("skill");
-    setHighlights(aliveEnemies.map((e) => ({ x: e.x, y: e.y, onEnemy: true })));
+    setHighlights(validTargets.map((e) => ({ x: e.x, y: e.y, onEnemy: true })));
   }
 
   function handleWait() {
