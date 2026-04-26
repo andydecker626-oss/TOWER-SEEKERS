@@ -153,8 +153,14 @@ export default function Battle() {
       spawnFloat("MISS", target.x, target.y, "#aaaaff", isEnemyTarget);
     }
 
-    if (ev.type === "ko" && target) {
-      setFlashUnits((prev) => ({ ...prev, [target.instanceId]: "ko" }));
+    if (ev.type === "ko") {
+      // KO events carry the KO'd unit in unitInstanceId, not targetUnitId
+      const koUnit = allUnits.find((u) => u.instanceId === ev.unitInstanceId);
+      if (koUnit) {
+        setFlashUnits((prev) => ({ ...prev, [koUnit.instanceId]: "ko" }));
+        setMyUnits((prev) => prev.map((u) => u.instanceId === koUnit.instanceId ? { ...u, alive: false } : u));
+        setEnemyUnits((prev) => prev.map((u) => u.instanceId === koUnit.instanceId ? { ...u, alive: false } : u));
+      }
     }
 
     if (actor && (ev.type === "attack" || ev.type === "skill")) {
