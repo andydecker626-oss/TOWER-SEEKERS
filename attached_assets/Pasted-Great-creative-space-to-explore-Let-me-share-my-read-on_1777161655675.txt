@@ -1,0 +1,33 @@
+Great creative space to explore. Let me share my read on each reference and what translates:
+
+What each game does that's relevant:
+
+Slay the Spire — The core loop is perfect: short runs, meaningful choices at every node, meta-progression feels rewarding without requiring grinding. The build is the gameplay, not just the combat. For Tower Seekers this maps to: your skill and passive loadout is your deck. Each run you might equip different moves.
+
+Darkest Dungeon — The roster as a living resource is brilliant. Units have history, risk, fatigue. Preparation matters. The dungeon is a war of attrition, not just individual fights. The stress/affliction system creates narrative even without a story. The dark part: it's punishing and not very accessible.
+
+Pokémon — Accessibility and the joy of team composition. The loop of "what team beats this next challenge" never gets old. Also the permanence of your trained team feels meaningful.
+
+Octopath / Chrono Trigger / FF — Beautiful aesthetics, encounter variety, combo systems between units. The HD-2D visual you've already built fits Octopath perfectly.
+
+What I think works for Tower Seekers specifically:
+
+The grid is your biggest differentiator. PvE needs to exploit it — enemies with unique formations, environmental hazards on specific tiles, boss mechanics that punish bad positioning. That's what makes this game's PvE feel distinct from everything else.
+
+My concept: "Towers" as roguelike runs with persistent unit mastery
+
+You own a roster of units (like Darkest Dungeon's hamlet)
+Each Tower is a run — you pick 6 from your roster, navigate a branching map (combat → rest → event → elite → boss), choose 4 per encounter as usual
+During the run, you find temporary augments: a skill upgrade, a bonus passive slot, a consumable item — gone when the run ends
+Permanent reward: Mastery XP on each unit that fought. Enough mastery unlocks new skills and passives for that unit permanently. This is how you expand their pool from 8 skills to maybe 12 over time.
+If units die mid-run they're wounded — unavailable for the next Tower attempt, back after one rest period (not permadeath, but meaningful cost)
+Towers have themes: one might be all physical-heavy enemies (favors Mages), another might be debuff-heavy (favors units with Cleanse). You pick your Tower, you adjust your team.
+Why this is accessible: Runs are finite, you don't lose your roster permanently, and you can always try a lower difficulty Tower. The loadout screen before each encounter gives you a genuine decision without overwhelming you.
+
+Why it's repeatable: Different Towers, different enemy formations exploiting the grid, seasonal/weekly Tower rotations, and the meta-progression of expanding unit skill pools keeps pulling you back.
+
+One thing worth deciding early: Does PvP and PvE share the same unit roster and progression, or are they separate? If shared, winning PvP matches could also grant Mastery — which creates a unified feel where your roster is the central thing you're building across both modes. That's my lean.
+
+What resonates? What doesn't?
+
+This all resonates... I like it. I wonder if the roguelike features wouldnt work since, per unit, you're already picking 4 moves, 1 passive, (perhaps an item?); units are already entering the tower somewhat 'altered/customized'. Would roguelike augments/upgrades feel impactful?
