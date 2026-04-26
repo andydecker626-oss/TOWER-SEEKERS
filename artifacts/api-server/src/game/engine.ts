@@ -48,8 +48,13 @@ function manhattan(ax: number, ay: number, bx: number, by: number): number {
   return Math.abs(ax - bx) + Math.abs(ay - by);
 }
 
-function unitAt(state: GridUnit[], x: number, y: number): GridUnit | undefined {
-  return state.find((u) => u.alive && u.x === x && u.y === y);
+function unitAt(state: GridUnit[], x: number, y: number, side?: Side): GridUnit | undefined {
+  return state.find(
+    (u) => u.alive && u.x === x && u.y === y && (side === undefined || u.side === side)
+  );
+}
+function enemySide(side: Side): Side {
+  return side === "A" ? "B" : "A";
 }
 
 function rollHit(accuracy: number, evasion: number): boolean {
@@ -99,7 +104,8 @@ export function resolveTurn(
 
       case "move": {
         if (action.targetX === undefined || action.targetY === undefined) break;
-        const occupied = unitAt(state, action.targetX, action.targetY);
+        // Only same-side units block movement; opponents live on a separate grid
+        const occupied = unitAt(state, action.targetX, action.targetY, actor.side);
         if (occupied) break;
         const dist = manhattan(actor.x, actor.y, action.targetX, action.targetY);
         if (dist > actorDef.moveDist) break;
@@ -123,8 +129,9 @@ export function resolveTurn(
 
       case "attack": {
         if (action.targetX === undefined || action.targetY === undefined) break;
-        const target = unitAt(state, action.targetX, action.targetY);
-        if (!target || target.side === actor.side) break;
+        // Attack targets must be on the opposing side's grid
+        const target = unitAt(state, action.targetX, action.targetY, enemySide(actor.side));
+        if (!target) break;
         const targetDef = getUnitDef(target.defId);
         if (!targetDef) break;
 
@@ -221,8 +228,9 @@ export function resolveTurn(
 
         if (action.targetX === undefined || action.targetY === undefined) break;
 
-        const skillTarget = unitAt(state, action.targetX, action.targetY);
-        if (!skillTarget || skillTarget.side === actor.side) break;
+        // Offensive skill targets must be on the opposing side's grid
+        const skillTarget = unitAt(state, action.targetX, action.targetY, enemySide(actor.side));
+        if (!skillTarget) break;
         const skillTargetDef = getUnitDef(skillTarget.defId);
         if (!skillTargetDef) break;
 
