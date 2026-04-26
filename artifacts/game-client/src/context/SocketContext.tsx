@@ -30,11 +30,14 @@ interface GameState {
   isWaitingForOpponent: boolean;
   winner: Side | null;
   pendingEvents: TurnEvent[] | null;
+  /** Set when server signals game-over; Battle stays mounted to play final animations */
+  pendingGameOver: Side | null;
   errorMsg: string | null;
 }
 
 const initial: GameState = {
   phase: "lobby",
+  pendingGameOver: null,
   roomCode: null,
   mySide: null,
   myRoster: [],
@@ -84,6 +87,7 @@ type Action =
       events: TurnEvent[];
     }
   | { type: "GAME_OVER"; winner: Side; events: TurnEvent[]; newState: GridUnit[] }
+  | { type: "CONFIRM_GAME_OVER" }
   | {
       type: "REMATCH_READY";
       side: Side;
@@ -162,14 +166,18 @@ function reducer(state: GameState, action: Action): GameState {
       const enemyNewUnits = action.newState.filter((u) => u.side !== mySide);
       return {
         ...state,
-        phase: "gameover",
+        // Stay in battle phase so Battle plays final animations before dismounting
+        phase: "battle",
         winner: action.winner,
         myUnits: myNewUnits,
         enemyUnits: enemyNewUnits,
         pendingEvents: action.events,
+        pendingGameOver: action.winner,
         isWaitingForOpponent: false,
       };
     }
+    case "CONFIRM_GAME_OVER":
+      return { ...state, phase: "gameover", pendingGameOver: null };
     case "REMATCH_READY":
       return {
         ...initial,
@@ -207,6 +215,7 @@ interface SocketContextValue {
   requestRematch: () => void;
   reset: () => void;
   clearPendingEvents: () => void;
+  confirmGameOver: () => void;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
@@ -329,6 +338,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "CLEAR_PENDING_EVENTS" });
   }, []);
 
+  const confirmGameOver = useCallback(() => {
+    dispatch({ type: "CONFIRM_GAME_OVER" });
+  }, []);
+
   return (
     <SocketContext.Provider
       value={{
@@ -342,6 +355,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         requestRematch,
         reset,
         clearPendingEvents,
+        confirmGameOver,
       }}
     >
       {children}

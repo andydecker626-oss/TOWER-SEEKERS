@@ -37,7 +37,7 @@ interface FloatText {
 let floatId = 0;
 
 export default function Battle() {
-  const { state, submitActions, clearPendingEvents } = useSocket();
+  const { state, submitActions, clearPendingEvents, confirmGameOver } = useSocket();
 
   const [myUnits, setMyUnits] = useState<GridUnit[]>(state.myUnits);
   const [enemyUnits, setEnemyUnits] = useState<GridUnit[]>(state.enemyUnits);
@@ -55,6 +55,10 @@ export default function Battle() {
   // Always-current unit state for animation closures (avoids stale state desync)
   const latestUnitsRef = useRef<{ my: GridUnit[]; enemy: GridUnit[] }>({ my: state.myUnits, enemy: state.enemyUnits });
   useEffect(() => { latestUnitsRef.current = { my: myUnits, enemy: enemyUnits }; }, [myUnits, enemyUnits]);
+
+  // Track pendingGameOver in a ref so animation closures can read the current value
+  const pendingGameOverRef = useRef(state.pendingGameOver);
+  useEffect(() => { pendingGameOverRef.current = state.pendingGameOver; }, [state.pendingGameOver]);
 
   const aliveMyUnits = myUnits.filter((u) => u.alive);
   const aliveEnemies = enemyUnits.filter((u) => u.alive);
@@ -79,6 +83,7 @@ export default function Battle() {
     if (events.length === 0) {
       setMyUnits(finalMy);
       setEnemyUnits(finalEnemy);
+      if (pendingGameOverRef.current) setTimeout(() => confirmGameOver(), 400);
       return;
     }
     setAnimating(true);
@@ -95,6 +100,8 @@ export default function Battle() {
             setEnemyUnits(finalEnemy);
             setFlashUnits({});
             setAnimating(false);
+            // After final turn animations resolve, transition to GameOver screen
+            if (pendingGameOverRef.current) setTimeout(() => confirmGameOver(), 800);
           }, DELAY);
         }
       }, i * DELAY);
