@@ -18,10 +18,17 @@ if (Number.isNaN(port) || port <= 0) {
 
 const httpServer = createServer(app);
 
+const corsOrigin = process.env["CORS_ORIGIN"]
+  ?? (process.env["NODE_ENV"] === "production"
+    ? process.env["REPL_SLUG"]
+      ? `https://${process.env["REPL_SLUG"]}.${process.env["REPL_OWNER"]}.replit.app`
+      : false
+    : true);
+
 const io = new SocketIOServer(httpServer, {
   path: "/api/socket.io",
   cors: {
-    origin: "*",
+    origin: corsOrigin,
     methods: ["GET", "POST"],
   },
 });
