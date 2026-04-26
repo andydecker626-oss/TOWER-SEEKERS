@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SocketProvider, useSocket } from "@/context/SocketContext";
 import Lobby from "@/pages/Lobby";
@@ -11,8 +11,6 @@ const queryClient = new QueryClient();
 
 function GameRouter() {
   const { state } = useSocket();
-  const [, navigate] = useLocation();
-
   const phase = state.phase;
 
   if (phase === "lobby" || phase === "waiting") return <Lobby />;
@@ -24,16 +22,17 @@ function GameRouter() {
 }
 
 function App() {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <BrowserRouter basename={base}>
         <SocketProvider>
-          <Switch>
-            <Route path="/" component={GameRouter} />
-            <Route path="/:rest*" component={GameRouter} />
-          </Switch>
+          <Routes>
+            <Route path="/" element={<GameRouter />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </SocketProvider>
-      </WouterRouter>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
