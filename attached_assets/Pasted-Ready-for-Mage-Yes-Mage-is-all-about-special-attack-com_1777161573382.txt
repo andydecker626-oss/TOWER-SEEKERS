@@ -1,0 +1,49 @@
+Ready for Mage?
+
+Yes, Mage is all about special attack, combo, and aoe. perhaps mage has one very expensive move that has immense effect (come to think of it, Knight should have a move that is a massive save to the team where he takes all damage for one turn)
+
+4 days ago
+
+Show less
+
+Planning Mage and Knight abilities (24 seconds)
+Two things — adding that Knight skill first, then Mage.
+
+Knight skill pool gets one addition (9 total):
+
+Move	Type	Power	AP	Style	Effect
+Last Bastion	—	—	4	Self	For one full turn, all damage dealt to any ally is redirected to Knight instead (calculated with Knight's own defenses)
+Unit 5 · Mage
+Identity: Pure special attacker built around setup and payoff. Spells amplify each other. Low defenses make positioning critical. Has one very expensive ultimate that can swing the game if the Mage survives long enough to fire it.
+
+Type: Ranged
+
+Stat	Value
+HP	65
+Phys Atk	10
+Spec Atk	90
+Phys Def	20
+Spec Def	55
+Speed	35
+Move Dist	2
+Evasion	15%
+Base Attack Type	Ranged Volley
+Passive pool (pick 1):
+
+Spell Mastery — After using 3 different skills in a match, all skill AP costs reduced by 1 (minimum 1)
+Overload — Each time Mage deals damage with a skill, gains +5 SpAtk permanently (stacks up to 5×)
+Arcane Presence — All enemies within 3 tiles have SpDef reduced by 15%
+Skill pool (pick 4):
+
+Move	Type	Power	AP	Style	Effect
+Arcane Bolt	Special	55	2	Ranged-Direct	Reliable magic shot
+Frost Lance	Special	60	2	Ranged-Direct	Reduces target Speed by 15 for 2 turns
+Arcane Surge	—	—	2	Self	Next skill used this match deals +50% damage
+Fireball	Special	70	3	Ranged-Volleyed	AoE 2×2 explosion
+Chain Lightning	Special	65	3	Ranged-Piercing	Arcs to nearest enemy for 60% damage
+Blizzard	Special	55	4	Ranged-Volleyed	AoE 3×3; all hit units lose 10 Speed for 2 turns
+Mana Overload	Special	85	4	Ranged-Direct	After casting, Mage loses 2 AP
+Arcane Cataclysm	Special	120	7	Ranged-Volleyed	AoE 3×3 — the ultimate; requires significant AP buildup to fire
+What would you change?
+
+change mana overload for some sort of ice wall block, where on succesfull block they gain ap (goes on cooldown for 3 turns). change arcane presence to something else
