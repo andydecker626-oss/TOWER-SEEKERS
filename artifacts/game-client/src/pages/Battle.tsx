@@ -182,7 +182,8 @@ export default function Battle() {
     const result: { x: number; y: number }[] = [];
     for (let cx = 0; cx < 4; cx++) {
       for (let cy = 0; cy < 4; cy++) {
-        if (Math.abs(cx - unit.x) + Math.abs(cy - unit.y) <= def.moveDist && !occupied.has(`${cx},${cy}`)) {
+        const isCurrent = cx === unit.x && cy === unit.y;
+        if (!isCurrent && Math.abs(cx - unit.x) + Math.abs(cy - unit.y) <= def.moveDist && !occupied.has(`${cx},${cy}`)) {
           result.push({ x: cx, y: cy });
         }
       }

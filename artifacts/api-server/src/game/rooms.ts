@@ -302,6 +302,23 @@ export function registerSocketHandlers(io: Server): void {
       }
     });
 
+    socket.on("leaveRoom", () => {
+      const info = socketToRoom.get(socket.id);
+      if (!info) return;
+      const room = rooms.get(info.code);
+      socketToRoom.delete(socket.id);
+      socket.leave(info.code);
+      if (room) {
+        if (room.phase === "waiting" || !room.sideB) {
+          rooms.delete(info.code);
+        } else {
+          io.to(info.code).emit("opponentDisconnected", {});
+          rooms.delete(info.code);
+        }
+      }
+      logger.info({ code: info.code, side: info.side }, "Player left room voluntarily");
+    });
+
     socket.on("disconnect", () => {
       const info = socketToRoom.get(socket.id);
       logger.info({ socketId: socket.id }, "Socket disconnected");

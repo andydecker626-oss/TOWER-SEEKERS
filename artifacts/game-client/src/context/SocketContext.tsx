@@ -331,6 +331,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const reset = useCallback(() => {
+    socketRef.current?.emit("leaveRoom");
     dispatch({ type: "RESET" });
   }, []);
 
