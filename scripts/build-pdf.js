@@ -22,9 +22,9 @@ const CSS = `
     --gold:      #c9a84c;
     --gold-lt:   #e8d5a3;
     --slate:     #2c3e50;
-    --rule:      #c9a84c44;
-    --bg:        #faf7f2;
-    --bg-alt:    #f0ebe0;
+    --rule:      #c9a84c55;
+    --bg:        #f5f7fa;
+    --bg-alt:    #eaecf2;
     --muted:     #5a5a7a;
     --red:       #8b2e2e;
     --teal:      #1e5f6e;
@@ -43,30 +43,68 @@ const CSS = `
 
   /* ── Cover block ─────────────────────────────────── */
   .cover {
-    background: linear-gradient(160deg, #0f1923 0%, #1a2a3a 60%, #0f1923 100%);
+    background: linear-gradient(160deg, #080e14 0%, #0f1c2b 45%, #152333 75%, #0a1520 100%);
     color: #f5e9d0;
-    padding: 64px 60px 48px;
+    padding: 100px 64px 72px;
     page-break-after: always;
-    border-bottom: 4px solid var(--gold);
+    border-bottom: 5px solid var(--gold);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 40%, #c9a84c18 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 70%, #1e5f6e12 0%, transparent 55%);
+    pointer-events: none;
+  }
+  .cover-eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 9.5pt;
+    letter-spacing: 0.35em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: 0.8;
   }
   .cover h1 {
     font-family: 'Cinzel', 'Trajan Pro', serif;
-    font-size: 36pt;
+    font-size: 62pt;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--gold);
-    text-shadow: 0 2px 12px #c9a84c66;
-    margin-bottom: 12px;
-    line-height: 1.2;
+    text-shadow: 0 0 40px #c9a84c55, 0 4px 20px #00000088;
+    margin-bottom: 6px;
+    line-height: 1.05;
+  }
+  .cover-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 14pt;
+    letter-spacing: 0.2em;
+    color: #8ab4c4;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+  .cover-rule {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 0 0 32px;
   }
   .cover blockquote {
     font-style: italic;
-    font-size: 13pt;
-    color: #c8c0b0;
+    font-size: 12.5pt;
+    color: #b0b8c4;
     border: none;
     padding: 0;
     margin: 0;
     background: none;
+    max-width: 480px;
+    line-height: 1.6;
   }
 
   /* ── Page body ───────────────────────────────────── */
@@ -162,10 +200,10 @@ const CSS = `
   }
   tbody tr:nth-child(odd)  { background: var(--bg); }
   tbody tr:nth-child(even) { background: var(--bg-alt); }
-  tbody tr:hover { background: #e8e0d0; }
+  tbody tr:hover { background: #dde2ec; }
   td {
     padding: 6px 10px;
-    border: 1px solid #d8d0c0;
+    border: 1px solid #cdd3df;
     vertical-align: top;
   }
   td strong { color: var(--ink); }
@@ -212,7 +250,7 @@ const CSS = `
 
 // Detect if the first h2 block is the cover (title + tagline)
 // We wrap just the first block in a styled cover div
-const coverTitle = 'Tower Seekers — Game Design Document';
+const coverTitle = 'Tower Seekers — Game Bible';
 
 const fullHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -224,9 +262,11 @@ const fullHtml = `<!DOCTYPE html>
 </head>
 <body>
 <div class="cover">
-  <h1>Tower Seekers</h1>
-  <p style="font-family:'Cinzel',serif;font-size:13pt;color:#a0c0c8;letter-spacing:0.1em;margin-bottom:24px;">GAME DESIGN DOCUMENT</p>
-  <blockquote>"Deep unit mastery. Pure counterplay. The JRPG reimagined for competitive play."</blockquote>
+  <p class="cover-eyebrow">Competitive Turn-Based Battler</p>
+  <h1>Tower<br>Seekers</h1>
+  <p class="cover-subtitle">Game Bible</p>
+  <div class="cover-rule"></div>
+  <blockquote>"Deep unit mastery. Pure counterplay.<br>The JRPG reimagined for competitive play."</blockquote>
 </div>
 <div class="content">
 ${body}
@@ -250,7 +290,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 await page.setContent(fullHtml, { waitUntil: 'domcontentloaded' });
 
-const outPath = resolve(ROOT, '.local/game-design.pdf');
+const outPath = resolve(ROOT, '.local/game-bible.pdf');
 await page.pdf({
   path: outPath,
   format: 'Letter',
@@ -262,7 +302,7 @@ await page.pdf({
     <div style="width:100%;font-family:Georgia,serif;font-size:9pt;color:#888;
                 display:flex;justify-content:space-between;
                 padding:0 52px;box-sizing:border-box;">
-      <span>Tower Seekers — Game Design Document</span>
+      <span>Tower Seekers — Game Bible</span>
       <span><span class="pageNumber"></span> / <span class="totalPages"></span></span>
     </div>`,
 });

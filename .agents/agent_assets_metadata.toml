@@ -12,3 +12,9 @@ id = "ypJDoA8LXMQBRP5vsYfyG"
 uri = "file://.local/game-design.pdf"
 type = "pdf"
 title = "Tower Seekers — Game Design Document"
+
+[[outputs]]
+id = "oSI-MQ8JLnMxEWhAiv3V4"
+uri = "file://.local/game-bible.pdf"
+type = "pdf"
+title = "Tower Seekers — Game Bible"
