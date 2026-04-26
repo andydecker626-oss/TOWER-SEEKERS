@@ -177,7 +177,8 @@ export default function Battle() {
   function getValidMoves(unit: GridUnit): { x: number; y: number }[] {
     const def = getUnitDef(unit.defId);
     if (!def) return [];
-    const occupied = new Set([...myUnits, ...enemyUnits].filter((u) => u.alive && u.instanceId !== unit.instanceId).map((u) => `${u.x},${u.y}`));
+    // Only same-side units occupy ally grid tiles; enemy units live on a separate grid
+    const occupied = new Set(myUnits.filter((u) => u.alive && u.instanceId !== unit.instanceId).map((u) => `${u.x},${u.y}`));
     const result: { x: number; y: number }[] = [];
     for (let cx = 0; cx < 4; cx++) {
       for (let cy = 0; cy < 4; cy++) {
