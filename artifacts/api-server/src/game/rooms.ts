@@ -73,18 +73,18 @@ export function registerSocketHandlers(io: Server): void {
       const rosterBDefs = getRosterDefs(finalRosterB);
 
       io.to(room.sideA.socketId).emit("roomReady", {
-        code,
+        code: normalizedCode,
         side: "A",
         myRoster: rosterADefs,
         enemyRoster: rosterBDefs,
       });
       socket.emit("roomReady", {
-        code,
+        code: normalizedCode,
         side: "B",
         myRoster: rosterBDefs,
         enemyRoster: rosterADefs,
       });
-      logger.info({ code }, "Both players joined — preselection");
+      logger.info({ code: normalizedCode }, "Both players joined — preselection");
     });
 
     socket.on("submitPicks", ({ picks }: { picks: string[] }) => {
