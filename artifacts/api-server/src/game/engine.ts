@@ -226,6 +226,13 @@ export function resolveTurn(
         const skillTargetDef = getUnitDef(skillTarget.defId);
         if (!skillTargetDef) break;
 
+        // Authoritative server-side skill range validation
+        const skillRange = getAttackRange(skill.style);
+        const skillDist = actor.side === "A"
+          ? crossGridDist(actor.x, actor.y, skillTarget.x, skillTarget.y)
+          : crossGridDist(skillTarget.x, skillTarget.y, actor.x, actor.y);
+        if (skillDist > skillRange) break;
+
         if (!rollHit(skill.accuracy, skillTargetDef.evasion)) {
           events.push({
             type: "miss",
