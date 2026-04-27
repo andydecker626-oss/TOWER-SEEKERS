@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSocket } from "@/context/SocketContext";
 
 export default function Lobby() {
   const { state, connected, createRoom, joinRoom, reset } = useSocket();
+  const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -294,6 +296,30 @@ export default function Lobby() {
           color: #fca5a5;
           text-align: center;
         }
+
+        .hub-link-btn {
+          font-family: 'Cinzel', serif;
+          font-size: 0.78rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          background: transparent;
+          color: rgba(200,170,100,0.55);
+          border: 1px solid rgba(240,192,64,0.15);
+          border-radius: 8px;
+          padding: 0.55rem 1.2rem;
+          cursor: pointer;
+          transition: all 0.18s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.45rem;
+          width: 100%;
+        }
+        .hub-link-btn:hover {
+          color: #f0c040;
+          border-color: rgba(240,192,64,0.38);
+          background: rgba(240,192,64,0.05);
+        }
       `}</style>
 
       <div className="lobby-bg" />
@@ -366,6 +392,10 @@ export default function Lobby() {
             </div>
           </div>
         )}
+
+        <button className="hub-link-btn" onClick={() => navigate("/hub")}>
+          ⚔ Gathering Hub — Manage Parties
+        </button>
 
         <div className="status-text">
           <span className={`status-dot${connected ? "" : " disconnected"}`} />

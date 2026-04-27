@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSocket } from "@/context/SocketContext";
+import { useParties } from "@/hooks/useParties";
 import type { UnitDef } from "@/lib/types";
 
 function StatBar({ val, max = 160 }: { val: number; max?: number }) {
@@ -50,12 +51,17 @@ function UnitCard({
 
 export default function PreSelection() {
   const { state, submitPicks } = useSocket();
+  const { parties } = useParties();
   const [picks, setPicks] = useState<string[]>([]);
+  const [partyPanelOpen, setPartyPanelOpen] = useState(false);
 
   const myRoster = state.myRoster;
   const enemyRoster = state.enemyRoster;
   const waiting = state.isWaitingForOpponent;
   const opponentLocked = state.opponentPicksLocked;
+
+  const rosterIds = new Set(myRoster.map((u) => u.id));
+  const matchingParties = parties.filter((p) => p.unitIds.length === 4 && p.unitIds.every((id) => rosterIds.has(id)));
 
   function togglePick(id: string) {
     if (waiting) return;
@@ -64,6 +70,11 @@ export default function PreSelection() {
     } else if (picks.length < 4) {
       setPicks([...picks, id]);
     }
+  }
+
+  function loadParty(unitIds: string[]) {
+    setPicks(unitIds);
+    setPartyPanelOpen(false);
   }
 
   return (
@@ -121,6 +132,84 @@ export default function PreSelection() {
           padding: 0.4rem 1.2rem;
           margin-bottom: 1.2rem;
           position: relative; z-index: 1;
+        }
+
+        .load-party-bar {
+          position: relative; z-index: 1;
+          width: 100%;
+          max-width: 1100px;
+          margin-bottom: 0.8rem;
+        }
+        .load-party-toggle {
+          font-family: 'Cinzel', serif;
+          font-size: 0.72rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          background: transparent;
+          color: rgba(200,170,100,0.55);
+          border: 1px solid rgba(240,192,64,0.18);
+          border-radius: 6px;
+          padding: 0.38rem 0.85rem;
+          cursor: pointer;
+          transition: all 0.15s;
+          display: flex; align-items: center; gap: 0.4rem;
+        }
+        .load-party-toggle:hover { color: #f0c040; border-color: rgba(240,192,64,0.4); background: rgba(240,192,64,0.05); }
+        .load-party-panel {
+          margin-top: 0.6rem;
+          background: rgba(12,9,24,0.92);
+          border: 1px solid rgba(240,192,64,0.2);
+          border-radius: 10px;
+          padding: 0.9rem 1rem;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.6rem;
+          max-height: 180px;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(240,192,64,0.2) transparent;
+        }
+        .party-chip {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: rgba(240,192,64,0.06);
+          border: 1px solid rgba(240,192,64,0.22);
+          border-radius: 7px;
+          padding: 0.35rem 0.7rem;
+          cursor: pointer;
+          transition: all 0.15s;
+          flex-shrink: 0;
+        }
+        .party-chip:hover { background: rgba(240,192,64,0.14); border-color: rgba(240,192,64,0.5); }
+        .party-chip-name {
+          font-family: 'Cinzel', serif;
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #f0c040;
+        }
+        .party-chip-units {
+          font-size: 0.62rem;
+          color: rgba(200,170,100,0.5);
+        }
+        .party-chip-load {
+          font-family: 'Cinzel', serif;
+          font-size: 0.6rem;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: rgba(240,192,64,0.6);
+          border: 1px solid rgba(240,192,64,0.25);
+          border-radius: 4px;
+          padding: 0.15rem 0.45rem;
+          transition: all 0.15s;
+        }
+        .party-chip:hover .party-chip-load { color: #f0c040; border-color: rgba(240,192,64,0.6); }
+        .load-party-empty {
+          font-family: 'Cinzel', serif;
+          font-size: 0.72rem;
+          color: rgba(200,170,100,0.35);
+          letter-spacing: 0.12em;
+          padding: 0.25rem 0;
         }
 
         .presel-panels {
@@ -313,6 +402,36 @@ export default function PreSelection() {
       </div>
 
       <div className="presel-counter">{picks.length} / 4 selected</div>
+
+      {!waiting && parties.length > 0 && (
+        <div className="load-party-bar">
+          <button
+            className="load-party-toggle"
+            onClick={() => setPartyPanelOpen((v) => !v)}
+          >
+            ⚔ Load Party {partyPanelOpen ? "▲" : "▼"}
+          </button>
+          {partyPanelOpen && (
+            <div className="load-party-panel">
+              {matchingParties.length === 0 ? (
+                <div className="load-party-empty">No saved parties match your current roster.</div>
+              ) : (
+                matchingParties.map((party) => (
+                  <div key={party.id} className="party-chip" onClick={() => loadParty(party.unitIds)}>
+                    <div>
+                      <div className="party-chip-name">{party.name}</div>
+                      <div className="party-chip-units">
+                        {party.unitIds.map((id) => myRoster.find((u) => u.id === id)?.name ?? id).join(", ")}
+                      </div>
+                    </div>
+                    <span className="party-chip-load">Load</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="presel-panels">
         <div className="presel-panel">

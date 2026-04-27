@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SocketProvider, useSocket } from "@/context/SocketContext";
 import type { Phase } from "@/lib/types";
@@ -8,6 +8,7 @@ import PreSelection from "@/pages/PreSelection";
 import Placement from "@/pages/Placement";
 import Battle from "@/pages/Battle";
 import GameOver from "@/pages/GameOver";
+import GatheringHub from "@/pages/GatheringHub";
 
 const queryClient = new QueryClient();
 
@@ -23,8 +24,11 @@ const PHASE_ROUTES: Record<Phase, string> = {
 function PhaseNavigator() {
   const { state } = useSocket();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    const isHubPhase = state.phase === "lobby" || state.phase === "waiting";
+    if (location.pathname === "/hub" && isHubPhase) return;
     navigate(PHASE_ROUTES[state.phase] ?? "/lobby", { replace: true });
   }, [state.phase]);
 
@@ -40,6 +44,7 @@ function App() {
           <PhaseNavigator />
           <Routes>
             <Route path="/lobby" element={<Lobby />} />
+            <Route path="/hub" element={<GatheringHub />} />
             <Route path="/preselect" element={<PreSelection />} />
             <Route path="/place" element={<Placement />} />
             <Route path="/battle" element={<Battle />} />
