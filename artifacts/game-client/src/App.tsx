@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SocketProvider, useSocket } from "@/context/SocketContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 import type { Phase } from "@/lib/types";
 import Lobby from "@/pages/Lobby";
 import PreSelection from "@/pages/PreSelection";
@@ -9,6 +10,7 @@ import Placement from "@/pages/Placement";
 import Battle from "@/pages/Battle";
 import GameOver from "@/pages/GameOver";
 import GatheringHub from "@/pages/GatheringHub";
+import TitleScreen from "@/pages/TitleScreen";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ function PhaseNavigator() {
   const location = useLocation();
 
   useEffect(() => {
+    // Never redirect away from the title screen
+    if (location.pathname === "/") return;
     const isHubPhase = state.phase === "lobby" || state.phase === "waiting";
     if (location.pathname === "/hub" && isHubPhase) return;
     navigate(PHASE_ROUTES[state.phase] ?? "/lobby", { replace: true });
@@ -69,21 +73,24 @@ function App() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename={base}>
-        <SocketProvider>
-          <PhaseNavigator />
-          <OpponentReconnectingBanner />
-          <Routes>
-            <Route path="/lobby" element={<Lobby />} />
-            <Route path="/hub" element={<GatheringHub />} />
-            <Route path="/preselect" element={<PreSelection />} />
-            <Route path="/place" element={<Placement />} />
-            <Route path="/battle" element={<Battle />} />
-            <Route path="/gameover" element={<GameOver />} />
-            <Route path="*" element={<Navigate to="/lobby" replace />} />
-          </Routes>
-        </SocketProvider>
-      </BrowserRouter>
+      <SettingsProvider>
+        <BrowserRouter basename={base}>
+          <SocketProvider>
+            <PhaseNavigator />
+            <OpponentReconnectingBanner />
+            <Routes>
+              <Route path="/" element={<TitleScreen />} />
+              <Route path="/lobby" element={<Lobby />} />
+              <Route path="/hub" element={<GatheringHub />} />
+              <Route path="/preselect" element={<PreSelection />} />
+              <Route path="/place" element={<Placement />} />
+              <Route path="/battle" element={<Battle />} />
+              <Route path="/gameover" element={<GameOver />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </SocketProvider>
+        </BrowserRouter>
+      </SettingsProvider>
     </QueryClientProvider>
   );
 }

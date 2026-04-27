@@ -2,6 +2,30 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { getUnitDef } from "@/lib/units";
 import type { GridUnit, PlayerAction, TurnEvent, SkillDef } from "@/lib/types";
+import { audioManager } from "@/lib/audio";
+
+// Local sprite map — indexed by unit def.id
+const SPRITE_MAP: Record<string, string> = {
+  warlock:   "/assets/units/warlock-sprite.png",
+  paladin:   "/assets/units/paladin-sprite.png",
+  knight:    "/assets/units/knight-sprite.png",
+  cleric:    "/assets/units/cleric-sprite.png",
+  mage:      "/assets/units/mage-sprite.png",
+  rogue:     "/assets/units/rogue-sprite.png",
+  archer:    "/assets/units/archer-sprite.png",
+  shaman:    "/assets/units/shaman-sprite.png",
+  lancer:    "/assets/units/lancer-sprite.png",
+  berserker: "/assets/units/berserker-sprite.png",
+  bard:      "/assets/units/bard-sprite.png",
+  wanderer:  "/assets/units/wanderer-sprite.png",
+};
+
+const BATTLE_BACKGROUNDS = [
+  "/assets/bg-castle.png",
+  "/assets/bg-desert.png",
+  "/assets/bg-colosseum.png",
+  "/assets/bg-forest.png",
+];
 
 type SelectMode = "none" | "move" | "attack" | "skill";
 
@@ -50,7 +74,16 @@ export default function Battle() {
   const [floats, setFloats] = useState<FloatText[]>([]);
   const [animating, setAnimating] = useState(false);
   const [flashUnits, setFlashUnits] = useState<Record<string, string>>({});
+  const [hoveredTile, setHoveredTile] = useState<{ x: number; y: number; onEnemy: boolean } | null>(null);
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // Pick a random battle background once per mount
+  const battleBg = useRef(BATTLE_BACKGROUNDS[Math.floor(Math.random() * BATTLE_BACKGROUNDS.length)]);
+
+  // Start battle music
+  useEffect(() => {
+    audioManager.play("battle");
+    return () => audioManager.stop();
+  }, []);
 
   // Always-current unit state for animation closures (avoids stale state desync)
   const latestUnitsRef = useRef<{ my: GridUnit[]; enemy: GridUnit[] }>({ my: state.myUnits, enemy: state.enemyUnits });
@@ -380,7 +413,8 @@ export default function Battle() {
 
       {/* Battlefield stage */}
       <div className="b-stage">
-        <div className="b-arena-bg">
+        <div className="b-arena-bg" style={{ backgroundImage: `url('${battleBg.current}')` }}>
+          <div className="b-arena-overlay" />
           <div className="b-bokeh b-bokeh1" /><div className="b-bokeh b-bokeh2" /><div className="b-bokeh b-bokeh3" />
         </div>
         <div className="b-field-wrap">
@@ -399,6 +433,8 @@ export default function Battle() {
                     style={{ left: col * STEP, top: row * STEP, width: TILE, height: TILE }}
                     onClick={() => hl && handleTileClick(col, row, false)}
                     onKeyDown={(e) => e.key === "Enter" && hl && handleTileClick(col, row, false)}
+                    onMouseEnter={() => hl && setHoveredTile({ x: col, y: row, onEnemy: false })}
+                    onMouseLeave={() => setHoveredTile(null)}
                   />
                 );
               })
@@ -417,6 +453,8 @@ export default function Battle() {
                     style={{ left: ENEMY_OFFSET + col * STEP, top: row * STEP, width: TILE, height: TILE, zIndex: hl ? 25 : undefined }}
                     onClick={() => hl && handleTileClick(col, row, true)}
                     onKeyDown={(e) => e.key === "Enter" && hl && handleTileClick(col, row, true)}
+                    onMouseEnter={() => hl && setHoveredTile({ x: col, y: row, onEnemy: true })}
+                    onMouseLeave={() => setHoveredTile(null)}
                   />
                 );
               })
@@ -455,6 +493,40 @@ export default function Battle() {
                 floats={floats.filter((f) => f.onEnemy && f.x === unit.x && f.y === unit.y)}
               />
             ))}
+
+            {/* Targeting line SVG overlay */}
+            {(() => {
+              if (selectMode === "none" || !selectedId || !hoveredTile) return null;
+              const actor = myUnits.find(u => u.instanceId === selectedId);
+              if (!actor) return null;
+              const ax = actor.x * STEP + TILE / 2;
+              const ay = actor.y * STEP + TILE / 2;
+              const tx = hoveredTile.onEnemy
+                ? ENEMY_OFFSET + hoveredTile.x * STEP + TILE / 2
+                : hoveredTile.x * STEP + TILE / 2;
+              const ty = hoveredTile.y * STEP + TILE / 2;
+              const bfW = ENEMY_OFFSET + 4 * STEP;
+              return (
+                <svg
+                  style={{ position: "absolute", inset: 0, width: bfW, height: BOARD_H, pointerEvents: "none", zIndex: 28, overflow: "visible" }}
+                >
+                  <defs>
+                    <marker id="tgt-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill="rgba(240,192,64,0.85)" />
+                    </marker>
+                  </defs>
+                  <line
+                    x1={ax} y1={ay} x2={tx} y2={ty}
+                    stroke="rgba(240,192,64,0.75)"
+                    strokeWidth="2"
+                    strokeDasharray="9 5"
+                    strokeLinecap="round"
+                    markerEnd="url(#tgt-arrow)"
+                  />
+                  <circle cx={ax} cy={ay} r="5" fill="none" stroke="rgba(240,192,64,0.6)" strokeWidth="1.5" />
+                </svg>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -579,7 +651,7 @@ function UnitToken({
 
   return (
     <div
-      className={`b-unit-token${isSelected ? " b-token-sel" : ""}${isKo ? " b-token-ko" : ""}${flashType === "damage" ? " b-token-damage" : ""}${flashType === "attack" ? " b-token-attack" : ""}`}
+      className={`b-unit-token${isSelected ? " b-token-sel" : ""}${isKo ? " b-token-ko" : ""}${flashType === "damage" ? " b-token-damage" : ""}${flashType === "attack" ? " b-token-attack" : ""}${flashType === "skill" ? " b-token-skill" : ""}${flashType === "defend" ? " b-token-defend" : ""}${flashType === "wait" ? " b-token-wait" : ""}`}
       style={{
         position: "absolute",
         left: left,
@@ -592,7 +664,12 @@ function UnitToken({
       }}
       onClick={onClick}
     >
-      <div className={`sprite sprite--${def.cls} ${isAlly ? "sprite-ally" : "sprite-enemy"} sprite-idle`} />
+      <img
+        src={SPRITE_MAP[def.id] ?? "/assets/units/knight-sprite.png"}
+        alt={def.name}
+        className={`unit-sprite${isAlly ? "" : " sprite-enemy"}${flashType === "wait" ? " sprite-wait" : " sprite-idle"}`}
+        draggable={false}
+      />
 
       {/* Nameplate */}
       <div className="b-nameplate">
@@ -640,22 +717,97 @@ function actionLabel(action: QueuedAction) {
 
 function spriteCSS() {
   return `
-    .sprite {
+    .unit-sprite {
       image-rendering: pixelated;
-      background-repeat: no-repeat;
-      flex-shrink: 0;
       display: block;
+      width: 64px;
+      height: 80px;
+      object-fit: contain;
+      object-position: center bottom;
+      flex-shrink: 0;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
     }
-    .sprite-ally { filter: none; }
-    .sprite-enemy { filter: hue-rotate(180deg) saturate(1.3) brightness(1.1); }
-    .sprite--blade-knight { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/3/30/Blade_Knight.png'); width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--rune-archer  { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/d/dd/Rune_Archer.png');   width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--cleric       { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/a/a4/Cleric.png');        width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--guardian     { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/2/2b/Guardian.png');      width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--lancer       { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/e/e7/Lancer.png');        width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--hex-mage     { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/0/03/Hex_Mage.png');      width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--invoker      { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/5/50/Invoker.png');       width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--fell-duelist { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/8/8c/Fell_Duelist.png');  width:48px; height:64px; background-size:contain; background-position:center bottom; }
+
+    /* Enemy tint — cooler hue */
+    .unit-sprite.sprite-enemy {
+      filter: hue-rotate(170deg) saturate(1.4) brightness(1.05) drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+    }
+
+    /* Idle breathing bob */
+    .unit-sprite.sprite-idle {
+      animation: unitIdleBob 2.4s ease-in-out infinite;
+    }
+
+    /* Wait = slow gentle sway */
+    .unit-sprite.sprite-wait {
+      animation: unitWaitSway 3s ease-in-out infinite;
+    }
+
+    @keyframes unitIdleBob {
+      0%,100% { transform: translateY(0px); }
+      50%      { transform: translateY(-3px); }
+    }
+    @keyframes unitWaitSway {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      33%     { transform: translateY(-2px) rotate(-1.5deg); }
+      66%     { transform: translateY(-1px) rotate(1deg); }
+    }
+
+    /* Selected unit — glow on sprite */
+    .b-token-sel .unit-sprite {
+      filter: brightness(1.35) drop-shadow(0 0 10px rgba(240,192,64,0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.5)) !important;
+    }
+
+    /* Damage taken flash */
+    .b-token-damage .unit-sprite {
+      animation: unitDamageFlash 0.55s ease !important;
+    }
+    @keyframes unitDamageFlash {
+      0%,100% { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+      20%,60% { filter: brightness(2.5) saturate(0) sepia(1) hue-rotate(-30deg) drop-shadow(0 0 12px rgba(255,80,80,0.9)); transform: translateX(-4px); }
+      40%,80% { transform: translateX(4px); }
+    }
+
+    /* Attack lunge */
+    .b-token-attack .unit-sprite {
+      animation: unitAttackLunge 0.42s ease !important;
+    }
+    @keyframes unitAttackLunge {
+      0%     { transform: translateX(0) translateY(0); }
+      35%    { transform: translateX(14px) translateY(-5px) scale(1.08); filter: drop-shadow(0 4px 12px rgba(240,192,64,0.5)); }
+      65%    { transform: translateX(8px) translateY(-2px) scale(1.04); }
+      100%   { transform: translateX(0) translateY(0); }
+    }
+
+    /* Skill cast — burst flash */
+    .b-token-skill .unit-sprite {
+      animation: unitSkillFlash 0.65s ease !important;
+    }
+    @keyframes unitSkillFlash {
+      0%   { transform: scale(1); filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+      15%  { transform: scale(1.18) translateY(-6px); filter: brightness(2) drop-shadow(0 0 20px rgba(150,80,255,0.9)); }
+      35%  { transform: scale(1.12) translateY(-4px); filter: brightness(1.6) drop-shadow(0 0 14px rgba(150,80,255,0.7)); }
+      60%  { transform: scale(1.05); }
+      100% { transform: scale(1); filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+    }
+
+    /* Defend stance — shield up pulse */
+    .b-token-defend .unit-sprite {
+      animation: unitDefendPulse 0.7s ease !important;
+    }
+    @keyframes unitDefendPulse {
+      0%   { transform: scale(1); }
+      20%  { transform: scale(0.9) translateY(4px); filter: brightness(0.7) drop-shadow(0 0 10px rgba(60,120,255,0.8)); }
+      50%  { transform: scale(0.93) translateY(2px); filter: brightness(0.8) drop-shadow(0 0 6px rgba(60,120,255,0.5)); }
+      100% { transform: scale(1); }
+    }
+
+    /* KO'd unit */
+    .b-token-ko .unit-sprite {
+      opacity: 0.15;
+      filter: saturate(0) brightness(0.4);
+      animation: none !important;
+    }
   `;
 }
 
@@ -711,10 +863,15 @@ function battleCSS() {
     }
     .b-arena-bg {
       position: absolute; inset: 0;
+      background-size: cover;
+      background-position: center center;
+      background-color: #0a0614;
+    }
+    .b-arena-overlay {
+      position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse 90% 60% at 50% 40%, rgba(30,15,70,0.8) 0%, #060410 70%),
-        repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, transparent 1px, transparent 24px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, transparent 1px, transparent 24px);
+        linear-gradient(to bottom, rgba(6,4,16,0.35) 0%, rgba(6,4,16,0.15) 40%, rgba(6,4,16,0.55) 100%),
+        radial-gradient(ellipse 80% 50% at 50% 100%, rgba(6,4,16,0.7) 0%, transparent 70%);
     }
     .b-bokeh {
       position: absolute; border-radius: 50%;
@@ -773,18 +930,7 @@ function battleCSS() {
       align-items: center;
       gap: 2px;
     }
-    .b-token-sel .sprite { filter: brightness(1.4) drop-shadow(0 0 8px #f0c040) !important; }
-    .b-token-ko { opacity: 0.2; transition: opacity 0.5s; }
-    .b-token-damage .sprite { animation: damageFlash 0.5s; }
-    .b-token-attack .sprite { animation: attackBob 0.3s; }
-    @keyframes damageFlash {
-      0%,100% { filter: none; }
-      30%,70% { filter: brightness(2) saturate(0) sepia(1) hue-rotate(-60deg); }
-    }
-    @keyframes attackBob {
-      0%,100% { transform: translateX(0); }
-      40% { transform: translateX(6px); }
-    }
+    .b-token-ko { opacity: 0.22; transition: opacity 0.5s; pointer-events: none; }
 
     .b-nameplate {
       background: rgba(6,4,16,0.88);

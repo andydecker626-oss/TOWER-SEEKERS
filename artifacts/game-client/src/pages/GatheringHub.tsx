@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ALL_UNITS, getUnitDef } from "@/lib/units";
 import { useParties, type Party, type UnitLoadout } from "@/hooks/useParties";
 import type { UnitDef, SkillDef, PassiveDef } from "@/lib/types";
+import { audioManager } from "@/lib/audio";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap');`;
 
@@ -632,6 +633,12 @@ export default function GatheringHub() {
   const [editParty, setEditParty] = useState<Party | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<UnitDef | null>(null);
+
+  // Play hub music while in this screen
+  useEffect(() => {
+    audioManager.play("hub");
+    return () => audioManager.stop();
+  }, []);
 
   function openNew() { setEditParty(undefined); setModalOpen(true); }
   function openEdit(party: Party) { setEditParty(party); setModalOpen(true); }

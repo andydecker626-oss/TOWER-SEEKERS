@@ -234,6 +234,36 @@ uri = "file://artifacts/game-client/public/assets/units/bard-sprite.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "vJpChtoyfqjPNMWZPREcE"
+uri = "file://artifacts/game-client/public/assets/title-bg.png"
+type = "image"
+title = "tower seekers title screen"
+
+[[generated]]
+id = "-cu8vggmd1txhFb-9rZTd"
+uri = "file://artifacts/game-client/public/assets/bg-castle.png"
+type = "image"
+title = "castle battle background"
+
+[[generated]]
+id = "-8Si9qhsdapuonyuixVUA"
+uri = "file://artifacts/game-client/public/assets/bg-desert.png"
+type = "image"
+title = "desert battle background"
+
+[[generated]]
+id = "D2t2ZilEkYs8Ww5dyG9sB"
+uri = "file://artifacts/game-client/public/assets/bg-colosseum.png"
+type = "image"
+title = "colosseum battle background"
+
+[[generated]]
+id = "cvY3TnRizWfKEBr594IFI"
+uri = "file://artifacts/game-client/public/assets/bg-forest.png"
+type = "image"
+title = "forest battle background"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
