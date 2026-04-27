@@ -368,7 +368,7 @@ function UnitDetailPanel({ unit, onClose }: { unit: UnitDef; onClose: () => void
 
         <div className="detail-portrait">
           <img src={`/assets/units/${unit.id}-portrait.png`} alt={`${unit.name} portrait`}
-            style={{ width: "100%", maxHeight: 220, objectFit: "cover", objectPosition: "top center", display: "block" }} />
+            style={{ width: "100%", maxHeight: 340, objectFit: "cover", objectPosition: "top center", display: "block" }} />
           <div className="detail-portrait-fade" />
         </div>
 
@@ -524,17 +524,17 @@ const HUB_CSS = `
 
   /* Roster */
   .roster-grid {
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem;
   }
   .roster-card {
-    background: rgba(10,7,22,0.8); border: 1px solid rgba(240,192,64,0.1); border-radius: 8px;
-    padding: 0.55rem 0.3rem 0.4rem;
-    display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+    background: rgba(10,7,22,0.8); border: 1px solid rgba(240,192,64,0.1); border-radius: 10px;
+    padding: 1rem 0.5rem 0.75rem;
+    display: flex; flex-direction: column; align-items: center; gap: 0.45rem;
     cursor: pointer; transition: all 0.14s; position: relative;
   }
-  .roster-card:hover { border-color: rgba(240,192,64,0.4); background: rgba(240,192,64,0.06); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-  .roster-card-name { font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 600; color: rgba(220,190,120,0.85); text-align: center; line-height: 1.2; }
-  .roster-card-cls { font-size: 0.5rem; color: rgba(200,170,100,0.35); text-transform: capitalize; text-align: center; }
+  .roster-card:hover { border-color: rgba(240,192,64,0.4); background: rgba(240,192,64,0.06); transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  .roster-card-name { font-family: 'Cinzel', serif; font-size: 0.78rem; font-weight: 700; color: rgba(220,190,120,0.92); text-align: center; line-height: 1.3; }
+  .roster-card-cls { font-size: 0.62rem; color: rgba(200,170,100,0.45); text-transform: capitalize; text-align: center; padding-bottom: 0.15rem; }
 
   /* Modal */
   .modal-overlay {
@@ -592,7 +592,7 @@ const HUB_CSS = `
     display: flex; justify-content: flex-end;
   }
   .detail-panel {
-    width: 360px; max-width: 100vw; height: 100vh;
+    width: 520px; max-width: 100vw; height: 100vh;
     background: #080618; border-left: 1px solid rgba(240,192,64,0.18);
     display: flex; flex-direction: column; overflow: hidden;
     box-shadow: -10px 0 50px rgba(0,0,0,0.8);
@@ -606,7 +606,7 @@ const HUB_CSS = `
   .detail-name { font-family: 'Cinzel', serif; font-size: 1.05rem; font-weight: 700; color: #f0c040; }
   .detail-cls { font-family: 'Cinzel', serif; font-size: 0.6rem; color: rgba(200,170,100,0.45); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 0.1rem; }
   .detail-portrait { flex-shrink: 0; position: relative; }
-  .detail-portrait-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, #080618); }
+  .detail-portrait-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: linear-gradient(transparent, #080618); }
   .detail-body { flex: 1; overflow-y: auto; padding: 0.85rem 1.1rem; scrollbar-width: thin; scrollbar-color: rgba(240,192,64,0.12) transparent; }
   .detail-description { font-size: 0.7rem; color: rgba(200,175,130,0.65); line-height: 1.55; margin: 0 0 0.75rem; font-style: italic; }
   .detail-tag { font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.15); border-radius: 4px; padding: 2px 6px; color: rgba(200,170,100,0.55); }
@@ -698,7 +698,7 @@ export default function GatheringHub() {
         <div className="roster-grid">
           {ALL_UNITS.map((u) => (
             <div key={u.id} className="roster-card" onClick={() => setSelectedUnit(u)}>
-              <UnitSprite unit={u} size={40} />
+              <UnitSprite unit={u} size={68} />
               <div className="roster-card-name">{u.name}</div>
               <div className="roster-card-cls">{u.cls.replace(/-/g, " ")}</div>
             </div>
