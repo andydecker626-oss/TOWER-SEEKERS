@@ -4,19 +4,20 @@ const FRAME_W = 96;
 const FRAME_H = 96;
 const TOTAL_FRAMES = 12;
 
+// Phase totals per spec: Anticipation 150ms, Dash 150ms, Strike 100ms+50ms hit-pause, Reaction 100ms, Recovery 100ms
 const FRAME_TIMINGS_MS = [
-  50,   // 1  Idle
+  50,   // 1  Idle           (Anticipation phase)
   50,   // 2  Lean
   50,   // 3  Set
-  50,   // 4  Start Dash
-  50,   // 5  Dash Blur
+  50,   // 4  Start Dash     (Dash phase)
+  50,   // 5  Dash Blur      ← afterimage effect
   50,   // 6  Arrive
-  50,   // 7  Slash  ← slash arc appears
-  120,  // 8  Hit Pause (extended for impact feel)
-  50,   // 9  Enemy Recoil
+  50,   // 7  Slash          (Strike phase) ← slash arc on
+  100,  // 8  Hit Pause      (50ms base + 50ms extra hold) ← slash arc + hit flash
+  50,   // 9  Enemy Recoil   (Reaction phase)
   50,   // 10 Enemy Settle
-  50,   // 11 Recover
-  80,   // 12 Return
+  50,   // 11 Recover        (Recovery phase)
+  50,   // 12 Return
 ];
 
 const SLASH_ARC_FRAME = 6;   // 0-indexed frame 7
@@ -49,7 +50,8 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
       const next = (idx + 1) % TOTAL_FRAMES;
 
       setFrame(next);
-      setShowSlashArc(next === SLASH_ARC_FRAME);
+      // Slash arc visible on frames 7–8 (indices 6 and 7), per spec
+      setShowSlashArc(next === SLASH_ARC_FRAME || next === HIT_FLASH_FRAME);
       setShowHitFlash(next === HIT_FLASH_FRAME);
       setDashBlur(next === DASH_BLUR_FRAME);
 
@@ -108,7 +110,7 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
         style={{
           width: w,
           height: h,
-          backgroundImage: "url('/assets/units/anim/slash-sheet.png')",
+          backgroundImage: "url('/assets/units/wanderer-draw-slash-sheet.png')",
           backgroundRepeat: "no-repeat",
           backgroundSize: `${FRAME_W * TOTAL_FRAMES * scale}px ${h}px`,
           backgroundPosition: `${bgX * scale}px 0px`,
@@ -122,7 +124,7 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: "url('/assets/units/anim/slash-sheet.png')",
+            backgroundImage: "url('/assets/units/wanderer-draw-slash-sheet.png')",
             backgroundRepeat: "no-repeat",
             backgroundSize: `${FRAME_W * TOTAL_FRAMES * scale}px ${h}px`,
             backgroundPosition: `${(DASH_BLUR_FRAME - 1) * -FRAME_W * scale}px 0px`,
