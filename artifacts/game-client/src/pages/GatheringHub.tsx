@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ALL_UNITS } from "@/lib/units";
 import { useParties, type Party } from "@/hooks/useParties";
 import type { UnitDef } from "@/lib/types";
+import WandererSlashAnim from "@/components/WandererSlashAnim";
 
 function spriteCSS() {
   return `
@@ -155,12 +156,116 @@ function PartyModal({
   );
 }
 
+function StatRow({ label, value, max, color = "#f0c040" }: { label: string; value: number; max: number; color?: string }) {
+  const pct = Math.min(100, Math.round((value / max) * 100));
+  return (
+    <div style={{ marginBottom: "0.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.65rem", color: "rgba(200,170,100,0.6)", letterSpacing: "0.12em", textTransform: "uppercase" }}>{label}</span>
+        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.7rem", color, fontWeight: 700 }}>{value}</span>
+      </div>
+      <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2, transition: "width 0.3s" }} />
+      </div>
+    </div>
+  );
+}
+
+function UnitDetailPanel({ unit, onClose }: { unit: UnitDef; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<"art" | "preview">("art");
+  const hasPortrait = unit.id === "wanderer";
+  const hasAnimation = unit.id === "wanderer";
+
+  return (
+    <div className="detail-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="detail-panel">
+        <div className="detail-header">
+          <div>
+            <div className="detail-name">{unit.name}</div>
+            <div className="detail-cls">{unit.cls.replace(/-/g, " ")}</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}>✕</button>
+        </div>
+
+        {hasAnimation && (
+          <div className="detail-tabs">
+            <button className={`detail-tab${activeTab === "art" ? " active" : ""}`} onClick={() => setActiveTab("art")}>Portrait</button>
+            <button className={`detail-tab${activeTab === "preview" ? " active" : ""}`} onClick={() => setActiveTab("preview")}>Attack Preview</button>
+          </div>
+        )}
+
+        <div className="detail-visual">
+          {activeTab === "art" || !hasAnimation ? (
+            hasPortrait ? (
+              <img
+                src="/assets/units/wanderer-portrait.png"
+                alt="Wanderer portrait"
+                style={{ width: "100%", maxHeight: 260, objectFit: "cover", objectPosition: "top", borderRadius: 6, display: "block" }}
+              />
+            ) : (
+              <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className={`sprite sprite--${unit.cls}`} style={{ width: 64, height: 85, backgroundSize: "contain", backgroundPosition: "center bottom" }} />
+              </div>
+            )
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", padding: "1rem 0" }}>
+              <div style={{ fontSize: "0.65rem", fontFamily: "Cinzel, serif", color: "rgba(200,170,100,0.5)", letterSpacing: "0.2em", textTransform: "uppercase" }}>
+                Draw Slash · 12 Frames · 20 FPS
+              </div>
+              <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: 8, padding: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 180, gap: "2rem" }}>
+                <WandererSlashAnim mode="loop" scale={2} />
+              </div>
+              <div style={{ fontSize: "0.6rem", fontFamily: "Cinzel, serif", color: "rgba(200,170,100,0.35)", letterSpacing: "0.12em" }}>
+                Anticipation · Dash · Strike · Reaction · Recovery
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="detail-body">
+          <div className="detail-section-label">Stats</div>
+          <div style={{ marginBottom: "1rem" }}>
+            <StatRow label="HP" value={unit.baseHp} max={160} color="#86efac" />
+            <StatRow label="Phys Atk" value={unit.physAtk} max={100} color="#f0c040" />
+            <StatRow label="Mag Atk" value={unit.magAtk} max={100} color="#c084fc" />
+            <StatRow label="Phys Def" value={unit.physDef} max={100} color="#60a5fa" />
+            <StatRow label="Mag Def" value={unit.magDef} max={100} color="#818cf8" />
+            <StatRow label="Speed" value={unit.speed} max={100} color="#fb923c" />
+            <StatRow label="Move" value={unit.moveDist} max={4} color="#34d399" />
+            <StatRow label="Evasion" value={Math.round(unit.evasion * 100)} max={40} color="#f472b6" />
+          </div>
+
+          <div className="detail-section-label">Active Skills</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
+            {unit.skills.map((sk) => (
+              <div key={sk.id} className="skill-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <span className="skill-name">{sk.name}</span>
+                  <span className="skill-ap">{sk.ap} AP</span>
+                </div>
+                <div className="skill-type-row">
+                  <span className={`skill-badge skill-badge--${sk.type}`}>{sk.type}</span>
+                  {sk.power && <span className="skill-power">PWR {sk.power}</span>}
+                  {sk.accuracy && <span className="skill-acc">ACC {sk.accuracy}%</span>}
+                  {sk.healAmount && <span className="skill-power">+{sk.healAmount} HP</span>}
+                </div>
+                {sk.effect && <div className="skill-effect">{sk.effect}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GatheringHub() {
   const navigate = useNavigate();
   const { parties, saveParty, deleteParty } = useParties();
   const [modalOpen, setModalOpen] = useState(false);
   const [editParty, setEditParty] = useState<Party | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<UnitDef | null>(null);
 
   function openNew() {
     setEditParty(undefined);
@@ -557,6 +662,128 @@ export default function GatheringHub() {
           background: linear-gradient(to right, transparent, rgba(240,192,64,0.3), transparent);
           margin: 0.5rem 0;
         }
+
+        /* Roster section */
+        .roster-section { margin-top: 2.5rem; }
+        .roster-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+          gap: 0.6rem;
+        }
+        .roster-card {
+          background: rgba(12,9,25,0.85);
+          border: 1px solid rgba(240,192,64,0.13);
+          border-radius: 8px;
+          padding: 0.55rem 0.3rem 0.4rem;
+          display: flex; flex-direction: column; align-items: center; gap: 0.28rem;
+          cursor: pointer;
+          transition: all 0.15s;
+          position: relative;
+        }
+        .roster-card:hover { border-color: rgba(240,192,64,0.45); background: rgba(240,192,64,0.06); transform: translateY(-2px); }
+        .roster-card.has-anim::after {
+          content: "▶";
+          position: absolute; top: 3px; right: 4px;
+          font-size: 0.45rem; color: rgba(240,192,64,0.5);
+        }
+        .roster-card-name {
+          font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 600;
+          color: rgba(220,190,120,0.85); text-align: center; line-height: 1.2;
+        }
+        .roster-card-cls {
+          font-size: 0.5rem; color: rgba(200,170,100,0.4);
+          text-transform: capitalize; text-align: center;
+        }
+
+        /* Unit detail panel */
+        .detail-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(0,0,0,0.6);
+          backdrop-filter: blur(3px);
+          display: flex; justify-content: flex-end;
+        }
+        .detail-panel {
+          width: 340px; max-width: 100vw;
+          height: 100vh;
+          background: #0b0818;
+          border-left: 1px solid rgba(240,192,64,0.2);
+          display: flex; flex-direction: column;
+          overflow: hidden;
+          box-shadow: -8px 0 40px rgba(0,0,0,0.7);
+          animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn {
+          from { transform: translateX(100%); }
+          to   { transform: translateX(0); }
+        }
+        .detail-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 1.2rem 1.2rem 0.9rem;
+          border-bottom: 1px solid rgba(240,192,64,0.1);
+          flex-shrink: 0;
+        }
+        .detail-name {
+          font-family: 'Cinzel', serif; font-size: 1.1rem; font-weight: 700; color: #f0c040;
+        }
+        .detail-cls {
+          font-family: 'Cinzel', serif; font-size: 0.65rem;
+          color: rgba(200,170,100,0.5); letter-spacing: 0.18em; text-transform: uppercase;
+          margin-top: 0.15rem;
+        }
+        .detail-tabs {
+          display: flex; flex-shrink: 0;
+          border-bottom: 1px solid rgba(240,192,64,0.1);
+        }
+        .detail-tab {
+          flex: 1; font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.12em;
+          text-transform: uppercase; color: rgba(200,170,100,0.5);
+          background: transparent; border: none; padding: 0.6rem 0; cursor: pointer;
+          border-bottom: 2px solid transparent; transition: all 0.15s;
+        }
+        .detail-tab:hover { color: rgba(240,192,64,0.8); }
+        .detail-tab.active { color: #f0c040; border-bottom-color: #f0c040; }
+        .detail-visual { flex-shrink: 0; overflow: hidden; }
+        .detail-body {
+          flex: 1; overflow-y: auto; padding: 1rem 1.2rem;
+          scrollbar-width: thin; scrollbar-color: rgba(240,192,64,0.15) transparent;
+        }
+        .detail-section-label {
+          font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.22em;
+          text-transform: uppercase; color: rgba(200,170,100,0.5);
+          margin-bottom: 0.6rem; margin-top: 0.2rem;
+          padding-bottom: 0.3rem; border-bottom: 1px solid rgba(240,192,64,0.08);
+        }
+        .skill-card {
+          background: rgba(15,11,30,0.9);
+          border: 1px solid rgba(240,192,64,0.12);
+          border-radius: 6px; padding: 0.6rem 0.7rem;
+        }
+        .skill-name {
+          font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 600; color: #f0c040;
+        }
+        .skill-ap {
+          font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700;
+          color: #c084fc; background: rgba(192,132,252,0.12);
+          border-radius: 4px; padding: 1px 6px;
+        }
+        .skill-type-row {
+          display: flex; gap: 0.35rem; margin-top: 0.3rem; flex-wrap: wrap;
+        }
+        .skill-badge {
+          font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase;
+          border-radius: 3px; padding: 1px 5px; font-weight: 600;
+        }
+        .skill-badge--physical { background: rgba(251,146,60,0.18); color: #fb923c; }
+        .skill-badge--magical  { background: rgba(192,132,252,0.18); color: #c084fc; }
+        .skill-badge--healing  { background: rgba(134,239,172,0.18); color: #86efac; }
+        .skill-badge--buff     { background: rgba(96,165,250,0.18);  color: #60a5fa; }
+        .skill-badge--special  { background: rgba(240,192,64,0.18);  color: #f0c040; }
+        .skill-power { font-size: 0.6rem; color: rgba(200,170,100,0.55); }
+        .skill-acc   { font-size: 0.6rem; color: rgba(200,170,100,0.45); }
+        .skill-effect {
+          font-size: 0.62rem; color: rgba(200,170,100,0.5); margin-top: 0.3rem;
+          font-style: italic; line-height: 1.4;
+        }
       `}</style>
 
       <div className="hub-bg" />
@@ -603,6 +830,25 @@ export default function GatheringHub() {
             />
           ))}
         </div>
+
+        <div className="roster-section">
+          <div className="hub-section-bar">
+            <span className="section-label">Unit Roster — click any unit to inspect</span>
+          </div>
+          <div className="roster-grid">
+            {ALL_UNITS.map((u) => (
+              <div
+                key={u.id}
+                className={`roster-card${u.id === "wanderer" ? " has-anim" : ""}`}
+                onClick={() => setSelectedUnit(u)}
+              >
+                <UnitSprite unit={u} size={36} />
+                <div className="roster-card-name">{u.name}</div>
+                <div className="roster-card-cls">{u.cls.replace(/-/g, " ")}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
 
       {modalOpen && (
@@ -610,6 +856,13 @@ export default function GatheringHub() {
           initial={editParty}
           onSave={handleSave}
           onClose={() => { setModalOpen(false); setEditParty(undefined); }}
+        />
+      )}
+
+      {selectedUnit && (
+        <UnitDetailPanel
+          unit={selectedUnit}
+          onClose={() => setSelectedUnit(null)}
         />
       )}
     </div>

@@ -12,6 +12,90 @@ uri = "file://artifacts/game-client/public/assets/units/wanderer-portrait.png"
 type = "image"
 title = "wanderer character portrait art"
 
+[[generated]]
+id = "EWDOszOwKyFQ1chjjhdkE"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f01-idle.png"
+type = "image"
+title = "wanderer idle frame 1"
+
+[[generated]]
+id = "mch9-3aV3PT5Hw8BtMWp7"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f02-lean.png"
+type = "image"
+title = "wanderer lean frame 2"
+
+[[generated]]
+id = "pxWXva4QmCMk2Q7LjmgZK"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f03-set.png"
+type = "image"
+title = "wanderer set frame 3"
+
+[[generated]]
+id = "mXWa7HHCarzBXGvxH_edT"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f04-start-dash.png"
+type = "image"
+title = "wanderer start dash frame 4"
+
+[[generated]]
+id = "VCqkCkzx9t9HwmGW0mRkJ"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f05-dash-blur.png"
+type = "image"
+title = "wanderer dash blur frame 5"
+
+[[generated]]
+id = "DTJ8a94Zx4cfz8gxWhw7w"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f06-arrive.png"
+type = "image"
+title = "wanderer arrive frame 6"
+
+[[generated]]
+id = "KqvPVApWd0npjG2QfVe71"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f07-slash.png"
+type = "image"
+title = "wanderer slash frame 7"
+
+[[generated]]
+id = "G7qUdtARwGIpLUvRFkRVY"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f08-hit-pause.png"
+type = "image"
+title = "wanderer hit pause frame 8"
+
+[[generated]]
+id = "WLzy7cmQTaS5UWxA7JwJu"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f09-enemy-recoil.png"
+type = "image"
+title = "enemy recoil frame 9"
+
+[[generated]]
+id = "AOcJYcP9SZ4K_-NCb03jG"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f10-enemy-settle.png"
+type = "image"
+title = "enemy settle frame 10"
+
+[[generated]]
+id = "1JIj7Hfv4zG_9X7pKxafF"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f11-recover.png"
+type = "image"
+title = "wanderer recover frame 11"
+
+[[generated]]
+id = "iBgYHBPFgyGaQjWfTozZh"
+uri = "file://artifacts/game-client/public/assets/units/anim/slash-f12-return.png"
+type = "image"
+title = "wanderer return frame 12"
+
+[[generated]]
+id = "BTf86VPxteQtho_eDqzzg"
+uri = "file://artifacts/game-client/public/assets/units/anim/vfx-slash-arc.png"
+type = "image"
+title = "slash arc VFX"
+
+[[generated]]
+id = "w29Boc2sQmdnTbwrjTcdV"
+uri = "file://artifacts/game-client/public/assets/units/anim/vfx-hit-flash.png"
+type = "image"
+title = "hit flash VFX"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
