@@ -1,5 +1,16 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "Jx5zCG1T43BIB4IteKsX_"
+uri = "file://artifacts/game-client/public/assets/units/wanderer-sprite.png"
+type = "image"
+title = "wanderer pixel sprite idle"
+
+[[generated]]
+id = "xukrOk3hOsybwhOxR7L0D"
+uri = "file://artifacts/game-client/public/assets/units/wanderer-portrait.png"
+type = "image"
+title = "wanderer character portrait art"
 
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
