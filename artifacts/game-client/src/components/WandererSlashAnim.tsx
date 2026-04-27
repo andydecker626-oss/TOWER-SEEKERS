@@ -4,7 +4,8 @@ const FRAME_W = 96;
 const FRAME_H = 96;
 const TOTAL_FRAMES = 12;
 
-// Phase totals per spec: Anticipation 150ms, Dash 150ms, Strike 100ms+50ms hit-pause, Reaction 100ms, Recovery 100ms
+// Phase totals per spec (20 FPS base = 600ms) + intentional ~50ms hit-pause extra = ~650ms total:
+// Anticipation 150ms | Dash 150ms | Strike 150ms (100ms base + 50ms hold) | Reaction 100ms | Recovery 100ms
 const FRAME_TIMINGS_MS = [
   50,   // 1  Idle           (Anticipation phase)
   50,   // 2  Lean
@@ -137,7 +138,7 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
         />
       )}
 
-      {/* Slash arc VFX */}
+      {/* Slash arc VFX — stays visible across frames 7–8; duration = frame7 + frame8 timing */}
       {showSlashArc && (
         <div
           style={{
@@ -151,7 +152,7 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center",
             imageRendering: "pixelated",
-            animation: `slashArcIn ${FRAME_TIMINGS_MS[SLASH_ARC_FRAME]}ms ease-out forwards`,
+            animation: `slashArcIn ${FRAME_TIMINGS_MS[SLASH_ARC_FRAME] + FRAME_TIMINGS_MS[HIT_FLASH_FRAME]}ms ease-out forwards`,
             pointerEvents: "none",
           }}
         />
