@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto";
 import type { Server, Socket } from "socket.io";
-import type { RoomState, PlayerAction, Side, SideState } from "./types.js";
+import type { RoomState, PlayerAction, Side, SideState, GridUnit } from "./types.js";
 import { assignRosters, getUnitDef, shuffleArray, ALL_UNITS } from "./units.js";
-import { createGridUnits, resolveTurn, checkWinner } from "./engine.js";
+import { createGridUnits, resolveTurn, checkWinner, crossGridDist, getAttackRange } from "./engine.js";
 import { logger } from "../lib/logger.js";
+
+const AI_SOCKET_ID = "AI_BOT";
 
 const rooms = new Map<string, RoomState>();
 const socketToRoom = new Map<string, { code: string; side: Side }>();
@@ -24,6 +26,104 @@ function generateCode(): string {
 function getRosterDefs(ids: string[]) {
   return ids.map((id) => getUnitDef(id)).filter(Boolean);
 }
+
+// ─── AI helpers ──────────────────────────────────────────────────────────────
+
+function aiPickUnits(roster: string[]): string[] {
+  return roster.slice(0, 4);
+}
+
+function aiPlaceUnits(picks: string[]): { unitId: string; x: number; y: number }[] {
+  // Front row (x=3 is closest to Side A for Side B units)
+  return picks.map((unitId, i) => ({ unitId, x: 3, y: i }));
+}
+
+function generateAiActions(battleState: GridUnit[], aiSide: Side): PlayerAction[] {
+  const aiUnits = battleState.filter((u) => u.side === aiSide && u.alive);
+  const enemies = battleState.filter((u) => u.side !== aiSide && u.alive);
+
+  const actions: PlayerAction[] = [];
+  const pendingMoves = new Set<string>();
+
+  for (const unit of aiUnits) {
+    const def = getUnitDef(unit.defId);
+    if (!def || enemies.length === 0) {
+      actions.push({ unitInstanceId: unit.instanceId, type: "wait" });
+      continue;
+    }
+
+    // Find nearest living enemy
+    let nearest = enemies[0];
+    let nearestDist = Infinity;
+    for (const enemy of enemies) {
+      const dist =
+        aiSide === "A"
+          ? crossGridDist(unit.x, unit.y, enemy.x, enemy.y)
+          : crossGridDist(enemy.x, enemy.y, unit.x, unit.y);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    const attackRange = getAttackRange(def.baseAttackStyle);
+
+    if (nearestDist <= attackRange) {
+      actions.push({
+        unitInstanceId: unit.instanceId,
+        type: "attack",
+        targetX: nearest.x,
+        targetY: nearest.y,
+      });
+    } else {
+      // Move toward the nearest enemy (greedy best step within moveDist)
+      const occupiedBySide = new Set(
+        battleState
+          .filter((u) => u.side === aiSide && u.alive && u.instanceId !== unit.instanceId)
+          .map((u) => `${u.x},${u.y}`)
+      );
+
+      let bestMove: { x: number; y: number } | null = null;
+      let bestMoveDist = nearestDist;
+
+      for (let dx = -def.moveDist; dx <= def.moveDist; dx++) {
+        for (let dy = -def.moveDist; dy <= def.moveDist; dy++) {
+          if (Math.abs(dx) + Math.abs(dy) > def.moveDist) continue;
+          if (dx === 0 && dy === 0) continue;
+          const nx = unit.x + dx;
+          const ny = unit.y + dy;
+          if (nx < 0 || nx > 3 || ny < 0 || ny > 3) continue;
+          const posKey = `${nx},${ny}`;
+          if (occupiedBySide.has(posKey) || pendingMoves.has(posKey)) continue;
+          const d =
+            aiSide === "A"
+              ? crossGridDist(nx, ny, nearest.x, nearest.y)
+              : crossGridDist(nearest.x, nearest.y, nx, ny);
+          if (d < bestMoveDist) {
+            bestMoveDist = d;
+            bestMove = { x: nx, y: ny };
+          }
+        }
+      }
+
+      if (bestMove) {
+        pendingMoves.add(`${bestMove.x},${bestMove.y}`);
+        actions.push({
+          unitInstanceId: unit.instanceId,
+          type: "move",
+          targetX: bestMove.x,
+          targetY: bestMove.y,
+        });
+      } else {
+        actions.push({ unitInstanceId: unit.instanceId, type: "wait" });
+      }
+    }
+  }
+
+  return actions;
+}
+
+// ─── Reconnection payload ────────────────────────────────────────────────────
 
 function buildReconnectPayload(room: RoomState, side: Side) {
   const sideState = side === "A" ? room.sideA : room.sideB!;
@@ -87,7 +187,11 @@ function buildReconnectPayload(room: RoomState, side: Side) {
   return base;
 }
 
+// ─── Disconnect ──────────────────────────────────────────────────────────────
+
 function handlePlayerDisconnect(io: Server, socket: Socket, room: RoomState, side: Side) {
+  if (room.isAiRoom) return; // AI never disconnects
+
   const otherSide: Side = side === "A" ? "B" : "A";
   const otherState: SideState | undefined = otherSide === "A" ? room.sideA : room.sideB;
 
@@ -130,6 +234,8 @@ function handlePlayerDisconnect(io: Server, socket: Socket, room: RoomState, sid
   room.disconnectTimers[side] = silentTimer;
 }
 
+// ─── Socket handlers ─────────────────────────────────────────────────────────
+
 export function registerSocketHandlers(io: Server): void {
   io.on("connection", (socket: Socket) => {
     logger.info({ socketId: socket.id }, "Socket connected");
@@ -164,7 +270,7 @@ export function registerSocketHandlers(io: Server): void {
       const otherSide: Side = side === "A" ? "B" : "A";
       const otherState: SideState | undefined = otherSide === "A" ? room.sideA : room.sideB;
 
-      if (otherState) {
+      if (otherState && !room.isAiRoom) {
         io.to(otherState.socketId).emit("opponentReconnected", {});
       }
 
@@ -197,6 +303,35 @@ export function registerSocketHandlers(io: Server): void {
         sessionToken,
       });
       logger.info({ code, socketId: socket.id }, "Room created");
+    });
+
+    // ── vs AI ────────────────────────────────────────────────────────────────
+    socket.on("createAiRoom", () => {
+      const code = generateCode();
+      const { rosterA, rosterB } = assignRosters();
+      const sessionToken = randomUUID();
+      const room: RoomState = {
+        code,
+        phase: "preselection",
+        isAiRoom: true,
+        sideA: { socketId: socket.id, sessionToken, roster: rosterA },
+        sideB: { socketId: AI_SOCKET_ID, sessionToken: AI_SOCKET_ID, roster: rosterB },
+        battleState: [],
+        turnNumber: 0,
+        disconnectTimers: {},
+      };
+      rooms.set(code, room);
+      socketToRoom.set(socket.id, { code, side: "A" });
+      sessionTokenToRoom.set(sessionToken, { code, side: "A" });
+      socket.join(code);
+      socket.emit("roomReady", {
+        code,
+        side: "A",
+        myRoster: getRosterDefs(rosterA),
+        enemyRoster: getRosterDefs(rosterB),
+        sessionToken,
+      });
+      logger.info({ code, socketId: socket.id }, "AI room created");
     });
 
     socket.on("joinRoom", ({ code }: { code: string }) => {
@@ -261,20 +396,29 @@ export function registerSocketHandlers(io: Server): void {
       }
       sideState.picks = uniquePicks;
 
+      // AI auto-picks immediately after human picks
+      if (room.isAiRoom && info.side === "A" && room.sideB && !room.sideB.picks) {
+        room.sideB.picks = aiPickUnits(room.sideB.roster);
+      }
+
       const otherSideState = info.side === "A" ? room.sideB : room.sideA;
       if (otherSideState && otherSideState.picks) {
         room.phase = "placement";
-        io.to(room.sideA.socketId).emit("picksReady", {
-          myPicks: getRosterDefs(room.sideA.picks!),
-          enemyPicks: getRosterDefs(room.sideB!.picks!),
+        socket.emit("picksReady", {
+          myPicks: getRosterDefs(sideState.picks),
+          enemyPicks: getRosterDefs(otherSideState.picks),
         });
-        io.to(room.sideB!.socketId).emit("picksReady", {
-          myPicks: getRosterDefs(room.sideB!.picks!),
-          enemyPicks: getRosterDefs(room.sideA.picks!),
-        });
+        if (!room.isAiRoom) {
+          io.to(otherSideState.socketId).emit("picksReady", {
+            myPicks: getRosterDefs(otherSideState.picks),
+            enemyPicks: getRosterDefs(sideState.picks),
+          });
+        }
       } else {
         socket.emit("picksSubmitted", {});
-        io.to(info.code).except(socket.id).emit("opponentPicksLocked", {});
+        if (!room.isAiRoom) {
+          io.to(info.code).except(socket.id).emit("opponentPicksLocked", {});
+        }
       }
       logger.info({ code: info.code, side: info.side }, "Picks submitted");
     });
@@ -319,6 +463,11 @@ export function registerSocketHandlers(io: Server): void {
 
         sideState.placement = placement;
 
+        // AI auto-places immediately
+        if (room.isAiRoom && info.side === "A" && room.sideB && !room.sideB.placement) {
+          room.sideB.placement = aiPlaceUnits(room.sideB.picks ?? []);
+        }
+
         const otherSide = info.side === "A" ? room.sideB : room.sideA;
         if (otherSide && otherSide.placement) {
           try {
@@ -328,22 +477,26 @@ export function registerSocketHandlers(io: Server): void {
             room.phase = "battle";
             room.turnNumber = 1;
 
-            io.to(room.sideA.socketId).emit("battleStart", {
+            socket.emit("battleStart", {
               myUnits: unitsA,
               enemyUnits: unitsB,
               turnNumber: 1,
             });
-            io.to(room.sideB!.socketId).emit("battleStart", {
-              myUnits: unitsB,
-              enemyUnits: unitsA,
-              turnNumber: 1,
-            });
+            if (!room.isAiRoom) {
+              io.to(room.sideB!.socketId).emit("battleStart", {
+                myUnits: unitsB,
+                enemyUnits: unitsA,
+                turnNumber: 1,
+              });
+            }
           } catch (err) {
             logger.error({ err }, "Failed to start battle");
           }
         } else {
           socket.emit("placementSubmitted", {});
-          io.to(info.code).except(socket.id).emit("opponentPlacementReady", {});
+          if (!room.isAiRoom) {
+            io.to(info.code).except(socket.id).emit("opponentPlacementReady", {});
+          }
         }
         logger.info({ code: info.code, side: info.side }, "Placement submitted");
       }
@@ -379,6 +532,11 @@ export function registerSocketHandlers(io: Server): void {
       }
       sideState.actions = actions;
 
+      // AI generates its actions immediately after human submits
+      if (room.isAiRoom && info.side === "A" && room.sideB && !room.sideB.actions) {
+        room.sideB.actions = generateAiActions(room.battleState, "B");
+      }
+
       const otherSide = info.side === "A" ? room.sideB : room.sideA;
       if (otherSide && otherSide.actions) {
         const actionsA = room.sideA.actions ?? [];
@@ -394,29 +552,32 @@ export function registerSocketHandlers(io: Server): void {
         if (winner) {
           room.phase = "gameover";
           room.winner = winner;
-          io.to(info.code).emit("gameOver", {
-            winner,
-            events,
-            newState,
-          });
+          socket.emit("gameOver", { winner, events, newState });
+          if (!room.isAiRoom) {
+            io.to(info.code).except(socket.id).emit("gameOver", { winner, events, newState });
+          }
         } else {
-          io.to(room.sideA.socketId).emit("turnResult", {
+          socket.emit("turnResult", {
             events,
             myUnits: newState.filter((u) => u.side === "A"),
             enemyUnits: newState.filter((u) => u.side === "B"),
             turnNumber: room.turnNumber,
           });
-          io.to(room.sideB!.socketId).emit("turnResult", {
-            events,
-            myUnits: newState.filter((u) => u.side === "B"),
-            enemyUnits: newState.filter((u) => u.side === "A"),
-            turnNumber: room.turnNumber,
-          });
+          if (!room.isAiRoom) {
+            io.to(room.sideB!.socketId).emit("turnResult", {
+              events,
+              myUnits: newState.filter((u) => u.side === "B"),
+              enemyUnits: newState.filter((u) => u.side === "A"),
+              turnNumber: room.turnNumber,
+            });
+          }
         }
         logger.info({ code: info.code }, `Turn ${room.turnNumber - 1} resolved`);
       } else {
         socket.emit("actionsSubmitted", {});
-        io.to(info.code).except(socket.id).emit("opponentActionsReady", {});
+        if (!room.isAiRoom) {
+          io.to(info.code).except(socket.id).emit("opponentActionsReady", {});
+        }
       }
     });
 
@@ -443,12 +604,13 @@ export function registerSocketHandlers(io: Server): void {
         room.sideB.actions = undefined;
       }
 
-      io.to(room.sideA.socketId).emit("rematchReady", {
+      socket.emit("rematchReady", {
         side: "A",
         myRoster: getRosterDefs(rosterA),
         enemyRoster: getRosterDefs(rosterB),
       });
-      if (room.sideB) {
+
+      if (!room.isAiRoom && room.sideB) {
         io.to(room.sideB.socketId).emit("rematchReady", {
           side: "B",
           myRoster: getRosterDefs(rosterB),
@@ -473,7 +635,9 @@ export function registerSocketHandlers(io: Server): void {
         if (room.phase === "waiting" || !room.sideB) {
           rooms.delete(info.code);
         } else {
-          io.to(info.code).emit("opponentDisconnected", {});
+          if (!room.isAiRoom) {
+            io.to(info.code).emit("opponentDisconnected", {});
+          }
           rooms.delete(info.code);
         }
       }

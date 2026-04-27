@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSocket } from "@/context/SocketContext";
 
 export default function Lobby() {
-  const { state, connected, hasStoredSession, createRoom, joinRoom, reset } = useSocket();
+  const { state, connected, hasStoredSession, createRoom, createAiRoom, joinRoom, reset } = useSocket();
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -170,6 +170,28 @@ export default function Lobby() {
           border-color: rgba(240,192,64,0.6);
         }
         .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-ai {
+          font-family: 'Cinzel', serif;
+          font-size: 1rem;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          background: linear-gradient(135deg, #006a6a, #00b8b8, #006a6a);
+          color: #e8fffe;
+          border: none;
+          border-radius: 8px;
+          padding: 0.85rem 2rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 4px 16px rgba(0,184,184,0.3), 0 2px 4px rgba(0,0,0,0.4);
+          width: 100%;
+        }
+        .btn-ai:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 24px rgba(0,184,184,0.45), 0 2px 4px rgba(0,0,0,0.4);
+        }
+        .btn-ai:active:not(:disabled) { transform: translateY(0); }
+        .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .join-row {
           display: flex;
@@ -393,6 +415,14 @@ export default function Lobby() {
               disabled={!connected}
             >
               Create Room
+            </button>
+
+            <button
+              className="btn-ai"
+              onClick={createAiRoom}
+              disabled={!connected}
+            >
+              ⚔ Battle vs AI
             </button>
 
             <div className="lobby-divider" />

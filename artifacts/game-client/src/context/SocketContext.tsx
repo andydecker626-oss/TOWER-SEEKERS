@@ -331,6 +331,7 @@ interface SocketContextValue {
   connected: boolean;
   hasStoredSession: boolean;
   createRoom: () => void;
+  createAiRoom: () => void;
   joinRoom: (code: string) => void;
   submitPicks: (picks: string[]) => void;
   submitPlacement: (placement: { unitId: string; x: number; y: number }[]) => void;
@@ -463,6 +464,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socketRef.current?.emit("createRoom");
   }, []);
 
+  const createAiRoom = useCallback(() => {
+    socketRef.current?.emit("createAiRoom");
+  }, []);
+
   const joinRoom = useCallback((code: string) => {
     socketRef.current?.emit("joinRoom", { code });
   }, []);
@@ -508,6 +513,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         connected,
         hasStoredSession,
         createRoom,
+        createAiRoom,
         joinRoom,
         submitPicks,
         submitPlacement,

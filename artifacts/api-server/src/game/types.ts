@@ -25,6 +25,7 @@ export interface SideState {
 export interface RoomState {
   code: string;
   phase: Phase;
+  isAiRoom?: boolean;
   sideA: SideState;
   sideB?: SideState;
   battleState: GridUnit[];
