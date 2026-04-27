@@ -25,10 +25,17 @@ export interface SkillDef {
   effect?: string;
 }
 
+export interface PassiveDef {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export interface UnitDef {
   id: string;
   name: string;
   cls: string;
+  description: string;
   baseAttackStyle: AttackStyle;
   primaryStat: PrimaryStat;
   baseHp: number;
@@ -40,6 +47,7 @@ export interface UnitDef {
   moveDist: number;
   evasion: number;
   skills: SkillDef[];
+  passives: PassiveDef[];
 }
 
 export interface GridUnit {

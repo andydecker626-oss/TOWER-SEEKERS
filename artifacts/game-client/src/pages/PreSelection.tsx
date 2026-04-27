@@ -67,7 +67,7 @@ export default function PreSelection() {
   const opponentLocked = state.opponentPicksLocked;
 
   const rosterIds = new Set(myRoster.map((u) => u.id));
-  const matchingParties = parties.filter((p) => p.unitIds.length === 4 && p.unitIds.every((id) => rosterIds.has(id)));
+  const matchingParties = parties.filter((p) => p.units.length === 4 && p.units.every((ul) => rosterIds.has(ul.unitId)));
 
   function togglePick(id: string) {
     if (waiting) return;
@@ -423,11 +423,11 @@ export default function PreSelection() {
                 <div className="load-party-empty">No saved parties match your current roster.</div>
               ) : (
                 matchingParties.map((party) => (
-                  <div key={party.id} className="party-chip" onClick={() => loadParty(party.unitIds)}>
+                  <div key={party.id} className="party-chip" onClick={() => loadParty(party.units.map((ul) => ul.unitId))}>
                     <div>
                       <div className="party-chip-name">{party.name}</div>
                       <div className="party-chip-units">
-                        {party.unitIds.map((id) => myRoster.find((u) => u.id === id)?.name ?? id).join(", ")}
+                        {party.units.map((ul) => myRoster.find((u) => u.id === ul.unitId)?.name ?? ul.unitId).join(", ")}
                       </div>
                     </div>
                     <span className="party-chip-load">Load</span>

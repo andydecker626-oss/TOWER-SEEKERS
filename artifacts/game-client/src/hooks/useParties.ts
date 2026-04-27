@@ -1,12 +1,18 @@
 import { useState, useCallback } from "react";
 
+export interface UnitLoadout {
+  unitId: string;
+  skillIds: string[];
+  passiveId: string;
+}
+
 export interface Party {
   id: string;
   name: string;
-  unitIds: string[];
+  units: UnitLoadout[];
 }
 
-const STORAGE_KEY = "tower-seekers-parties";
+const STORAGE_KEY = "tower-seekers-parties-v2";
 
 function loadFromStorage(): Party[] {
   try {
@@ -25,19 +31,19 @@ function persist(parties: Party[]): void {
 export function useParties() {
   const [parties, setParties] = useState<Party[]>(loadFromStorage);
 
-  const saveParty = useCallback((name: string, unitIds: string[], editId?: string) => {
+  const saveParty = useCallback((name: string, units: UnitLoadout[], editId?: string) => {
     setParties((prev) => {
       let updated: Party[];
       if (editId) {
         updated = prev.map((p) =>
           p.id === editId
-            ? { ...p, name: name.trim() || "Unnamed Party", unitIds }
+            ? { ...p, name: name.trim() || "Unnamed Party", units }
             : p
         );
       } else {
         updated = [
           ...prev,
-          { id: `party-${Date.now()}`, name: name.trim() || "Unnamed Party", unitIds },
+          { id: `party-${Date.now()}`, name: name.trim() || "Unnamed Party", units },
         ];
       }
       persist(updated);

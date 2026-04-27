@@ -4,13 +4,13 @@ uploads = []
 id = "Jx5zCG1T43BIB4IteKsX_"
 uri = "file://artifacts/game-client/public/assets/units/wanderer-sprite.png"
 type = "image"
-title = "wanderer pixel sprite idle"
+title = "generated_image"
 
 [[generated]]
 id = "xukrOk3hOsybwhOxR7L0D"
 uri = "file://artifacts/game-client/public/assets/units/wanderer-portrait.png"
 type = "image"
-title = "wanderer character portrait art"
+title = "generated_image"
 
 [[generated]]
 id = "EWDOszOwKyFQ1chjjhdkE"
@@ -95,6 +95,144 @@ id = "w29Boc2sQmdnTbwrjTcdV"
 uri = "file://artifacts/game-client/public/assets/units/anim/vfx-hit-flash.png"
 type = "image"
 title = "hit flash VFX"
+
+[[generated]]
+id = "xWfsWyytx5zcOHsTPUTQW"
+uri = "file://artifacts/game-client/public/assets/hub/tavern-backdrop.png"
+type = "image"
+title = "tavern backdrop"
+
+[[generated]]
+id = "i_NSMg9VUKiWb_-YdbjPR"
+uri = "file://artifacts/game-client/public/assets/units/warlock-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "3rFqaMe1rz39e0I-6ztpi"
+uri = "file://artifacts/game-client/public/assets/units/paladin-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "bTeJ0fCObf_rV3DfHo32F"
+uri = "file://artifacts/game-client/public/assets/units/knight-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SQLNqn9ZgWFxslQAqweFw"
+uri = "file://artifacts/game-client/public/assets/units/cleric-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-R0sD0qzhaEoZvFjdaD03"
+uri = "file://artifacts/game-client/public/assets/units/mage-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "o31cPf6gtGQk9bIeGYTtL"
+uri = "file://artifacts/game-client/public/assets/units/rogue-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LkP2pFSU59KK3LG4qLgNT"
+uri = "file://artifacts/game-client/public/assets/units/archer-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "zNFqegIpOSwdOeLGfm51h"
+uri = "file://artifacts/game-client/public/assets/units/berserker-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ESlORuZgHvmzQQk9zIAOg"
+uri = "file://artifacts/game-client/public/assets/units/lancer-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Z2jtqGG3KumqS8I5QXFMI"
+uri = "file://artifacts/game-client/public/assets/units/shaman-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "9YmRCbsiy9-xFyGguXbcU"
+uri = "file://artifacts/game-client/public/assets/units/bard-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "iFM2fplLGmPFY0S7AhyHc"
+uri = "file://artifacts/game-client/public/assets/units/warlock-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "oDOA6pq7--6Zvpn1Y5a-H"
+uri = "file://artifacts/game-client/public/assets/units/paladin-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "9TqLXTWEigc9jZvMlZM7H"
+uri = "file://artifacts/game-client/public/assets/units/knight-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "BDuSIgNqk89Ft3LTJjtVe"
+uri = "file://artifacts/game-client/public/assets/units/cleric-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "J7LpRtM54l0VPuiIBzwoX"
+uri = "file://artifacts/game-client/public/assets/units/mage-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "N3sEi3WIU-0bpRWDzK0Pf"
+uri = "file://artifacts/game-client/public/assets/units/rogue-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GiYZXOvxNshcNaq2cVlwL"
+uri = "file://artifacts/game-client/public/assets/units/archer-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "nuw9g-xOigCjx_g_ePOL_"
+uri = "file://artifacts/game-client/public/assets/units/berserker-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "OxwpYmWBwXI754xxHNCV2"
+uri = "file://artifacts/game-client/public/assets/units/lancer-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Hx9cCQ3fkBOxzmsEf_Rob"
+uri = "file://artifacts/game-client/public/assets/units/shaman-sprite.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "X0fzEEYhQsewJHMDF1pb-"
+uri = "file://artifacts/game-client/public/assets/units/bard-sprite.png"
+type = "image"
+title = "generated_image"
 
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"

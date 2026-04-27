@@ -5,6 +5,7 @@ export type {
   PrimaryStat,
   SkillType,
   SkillDef,
+  PassiveDef,
   UnitDef,
   GridUnit,
   PlayerAction,
