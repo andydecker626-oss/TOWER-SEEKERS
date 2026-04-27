@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSocket } from "@/context/SocketContext";
 
 export default function Lobby() {
-  const { state, connected, createRoom, joinRoom, reset } = useSocket();
+  const { state, connected, hasStoredSession, createRoom, joinRoom, reset } = useSocket();
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -17,6 +17,7 @@ export default function Lobby() {
   }
 
   const isWaiting = state.phase === "waiting";
+  const isReconnecting = hasStoredSession && state.phase === "lobby" && !state.errorMsg;
 
   return (
     <div className="lobby-root">
@@ -273,6 +274,24 @@ export default function Lobby() {
         .copy-btn:hover { background: rgba(240,192,64,0.2); border-color: rgba(240,192,64,0.6); color: #f0c040; }
         .copy-btn.copied { color: #86efac; border-color: rgba(134,239,172,0.5); background: rgba(134,239,172,0.08); }
 
+        .reconnecting-box {
+          text-align: center;
+          padding: 1.5rem 1rem;
+        }
+        .reconnecting-title {
+          font-family: 'Cinzel', serif;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #f0c040;
+          letter-spacing: 0.1em;
+          margin-bottom: 0.5rem;
+        }
+        .reconnecting-hint {
+          font-size: 0.82rem;
+          color: rgba(200,170,100,0.55);
+          font-style: italic;
+        }
+
         .pulse-dot {
           display: inline-block;
           width: 10px;
@@ -337,7 +356,18 @@ export default function Lobby() {
           <div className="error-msg">{state.errorMsg}</div>
         )}
 
-        {isWaiting ? (
+        {isReconnecting ? (
+          <div className="lobby-card">
+            <div className="reconnecting-box">
+              <div className="reconnecting-title">Rejoining Your Game</div>
+              <div className="pulse-dot" />
+              <div className="reconnecting-hint">Reconnecting to your previous match…</div>
+            </div>
+            <button className="btn-secondary" onClick={reset}>
+              Cancel &amp; Return to Lobby
+            </button>
+          </div>
+        ) : isWaiting ? (
           <div className="lobby-card">
             <div className="waiting-box">
               <div className="waiting-label">Waiting for opponent</div>

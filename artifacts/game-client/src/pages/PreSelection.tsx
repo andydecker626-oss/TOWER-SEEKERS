@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { useParties } from "@/hooks/useParties";
 import type { UnitDef } from "@/lib/types";
@@ -54,6 +54,12 @@ export default function PreSelection() {
   const { parties } = useParties();
   const [picks, setPicks] = useState<string[]>([]);
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (state.submittedPickIds && state.submittedPickIds.length > 0) {
+      setPicks(state.submittedPickIds);
+    }
+  }, [state.submittedPickIds]);
 
   const myRoster = state.myRoster;
   const enemyRoster = state.enemyRoster;

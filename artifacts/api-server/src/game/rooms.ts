@@ -1,11 +1,16 @@
+import { randomUUID } from "crypto";
 import type { Server, Socket } from "socket.io";
-import type { RoomState, PlayerAction, Side } from "./types.js";
+import type { RoomState, PlayerAction, Side, SideState } from "./types.js";
 import { assignRosters, getUnitDef, shuffleArray, ALL_UNITS } from "./units.js";
 import { createGridUnits, resolveTurn, checkWinner } from "./engine.js";
 import { logger } from "../lib/logger.js";
 
 const rooms = new Map<string, RoomState>();
 const socketToRoom = new Map<string, { code: string; side: Side }>();
+const sessionTokenToRoom = new Map<string, { code: string; side: Side }>();
+
+const SILENT_GRACE_MS = 8_000;
+const TOTAL_GRACE_MS = 30_000;
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -20,27 +25,176 @@ function getRosterDefs(ids: string[]) {
   return ids.map((id) => getUnitDef(id)).filter(Boolean);
 }
 
+function buildReconnectPayload(room: RoomState, side: Side) {
+  const sideState = side === "A" ? room.sideA : room.sideB!;
+  const otherState = side === "A" ? room.sideB : room.sideA;
+  const phase = room.phase;
+
+  const base = { phase, side, code: room.code };
+
+  if (phase === "waiting") {
+    return {
+      ...base,
+      myRoster: getRosterDefs(sideState.roster),
+    };
+  }
+
+  if (phase === "preselection") {
+    return {
+      ...base,
+      myRoster: getRosterDefs(sideState.roster),
+      enemyRoster: getRosterDefs(otherState?.roster ?? []),
+      picksSubmitted: !!sideState.picks,
+      submittedPickIds: sideState.picks ?? null,
+      opponentPicksLocked: !!otherState?.picks,
+    };
+  }
+
+  if (phase === "placement") {
+    return {
+      ...base,
+      myPicks: getRosterDefs(sideState.picks ?? []),
+      enemyPicks: getRosterDefs(otherState?.picks ?? []),
+      placementSubmitted: !!sideState.placement,
+      submittedPlacement: sideState.placement ?? null,
+    };
+  }
+
+  if (phase === "battle") {
+    const myUnits = room.battleState.filter((u) => u.side === side);
+    const enemyUnits = room.battleState.filter((u) => u.side !== side);
+    return {
+      ...base,
+      myUnits,
+      enemyUnits,
+      turnNumber: room.turnNumber,
+      actionsSubmitted: !!sideState.actions,
+    };
+  }
+
+  if (phase === "gameover") {
+    const myUnits = room.battleState.filter((u) => u.side === side);
+    const enemyUnits = room.battleState.filter((u) => u.side !== side);
+    return {
+      ...base,
+      winner: room.winner,
+      myUnits,
+      enemyUnits,
+      turnNumber: room.turnNumber,
+    };
+  }
+
+  return base;
+}
+
+function handlePlayerDisconnect(io: Server, socket: Socket, room: RoomState, side: Side) {
+  const otherSide: Side = side === "A" ? "B" : "A";
+  const otherState: SideState | undefined = otherSide === "A" ? room.sideA : room.sideB;
+
+  if (room.disconnectTimers[side]) {
+    clearTimeout(room.disconnectTimers[side]);
+  }
+
+  const silentTimer = setTimeout(() => {
+    const sideState = side === "A" ? room.sideA : room.sideB!;
+    const stillConnected = io.sockets.sockets.has(sideState.socketId);
+    if (stillConnected) return;
+
+    if (otherState) {
+      io.to(otherState.socketId).emit("opponentReconnecting", {});
+    }
+
+    const hardTimer = setTimeout(() => {
+      const sideState2 = side === "A" ? room.sideA : room.sideB!;
+      const stillConnected2 = io.sockets.sockets.has(sideState2.socketId);
+      if (stillConnected2) return;
+
+      sessionTokenToRoom.delete(sideState2.sessionToken);
+      socketToRoom.delete(sideState2.socketId);
+
+      if (room.phase === "waiting") {
+        rooms.delete(room.code);
+      } else {
+        if (otherState) {
+          io.to(otherState.socketId).emit("opponentDisconnected", {});
+        }
+        rooms.delete(room.code);
+      }
+
+      logger.info({ code: room.code, side }, "Player permanently disconnected after grace period");
+    }, TOTAL_GRACE_MS - SILENT_GRACE_MS);
+
+    room.disconnectTimers[side] = hardTimer;
+  }, SILENT_GRACE_MS);
+
+  room.disconnectTimers[side] = silentTimer;
+}
+
 export function registerSocketHandlers(io: Server): void {
   io.on("connection", (socket: Socket) => {
     logger.info({ socketId: socket.id }, "Socket connected");
 
+    socket.on("reconnectSession", ({ token }: { token: string }) => {
+      const info = sessionTokenToRoom.get(token);
+      if (!info) {
+        socket.emit("reconnectFailed", { message: "Session expired or not found" });
+        return;
+      }
+
+      const room = rooms.get(info.code);
+      if (!room) {
+        sessionTokenToRoom.delete(token);
+        socket.emit("reconnectFailed", { message: "Room no longer exists" });
+        return;
+      }
+
+      const side = info.side;
+      const sideState = side === "A" ? room.sideA : room.sideB!;
+
+      if (room.disconnectTimers[side]) {
+        clearTimeout(room.disconnectTimers[side]);
+        room.disconnectTimers[side] = undefined;
+      }
+
+      socketToRoom.delete(sideState.socketId);
+      sideState.socketId = socket.id;
+      socketToRoom.set(socket.id, { code: info.code, side });
+      socket.join(info.code);
+
+      const otherSide: Side = side === "A" ? "B" : "A";
+      const otherState: SideState | undefined = otherSide === "A" ? room.sideA : room.sideB;
+
+      if (otherState) {
+        io.to(otherState.socketId).emit("opponentReconnected", {});
+      }
+
+      const payload = buildReconnectPayload(room, side);
+      socket.emit("reconnectSuccess", payload);
+
+      logger.info({ code: info.code, side }, "Player reconnected via session token");
+    });
+
     socket.on("createRoom", () => {
       const code = generateCode();
       const { rosterA, rosterB } = assignRosters();
+      const sessionToken = randomUUID();
       const room: RoomState = {
         code,
         phase: "waiting",
-        sideA: { socketId: socket.id, roster: rosterA },
+        sideA: { socketId: socket.id, sessionToken, roster: rosterA },
         battleState: [],
         turnNumber: 0,
+        disconnectTimers: {},
       };
       rooms.set(code, room);
       socketToRoom.set(socket.id, { code, side: "A" });
+      sessionTokenToRoom.set(sessionToken, { code, side: "A" });
       socket.join(code);
       socket.emit("roomCreated", {
         code,
         side: "A",
         roster: getRosterDefs(rosterA),
+        sessionToken,
       });
       logger.info({ code, socketId: socket.id }, "Room created");
     });
@@ -64,9 +218,11 @@ export function registerSocketHandlers(io: Server): void {
       const finalRosterB = allIds.filter((id) => !room.sideA.roster.includes(id)).slice(0, 6);
 
       const normalizedCode = code.toUpperCase();
-      room.sideB = { socketId: socket.id, roster: finalRosterB };
+      const sessionToken = randomUUID();
+      room.sideB = { socketId: socket.id, sessionToken, roster: finalRosterB };
       room.phase = "preselection";
       socketToRoom.set(socket.id, { code: normalizedCode, side: "B" });
+      sessionTokenToRoom.set(sessionToken, { code: normalizedCode, side: "B" });
       socket.join(normalizedCode);
 
       const rosterADefs = getRosterDefs(room.sideA.roster);
@@ -83,6 +239,7 @@ export function registerSocketHandlers(io: Server): void {
         side: "B",
         myRoster: rosterBDefs,
         enemyRoster: rosterADefs,
+        sessionToken,
       });
       logger.info({ code: normalizedCode }, "Both players joined — preselection");
     });
@@ -97,7 +254,6 @@ export function registerSocketHandlers(io: Server): void {
       const sideState = info.side === "A" ? room.sideA : room.sideB;
       if (!sideState) return;
 
-      // Enforce exactly 4 distinct picks from own roster
       const uniquePicks = [...new Set(picks.filter((id) => sideState.roster.includes(id)))].slice(0, 4);
       if (uniquePicks.length !== 4) {
         socket.emit("gameError", { message: "Must pick exactly 4 distinct units from your roster" });
@@ -203,7 +359,6 @@ export function registerSocketHandlers(io: Server): void {
       const sideState = info.side === "A" ? room.sideA : room.sideB;
       if (!sideState) return;
 
-      // Validate: actions must be for alive owned units only, no duplicates, exact count
       const ownedAliveIds = room.battleState
         .filter((u) => u.side === info.side && u.alive)
         .map((u) => u.instanceId);
@@ -309,6 +464,12 @@ export function registerSocketHandlers(io: Server): void {
       socketToRoom.delete(socket.id);
       socket.leave(info.code);
       if (room) {
+        const sideState = info.side === "A" ? room.sideA : room.sideB;
+        if (sideState) {
+          sessionTokenToRoom.delete(sideState.sessionToken);
+        }
+        if (room.disconnectTimers.A) clearTimeout(room.disconnectTimers.A);
+        if (room.disconnectTimers.B) clearTimeout(room.disconnectTimers.B);
         if (room.phase === "waiting" || !room.sideB) {
           rooms.delete(info.code);
         } else {
@@ -324,20 +485,11 @@ export function registerSocketHandlers(io: Server): void {
       logger.info({ socketId: socket.id }, "Socket disconnected");
       if (info) {
         const room = rooms.get(info.code);
-        // Give 8s grace window before treating as a real disconnect
-        setTimeout(() => {
-          const stillConnected = io.sockets.sockets.has(socket.id);
-          if (stillConnected) return;
+        if (room) {
+          handlePlayerDisconnect(io, socket, room, info.side);
+        } else {
           socketToRoom.delete(socket.id);
-          if (room) {
-            if (room.phase === "waiting") {
-              rooms.delete(info.code);
-            } else {
-              io.to(info.code).emit("opponentDisconnected", {});
-              rooms.delete(info.code);
-            }
-          }
-        }, 8000);
+        }
       }
     });
   });

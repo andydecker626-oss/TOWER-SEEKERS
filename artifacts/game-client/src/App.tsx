@@ -35,6 +35,36 @@ function PhaseNavigator() {
   return null;
 }
 
+function OpponentReconnectingBanner() {
+  const { state } = useSocket();
+  if (!state.opponentReconnecting) return null;
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 9999,
+      background: "rgba(180, 120, 0, 0.95)",
+      color: "#fff8e1",
+      textAlign: "center",
+      padding: "0.6rem 1rem",
+      fontFamily: "'Cinzel', serif",
+      fontSize: "0.85rem",
+      letterSpacing: "0.08em",
+      backdropFilter: "blur(4px)",
+      borderBottom: "1px solid rgba(240,192,64,0.4)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "0.6rem",
+    }}>
+      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: "#f0c040", animation: "pulse 1.4s ease-in-out infinite" }} />
+      Opponent lost connection — waiting for them to rejoin…
+    </div>
+  );
+}
+
 function App() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   return (
@@ -42,6 +72,7 @@ function App() {
       <BrowserRouter basename={base}>
         <SocketProvider>
           <PhaseNavigator />
+          <OpponentReconnectingBanner />
           <Routes>
             <Route path="/lobby" element={<Lobby />} />
             <Route path="/hub" element={<GatheringHub />} />

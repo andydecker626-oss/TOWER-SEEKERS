@@ -15,6 +15,7 @@ export type {
 
 export interface SideState {
   socketId: string;
+  sessionToken: string;
   roster: string[];
   picks?: string[];
   placement?: { unitId: string; x: number; y: number }[];
@@ -29,4 +30,8 @@ export interface RoomState {
   battleState: GridUnit[];
   turnNumber: number;
   winner?: Side;
+  disconnectTimers: {
+    A?: ReturnType<typeof setTimeout>;
+    B?: ReturnType<typeof setTimeout>;
+  };
 }

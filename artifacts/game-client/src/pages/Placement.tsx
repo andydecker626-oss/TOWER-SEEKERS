@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSocket } from "@/context/SocketContext";
 
 interface PlacedUnit {
@@ -11,6 +11,12 @@ export default function Placement() {
   const { state, submitPlacement } = useSocket();
   const [placed, setPlaced] = useState<PlacedUnit[]>([]);
   const dragUnitId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (state.submittedPlacement && state.submittedPlacement.length > 0) {
+      setPlaced(state.submittedPlacement);
+    }
+  }, [state.submittedPlacement]);
 
   const picks = state.myPicks;
   const waiting = state.isWaitingForOpponent;

@@ -16,6 +16,8 @@ import type {
   TurnEvent,
 } from "@/lib/types";
 
+const SESSION_TOKEN_KEY = "ts_session_token";
+
 interface GameState {
   phase: Phase;
   roomCode: string | null;
@@ -34,6 +36,11 @@ interface GameState {
   pendingGameOver: Side | null;
   opponentPicksLocked: boolean;
   errorMsg: string | null;
+  opponentReconnecting: boolean;
+  /** Pick IDs already submitted before reconnect (hydrates PreSelection UI) */
+  submittedPickIds: string[] | null;
+  /** Placement already submitted before reconnect (hydrates Placement UI) */
+  submittedPlacement: { unitId: string; x: number; y: number }[] | null;
 }
 
 const initial: GameState = {
@@ -53,7 +60,50 @@ const initial: GameState = {
   winner: null,
   pendingEvents: null,
   errorMsg: null,
+  opponentReconnecting: false,
+  submittedPickIds: null,
+  submittedPlacement: null,
 };
+
+type ReconnectPayload =
+  | { phase: "waiting"; side: Side; code: string; myRoster: UnitDef[] }
+  | {
+      phase: "preselection";
+      side: Side;
+      code: string;
+      myRoster: UnitDef[];
+      enemyRoster: UnitDef[];
+      picksSubmitted: boolean;
+      submittedPickIds: string[] | null;
+      opponentPicksLocked: boolean;
+    }
+  | {
+      phase: "placement";
+      side: Side;
+      code: string;
+      myPicks: UnitDef[];
+      enemyPicks: UnitDef[];
+      placementSubmitted: boolean;
+      submittedPlacement: { unitId: string; x: number; y: number }[] | null;
+    }
+  | {
+      phase: "battle";
+      side: Side;
+      code: string;
+      myUnits: GridUnit[];
+      enemyUnits: GridUnit[];
+      turnNumber: number;
+      actionsSubmitted: boolean;
+    }
+  | {
+      phase: "gameover";
+      side: Side;
+      code: string;
+      winner: Side;
+      myUnits: GridUnit[];
+      enemyUnits: GridUnit[];
+      turnNumber: number;
+    };
 
 type Action =
   | { type: "ROOM_CREATED"; code: string; side: Side; roster: UnitDef[] }
@@ -97,6 +147,9 @@ type Action =
       enemyRoster: UnitDef[];
     }
   | { type: "OPPONENT_DISCONNECTED" }
+  | { type: "OPPONENT_RECONNECTING" }
+  | { type: "OPPONENT_RECONNECTED" }
+  | { type: "RECONNECT_SUCCESS"; payload: ReconnectPayload }
   | { type: "ERROR"; message: string }
   | { type: "CLEAR_PENDING_EVENTS" }
   | { type: "RESET" };
@@ -169,7 +222,6 @@ function reducer(state: GameState, action: Action): GameState {
       const enemyNewUnits = action.newState.filter((u) => u.side !== mySide);
       return {
         ...state,
-        // Stay in battle phase so Battle plays final animations before dismounting
         phase: "battle",
         winner: action.winner,
         myUnits: myNewUnits,
@@ -190,12 +242,79 @@ function reducer(state: GameState, action: Action): GameState {
         myRoster: action.myRoster,
         enemyRoster: action.enemyRoster,
       };
+    case "OPPONENT_RECONNECTING":
+      return { ...state, opponentReconnecting: true };
+    case "OPPONENT_RECONNECTED":
+      return { ...state, opponentReconnecting: false };
     case "OPPONENT_DISCONNECTED":
       return {
-        ...state,
+        ...initial,
         errorMsg: "Opponent disconnected",
         phase: "lobby",
       };
+    case "RECONNECT_SUCCESS": {
+      const p = action.payload;
+      if (p.phase === "waiting") {
+        return {
+          ...initial,
+          phase: "waiting",
+          roomCode: p.code,
+          mySide: p.side,
+          myRoster: p.myRoster,
+          isWaitingForOpponent: true,
+        };
+      }
+      if (p.phase === "preselection") {
+        return {
+          ...initial,
+          phase: "preselection",
+          roomCode: p.code,
+          mySide: p.side,
+          myRoster: p.myRoster,
+          enemyRoster: p.enemyRoster,
+          isWaitingForOpponent: p.picksSubmitted,
+          opponentPicksLocked: p.opponentPicksLocked,
+          submittedPickIds: p.submittedPickIds,
+        };
+      }
+      if (p.phase === "placement") {
+        return {
+          ...initial,
+          phase: "placement",
+          roomCode: p.code,
+          mySide: p.side,
+          myPicks: p.myPicks,
+          enemyPicks: p.enemyPicks,
+          isWaitingForOpponent: p.placementSubmitted,
+          submittedPlacement: p.submittedPlacement,
+        };
+      }
+      if (p.phase === "battle") {
+        return {
+          ...initial,
+          phase: "battle",
+          roomCode: p.code,
+          mySide: p.side,
+          myUnits: p.myUnits,
+          enemyUnits: p.enemyUnits,
+          turnNumber: p.turnNumber,
+          isWaitingForOpponent: p.actionsSubmitted,
+        };
+      }
+      if (p.phase === "gameover") {
+        return {
+          ...initial,
+          phase: "gameover",
+          roomCode: p.code,
+          mySide: p.side,
+          winner: p.winner,
+          myUnits: p.myUnits,
+          enemyUnits: p.enemyUnits,
+          turnNumber: p.turnNumber,
+        };
+      }
+      return state;
+    }
     case "ERROR":
       return { ...state, errorMsg: action.message };
     case "CLEAR_PENDING_EVENTS":
@@ -210,6 +329,7 @@ function reducer(state: GameState, action: Action): GameState {
 interface SocketContextValue {
   state: GameState;
   connected: boolean;
+  hasStoredSession: boolean;
   createRoom: () => void;
   joinRoom: (code: string) => void;
   submitPicks: (picks: string[]) => void;
@@ -226,6 +346,9 @@ const SocketContext = createContext<SocketContextValue | null>(null);
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initial);
   const [connected, setConnected] = React.useState(false);
+  const [hasStoredSession, setHasStoredSession] = React.useState(
+    () => !!localStorage.getItem(SESSION_TOKEN_KEY)
+  );
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -237,18 +360,33 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     });
     socketRef.current = socket;
 
-    socket.on("connect", () => setConnected(true));
+    socket.on("connect", () => {
+      setConnected(true);
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (token) {
+        socket.emit("reconnectSession", { token });
+      }
+    });
+
     socket.on("disconnect", () => setConnected(false));
 
-    socket.on("roomCreated", (data: { code: string; side: Side; roster: UnitDef[] }) => {
-      dispatch({ type: "ROOM_CREATED", ...data });
+    socket.on("roomCreated", (data: { code: string; side: Side; roster: UnitDef[]; sessionToken: string }) => {
+      localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
+      setHasStoredSession(true);
+      dispatch({ type: "ROOM_CREATED", code: data.code, side: data.side, roster: data.roster });
     });
+
     socket.on(
       "roomReady",
-      (data: { code: string; side: Side; myRoster: UnitDef[]; enemyRoster: UnitDef[] }) => {
-        dispatch({ type: "ROOM_READY", ...data });
+      (data: { code: string; side: Side; myRoster: UnitDef[]; enemyRoster: UnitDef[]; sessionToken?: string }) => {
+        if (data.sessionToken) {
+          localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
+          setHasStoredSession(true);
+        }
+        dispatch({ type: "ROOM_READY", code: data.code, side: data.side, myRoster: data.myRoster, enemyRoster: data.enemyRoster });
       }
     );
+
     socket.on("picksSubmitted", () => dispatch({ type: "PICKS_SUBMITTED" }));
     socket.on("opponentPicksLocked", () => dispatch({ type: "OPPONENT_PICKS_LOCKED" }));
     socket.on(
@@ -294,9 +432,24 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "REMATCH_READY", ...data });
       }
     );
-    socket.on("opponentDisconnected", () =>
-      dispatch({ type: "OPPONENT_DISCONNECTED" })
+    socket.on("opponentReconnecting", () =>
+      dispatch({ type: "OPPONENT_RECONNECTING" })
     );
+    socket.on("opponentReconnected", () =>
+      dispatch({ type: "OPPONENT_RECONNECTED" })
+    );
+    socket.on("opponentDisconnected", () => {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      setHasStoredSession(false);
+      dispatch({ type: "OPPONENT_DISCONNECTED" });
+    });
+    socket.on("reconnectSuccess", (payload: ReconnectPayload) => {
+      dispatch({ type: "RECONNECT_SUCCESS", payload });
+    });
+    socket.on("reconnectFailed", () => {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      setHasStoredSession(false);
+    });
     socket.on("gameError", ({ message }: { message: string }) => {
       dispatch({ type: "ERROR", message });
     });
@@ -335,6 +488,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   const reset = useCallback(() => {
     socketRef.current?.emit("leaveRoom");
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+    setHasStoredSession(false);
     dispatch({ type: "RESET" });
   }, []);
 
@@ -351,6 +506,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       value={{
         state,
         connected,
+        hasStoredSession,
         createRoom,
         joinRoom,
         submitPicks,
