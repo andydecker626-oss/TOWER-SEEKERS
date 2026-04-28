@@ -600,30 +600,13 @@ export default function Battle() {
                       <div className="b-action-menu" onClick={(e) => e.stopPropagation()}>
                         <button className={`b-act-btn${selectMode === "move" ? " active" : ""}`} aria-label={`Move ${def.name}`} onClick={handleMove}>Move</button>
                         <button className={`b-act-btn${selectMode === "attack" ? " active" : ""}`} aria-label={`Attack ${def.name}`} onClick={handleAttack}>Attack</button>
-                        <div className="b-skill-wrap">
-                          <button
-                            className={`b-act-btn${selectMode === "skill" ? " active" : ""}`}
-                            aria-label={`Skill ${def.name}`}
-                            onClick={() => setSkillMenuOpen(skillMenuOpen === unit.instanceId ? null : unit.instanceId)}
-                          >
-                            Skill ▾
-                          </button>
-                          {skillMenuOpen === unit.instanceId && (
-                            <div className="b-skill-dropdown">
-                              {def.skills.map((sk) => (
-                                <button
-                                  key={sk.id}
-                                  className="b-skill-item"
-                                  disabled={unit.ap < sk.ap}
-                                  onClick={() => handleSkillSelect(sk)}
-                                >
-                                  <span className="b-sk-name">{sk.name}</span>
-                                  <span className="b-sk-ap">{sk.ap} AP</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          className={`b-act-btn${(skillMenuOpen === unit.instanceId || (selectMode === "skill" && selectedId === unit.instanceId)) ? " active" : ""}`}
+                          aria-label={`Skills ${def.name}`}
+                          onClick={() => setSkillMenuOpen(skillMenuOpen === unit.instanceId ? null : unit.instanceId)}
+                        >
+                          Skills ▾
+                        </button>
                         <button className="b-act-btn" aria-label={`Wait ${def.name}`} onClick={handleWait}>Wait</button>
                         <button className="b-act-btn" aria-label={`Defend ${def.name}`} onClick={handleDefend}>Defend</button>
                       </div>
@@ -632,6 +615,51 @@ export default function Battle() {
                 );
               })}
             </div>
+
+            {/* Skill detail panel — lives outside the scroll row so nothing clips it */}
+            {skillMenuOpen && (() => {
+              const skUnit = aliveMyUnits.find(u => u.instanceId === skillMenuOpen);
+              const skDef  = skUnit ? getUnitDef(skUnit.defId) : null;
+              if (!skUnit || !skDef) return null;
+              return (
+                <div className="b-skill-panel" onClick={(e) => e.stopPropagation()}>
+                  <div className="b-skp-header">
+                    <span className="b-skp-title">
+                      <span className="b-skp-unitname">{skDef.name}</span>
+                      <span className="b-skp-sub"> — Choose Skill</span>
+                    </span>
+                    <button className="b-skp-close" onClick={() => setSkillMenuOpen(null)} aria-label="Close skills">✕</button>
+                  </div>
+                  <div className="b-skp-grid">
+                    {skDef.skills.map(sk => {
+                      const canAfford = skUnit.ap >= sk.ap;
+                      return (
+                        <button
+                          key={sk.id}
+                          className={`b-skill-card${canAfford ? "" : " b-skill-card-poor"}`}
+                          disabled={!canAfford}
+                          onClick={() => handleSkillSelect(sk)}
+                        >
+                          <div className="b-skc-top">
+                            <span className="b-skc-name">{sk.name}</span>
+                            <span className="b-skc-ap">{sk.ap} AP</span>
+                          </div>
+                          <div className="b-skc-badges">
+                            <span className={`b-skc-type b-skt-${sk.type}`}>{sk.type}</span>
+                            <span className="b-skc-badge b-skc-style">{skillStyleLabel(sk.style)}</span>
+                            {sk.power    != null && <span className="b-skc-badge">PWR {sk.power}</span>}
+                            {sk.healAmount != null && <span className="b-skc-badge b-skc-heal">HEAL +{sk.healAmount}</span>}
+                            <span className="b-skc-badge">{sk.accuracy}% acc</span>
+                            {sk.aoe && <span className="b-skc-badge b-skc-aoe">AoE {sk.aoe.w}×{sk.aoe.h}</span>}
+                          </div>
+                          {sk.effect && <div className="b-skc-effect">{sk.effect}</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="b-submit-row">
               <div className="b-queue-status">
@@ -727,6 +755,14 @@ function UnitToken({
       )}
     </div>
   );
+}
+
+function skillStyleLabel(s: string): string {
+  if (s === "ranged-direct") return "Ranged";
+  if (s === "ranged-volley") return "Volley";
+  if (s === "self")          return "Self";
+  if (s === "ally")          return "Ally";
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function actionLabel(action: QueuedAction) {
@@ -1156,26 +1192,94 @@ function battleCSS() {
     .b-act-btn:hover { background: rgba(240,192,64,0.12); border-color: rgba(240,192,64,0.5); }
     .b-act-btn.active { background: rgba(240,192,64,0.2); border-color: #f0c040; color: #f0c040; }
 
-    .b-skill-wrap { position: relative; }
-    .b-skill-dropdown {
-      position: absolute; bottom: 100%; left: 0;
-      background: rgba(10,7,24,0.98);
-      border: 1px solid rgba(240,192,64,0.3);
-      border-radius: 7px; padding: 0.3rem;
-      min-width: 180px; z-index: 50;
-      box-shadow: 0 -8px 24px rgba(0,0,0,0.7);
+    /* ── Skill panel (panel-level, never clipped) ── */
+    .b-skill-panel {
+      margin: 0.45rem 0 0.1rem;
+      background: rgba(8,5,20,0.97);
+      border: 1px solid rgba(240,192,64,0.22);
+      border-radius: 8px;
+      padding: 0.55rem 0.65rem 0.6rem;
+      animation: skPanelIn 0.12s ease;
     }
-    .b-skill-item {
-      display: flex; justify-content: space-between; align-items: center;
-      width: 100%; background: none; border: none;
-      padding: 0.35rem 0.5rem; border-radius: 4px;
-      cursor: pointer; transition: background 0.12s;
-      gap: 0.5rem;
+    @keyframes skPanelIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    .b-skill-item:hover:not(:disabled) { background: rgba(240,192,64,0.1); }
-    .b-skill-item:disabled { opacity: 0.35; cursor: not-allowed; }
-    .b-sk-name { font-family: 'Cinzel', serif; font-size: 0.68rem; color: #f0e0a0; }
-    .b-sk-ap { font-family: 'Cinzel', serif; font-size: 0.6rem; color: #4080ff; }
+    .b-skp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.45rem;
+    }
+    .b-skp-title { font-family: 'Cinzel', serif; }
+    .b-skp-unitname { font-size: 0.72rem; font-weight: 700; color: #f0c040; }
+    .b-skp-sub { font-size: 0.65rem; color: rgba(240,192,64,0.45); }
+    .b-skp-close {
+      background: none; border: none; cursor: pointer;
+      color: rgba(200,170,100,0.5); font-size: 0.75rem; line-height: 1;
+      padding: 2px 4px; border-radius: 3px; transition: color 0.12s;
+    }
+    .b-skp-close:hover { color: #f0c040; }
+
+    .b-skp-grid {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+
+    .b-skill-card {
+      flex: 1 1 180px;
+      background: rgba(15,10,32,0.9);
+      border: 1px solid rgba(240,192,64,0.2);
+      border-radius: 7px; padding: 0.45rem 0.55rem;
+      text-align: left; cursor: pointer;
+      transition: background 0.13s, border-color 0.13s, transform 0.1s;
+    }
+    .b-skill-card:hover:not(:disabled) {
+      background: rgba(240,192,64,0.08);
+      border-color: rgba(240,192,64,0.5);
+      transform: translateY(-1px);
+    }
+    .b-skill-card:disabled, .b-skill-card-poor {
+      opacity: 0.38; cursor: not-allowed;
+    }
+    .b-skc-top {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 0.28rem; gap: 0.4rem;
+    }
+    .b-skc-name {
+      font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 700;
+      color: #f0e0a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .b-skc-ap {
+      font-family: 'Cinzel', serif; font-size: 0.62rem; font-weight: 600;
+      color: #4080ff; white-space: nowrap; flex-shrink: 0;
+    }
+    .b-skc-badges {
+      display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0.25rem;
+    }
+    .b-skc-type {
+      font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 1px 5px; border-radius: 3px;
+    }
+    .b-skt-physical { background: rgba(255,120,60,0.18); color: #ff8050; border: 1px solid rgba(255,120,60,0.35); }
+    .b-skt-magical  { background: rgba(160,80,255,0.18); color: #b070ff; border: 1px solid rgba(160,80,255,0.35); }
+    .b-skt-healing  { background: rgba(60,200,120,0.18); color: #40c880; border: 1px solid rgba(60,200,120,0.35); }
+    .b-skt-buff     { background: rgba(60,130,255,0.18); color: #5090ff; border: 1px solid rgba(60,130,255,0.35); }
+    .b-skt-special  { background: rgba(240,192,64,0.18); color: #f0c040; border: 1px solid rgba(240,192,64,0.35); }
+    .b-skc-badge {
+      font-family: 'Cinzel', serif; font-size: 0.55rem;
+      color: rgba(200,170,100,0.7);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+    }
+    .b-skc-style { color: rgba(180,160,255,0.75); border-color: rgba(160,140,255,0.2); background: rgba(160,140,255,0.07); }
+    .b-skc-heal  { color: #40c880; border-color: rgba(60,200,120,0.25); background: rgba(60,200,120,0.07); }
+    .b-skc-aoe   { color: #f0a040; border-color: rgba(240,160,60,0.25); background: rgba(240,160,60,0.07); }
+    .b-skc-effect {
+      font-size: 0.6rem; color: rgba(200,180,140,0.55);
+      line-height: 1.4; margin-top: 0.15rem;
+      border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.2rem;
+      font-style: italic;
+    }
 
     .b-submit-row {
       display: flex; align-items: center; justify-content: space-between;
