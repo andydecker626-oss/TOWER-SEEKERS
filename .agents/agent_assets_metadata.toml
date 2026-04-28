@@ -282,6 +282,24 @@ uri = "file://attached_assets/generated_images/title-bg-option-c.png"
 type = "image"
 title = "title bg option C golden blue afternoon"
 
+[[generated]]
+id = "MDTWmDzCAvJDhOk1Frm9T"
+uri = "file://attached_assets/generated_images/title-v2-option-a.png"
+type = "image"
+title = "title v2 town square gathering hub"
+
+[[generated]]
+id = "OoJasZyfnjjBqaSlRMGEQ"
+uri = "file://attached_assets/generated_images/title-v2-option-b.png"
+type = "image"
+title = "title v2 street level adventurer hub"
+
+[[generated]]
+id = "3T2lKBDuhHWbb79KdwwOG"
+uri = "file://attached_assets/generated_images/title-v2-option-c.png"
+type = "image"
+title = "title v2 aerial gathering hub elemental towers"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
