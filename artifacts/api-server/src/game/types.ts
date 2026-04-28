@@ -18,6 +18,7 @@ export interface SideState {
   sessionToken: string;
   roster: string[];
   picks?: string[];
+  battlePicks?: string[];
   placement?: { unitId: string; x: number; y: number }[];
   actions?: PlayerAction[];
 }

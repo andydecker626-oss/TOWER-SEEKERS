@@ -4,6 +4,7 @@ export type Phase =
   | "lobby"
   | "waiting"
   | "preselection"
+  | "battleselect"
   | "placement"
   | "battle"
   | "gameover";

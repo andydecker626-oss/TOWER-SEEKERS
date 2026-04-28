@@ -6,6 +6,7 @@ import { SettingsProvider } from "@/context/SettingsContext";
 import type { Phase } from "@/lib/types";
 import Lobby from "@/pages/Lobby";
 import PreSelection from "@/pages/PreSelection";
+import BattleSelect from "@/pages/BattleSelect";
 import Placement from "@/pages/Placement";
 import Battle from "@/pages/Battle";
 import GameOver from "@/pages/GameOver";
@@ -18,6 +19,7 @@ const PHASE_ROUTES: Record<Phase, string> = {
   lobby: "/lobby",
   waiting: "/lobby",
   preselection: "/preselect",
+  battleselect: "/battleselect",
   placement: "/place",
   battle: "/battle",
   gameover: "/gameover",
@@ -86,6 +88,7 @@ function App() {
               <Route path="/lobby" element={<Lobby />} />
               <Route path="/hub" element={<GatheringHub />} />
               <Route path="/preselect" element={<PreSelection />} />
+              <Route path="/battleselect" element={<BattleSelect />} />
               <Route path="/place" element={<Placement />} />
               <Route path="/battle" element={<Battle />} />
               <Route path="/gameover" element={<GameOver />} />

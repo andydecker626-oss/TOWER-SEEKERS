@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSocket } from "@/context/SocketContext";
 
 interface PlacedUnit {
@@ -10,7 +10,7 @@ interface PlacedUnit {
 export default function Placement() {
   const { state, submitPlacement } = useSocket();
   const [placed, setPlaced] = useState<PlacedUnit[]>([]);
-  const dragUnitId = useRef<string | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.submittedPlacement && state.submittedPlacement.length > 0) {
@@ -18,7 +18,7 @@ export default function Placement() {
     }
   }, [state.submittedPlacement]);
 
-  const picks = state.myPicks;
+  const picks = state.myBattlePicks;
   const waiting = state.isWaitingForOpponent;
 
   const COLS = 4;
@@ -32,18 +32,32 @@ export default function Placement() {
     return placed.find((p) => p.unitId === unitId);
   }
 
-  function handleDrop(x: number, y: number) {
-    const unitId = dragUnitId.current;
-    if (!unitId || waiting) return;
-    dragUnitId.current = null;
-    setPlaced((prev) => {
-      const without = prev.filter((p) => p.unitId !== unitId && !(p.x === x && p.y === y));
-      return [...without, { unitId, x, y }];
-    });
+  function handleUnitClick(unitId: string) {
+    if (waiting) return;
+    const existing = getUnitPlacement(unitId);
+    if (existing) {
+      setPlaced((prev) => prev.filter((p) => p.unitId !== unitId));
+      setSelectedUnitId(unitId);
+    } else {
+      setSelectedUnitId((prev) => (prev === unitId ? null : unitId));
+    }
   }
 
-  function handleRemove(unitId: string) {
-    setPlaced((prev) => prev.filter((p) => p.unitId !== unitId));
+  function handleTileClick(x: number, y: number) {
+    if (waiting) return;
+    const occupying = getPlacedAt(x, y);
+    if (occupying) {
+      setPlaced((prev) => prev.filter((p) => !(p.x === x && p.y === y)));
+      setSelectedUnitId(occupying.unitId);
+    } else if (selectedUnitId) {
+      setPlaced((prev) => {
+        const without = prev.filter(
+          (p) => p.unitId !== selectedUnitId && !(p.x === x && p.y === y)
+        );
+        return [...without, { unitId: selectedUnitId, x, y }];
+      });
+      setSelectedUnitId(null);
+    }
   }
 
   function handleConfirm() {
@@ -55,7 +69,6 @@ export default function Placement() {
     <div className="pl-root">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&display=swap');
-        ${spriteCSS()}
 
         .pl-root {
           min-height: 100vh;
@@ -113,16 +126,28 @@ export default function Placement() {
           border: 1px solid rgba(240,192,64,0.12);
           border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
-          transition: all 0.15s;
+          transition: all 0.12s;
           position: relative; overflow: hidden;
+          cursor: pointer;
         }
-        .pl-tile.drag-over {
-          border-color: rgba(240,192,64,0.7);
-          background: rgba(240,192,64,0.14);
-          box-shadow: inset 0 0 14px rgba(240,192,64,0.15);
+        .pl-tile:hover:not(.occupied) {
+          border-color: rgba(240,192,64,0.45);
+          background: rgba(240,192,64,0.08);
         }
+        .pl-tile.drop-target {
+          border-color: rgba(240,192,64,0.8);
+          background: rgba(240,192,64,0.16);
+          box-shadow: inset 0 0 14px rgba(240,192,64,0.2);
+          animation: pulse-tile 0.7s ease-in-out infinite alternate;
+        }
+        @keyframes pulse-tile { from { box-shadow: inset 0 0 6px rgba(240,192,64,0.1); } to { box-shadow: inset 0 0 18px rgba(240,192,64,0.3); } }
         .pl-tile.occupied {
-          border-color: rgba(80,200,120,0.35);
+          border-color: rgba(80,200,120,0.4);
+          cursor: pointer;
+        }
+        .pl-tile.occupied:hover {
+          border-color: rgba(240,100,100,0.6);
+          background: rgba(240,100,100,0.07);
         }
         .pl-tile-remove {
           position: absolute; top: 2px; right: 3px;
@@ -132,8 +157,8 @@ export default function Placement() {
           line-height: 1;
           padding: 2px;
           z-index: 2;
+          pointer-events: none;
         }
-        .pl-tile-remove:hover { color: #f87171; }
 
         .tile-col-label {
           font-family: 'Cinzel', serif; font-size: 0.6rem;
@@ -145,8 +170,8 @@ export default function Placement() {
         }
 
         .pl-units {
-          display: flex; flex-direction: column; gap: 0.5rem;
-          min-width: 160px;
+          display: flex; flex-direction: column; gap: 0.45rem;
+          min-width: 165px;
         }
         .pl-units-label {
           font-family: 'Cinzel', serif; font-size: 0.7rem;
@@ -159,20 +184,41 @@ export default function Placement() {
           border: 1px solid rgba(240,192,64,0.15);
           border-radius: 8px;
           padding: 0.5rem 0.75rem;
-          cursor: grab;
+          cursor: pointer;
           transition: all 0.15s;
           width: 100%;
           text-align: left;
           user-select: none;
         }
-        .pl-unit-btn:hover { border-color: rgba(240,192,64,0.45); background: rgba(20,14,40,0.9); }
-        .pl-unit-btn.placed { border-color: rgba(80,200,120,0.45); opacity: 0.65; cursor: grab; }
-        .pl-unit-btn:active { cursor: grabbing; }
-        .pl-drag-hint {
-          font-size: 0.62rem; color: rgba(200,170,100,0.35);
+        .pl-unit-btn:hover:not(.placed):not(.unit-selected) {
+          border-color: rgba(240,192,64,0.45);
+          background: rgba(20,14,40,0.9);
+        }
+        .pl-unit-btn.unit-selected {
+          border-color: rgba(240,192,64,0.9);
+          background: rgba(240,192,64,0.12);
+          box-shadow: 0 0 12px rgba(240,192,64,0.2);
+        }
+        .pl-unit-btn.placed {
+          border-color: rgba(80,200,120,0.45);
+          opacity: 0.65;
+        }
+        .pl-unit-btn.placed:hover {
+          opacity: 0.85;
+          border-color: rgba(240,100,100,0.5);
+        }
+        .pl-click-hint {
+          font-size: 0.6rem; color: rgba(200,170,100,0.35);
           text-align: center; margin-top: 0.25rem;
           font-family: 'Cinzel', serif;
           font-style: italic;
+        }
+        .pl-unit-portrait {
+          width: 32px; height: 32px;
+          border-radius: 4px;
+          object-fit: cover;
+          object-position: center top;
+          flex-shrink: 0;
         }
         .pl-unit-name {
           font-family: 'Cinzel', serif; font-size: 0.8rem;
@@ -220,13 +266,21 @@ export default function Placement() {
           font-size: 0.9rem; color: rgba(240,192,64,0.5);
           text-align: center; margin-top: 0.2rem;
         }
+
+        .tile-sprite {
+          image-rendering: pixelated;
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+          filter: drop-shadow(0 1px 4px rgba(0,0,0,0.7));
+        }
       `}</style>
 
       <div className="pl-bg" />
 
       <div className="pl-header">
         <h2 className="pl-title">Deploy Your Forces</h2>
-        <div className="pl-subtitle">Drag units onto the battlefield grid</div>
+        <div className="pl-subtitle">Select a unit, then click a grid tile to place it</div>
       </div>
 
       <div className="pl-body">
@@ -253,32 +307,23 @@ export default function Placement() {
                   Array.from({ length: COLS }).map((_, c) => {
                     const p = getPlacedAt(c, r);
                     const unit = p ? picks.find((u) => u.id === p.unitId) : null;
+                    const isDropTarget = !!selectedUnitId && !p;
                     return (
                       <div
                         key={`${r}-${c}`}
                         role="button"
                         aria-label={`Grid tile column ${c + 1} row ${r + 1}${unit ? ` (${unit.name})` : ""}`}
-                        className={`pl-tile${p ? " occupied" : ""}`}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.currentTarget.classList.add("drag-over");
-                        }}
-                        onDragLeave={(e) => {
-                          e.currentTarget.classList.remove("drag-over");
-                        }}
-                        onDrop={(e) => {
-                          e.currentTarget.classList.remove("drag-over");
-                          handleDrop(c, r);
-                        }}
+                        className={`pl-tile${p ? " occupied" : ""}${isDropTarget ? " drop-target" : ""}`}
+                        onClick={() => handleTileClick(c, r)}
                       >
                         {unit && (
                           <>
-                            <div className={`sprite sprite--${unit.cls} sprite-ally sprite-idle`} />
-                            <button
-                              className="pl-tile-remove"
-                              onClick={(e) => { e.stopPropagation(); handleRemove(unit.id); }}
-                              title="Remove"
-                            >✕</button>
+                            <img
+                              className="tile-sprite"
+                              src={`/assets/units/${unit.id}-sprite.png`}
+                              alt={unit.name}
+                            />
+                            <div className="pl-tile-remove">✕</div>
                           </>
                         )}
                       </div>
@@ -295,23 +340,30 @@ export default function Placement() {
           <div className="pl-units-label">Your Units</div>
           {picks.map((unit) => {
             const p = getUnitPlacement(unit.id);
+            const isSel = selectedUnitId === unit.id;
             return (
-              <div
+              <button
                 key={unit.id}
-                className={`pl-unit-btn${p ? " placed" : ""}`}
-                draggable
-                onDragStart={() => { dragUnitId.current = unit.id; }}
-                onDragEnd={() => { dragUnitId.current = null; }}
+                className={`pl-unit-btn${p ? " placed" : ""}${isSel ? " unit-selected" : ""}`}
+                onClick={() => handleUnitClick(unit.id)}
               >
-                <div className={`sprite sprite--${unit.cls} sprite-ally sprite-idle`} style={{ transform: "scale(0.6)", transformOrigin: "center" }} />
+                <img
+                  className="pl-unit-portrait"
+                  src={`/assets/units/${unit.id}-portrait.png`}
+                  alt={unit.name}
+                />
                 <div className="pl-unit-name">{unit.name}</div>
                 <div className={`pl-unit-status${p ? " placed-ok" : ""}`}>
-                  {p ? `✓` : "—"}
+                  {isSel ? "◉" : p ? "✓" : "—"}
                 </div>
-              </div>
+              </button>
             );
           })}
-          <div className="pl-drag-hint">Drag units to the grid</div>
+          <div className="pl-click-hint">
+            {selectedUnitId
+              ? `Click a tile to place ${picks.find((u) => u.id === selectedUnitId)?.name ?? ""}`
+              : "Click a unit to select it"}
+          </div>
         </div>
       </div>
 
@@ -331,25 +383,4 @@ export default function Placement() {
       </div>
     </div>
   );
-}
-
-function spriteCSS() {
-  return `
-    .sprite {
-      image-rendering: pixelated;
-      background-repeat: no-repeat;
-      flex-shrink: 0;
-      display: block;
-    }
-    .sprite-ally { filter: none; }
-    .sprite-enemy { filter: hue-rotate(180deg) saturate(1.3); }
-    .sprite--blade-knight { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/3/30/Blade_Knight.png'); width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--rune-archer  { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/d/dd/Rune_Archer.png');   width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--cleric       { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/a/a4/Cleric.png');        width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--guardian     { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/2/2b/Guardian.png');      width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--lancer       { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/e/e7/Lancer.png');        width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--hex-mage     { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/0/03/Hex_Mage.png');      width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--invoker      { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/5/50/Invoker.png');       width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--fell-duelist { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/8/8c/Fell_Duelist.png');  width:48px; height:64px; background-size:contain; background-position:center bottom; }
-  `;
 }

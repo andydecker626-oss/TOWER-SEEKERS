@@ -26,20 +26,21 @@ interface GameState {
   enemyRoster: UnitDef[];
   myPicks: UnitDef[];
   enemyPicks: UnitDef[];
+  myBattlePicks: UnitDef[];
+  enemyBattlePicks: UnitDef[];
   myUnits: GridUnit[];
   enemyUnits: GridUnit[];
   turnNumber: number;
   isWaitingForOpponent: boolean;
   winner: Side | null;
   pendingEvents: TurnEvent[] | null;
-  /** Set when server signals game-over; Battle stays mounted to play final animations */
   pendingGameOver: Side | null;
   opponentPicksLocked: boolean;
+  opponentBattlePicksLocked: boolean;
   errorMsg: string | null;
   opponentReconnecting: boolean;
-  /** Pick IDs already submitted before reconnect (hydrates PreSelection UI) */
   submittedPickIds: string[] | null;
-  /** Placement already submitted before reconnect (hydrates Placement UI) */
+  submittedBattlePickIds: string[] | null;
   submittedPlacement: { unitId: string; x: number; y: number }[] | null;
 }
 
@@ -47,12 +48,15 @@ const initial: GameState = {
   phase: "lobby",
   pendingGameOver: null,
   opponentPicksLocked: false,
+  opponentBattlePicksLocked: false,
   roomCode: null,
   mySide: null,
   myRoster: [],
   enemyRoster: [],
   myPicks: [],
   enemyPicks: [],
+  myBattlePicks: [],
+  enemyBattlePicks: [],
   myUnits: [],
   enemyUnits: [],
   turnNumber: 0,
@@ -62,6 +66,7 @@ const initial: GameState = {
   errorMsg: null,
   opponentReconnecting: false,
   submittedPickIds: null,
+  submittedBattlePickIds: null,
   submittedPlacement: null,
 };
 
@@ -78,11 +83,21 @@ type ReconnectPayload =
       opponentPicksLocked: boolean;
     }
   | {
-      phase: "placement";
+      phase: "battleselect";
       side: Side;
       code: string;
       myPicks: UnitDef[];
       enemyPicks: UnitDef[];
+      battlePicksSubmitted: boolean;
+      submittedBattlePickIds: string[] | null;
+      enemyBattlePicksLocked: boolean;
+    }
+  | {
+      phase: "placement";
+      side: Side;
+      code: string;
+      myBattlePicks: UnitDef[];
+      enemyBattlePicks: UnitDef[];
       placementSubmitted: boolean;
       submittedPlacement: { unitId: string; x: number; y: number }[] | null;
     }
@@ -120,6 +135,13 @@ type Action =
       type: "PICKS_READY";
       myPicks: UnitDef[];
       enemyPicks: UnitDef[];
+    }
+  | { type: "BATTLE_PICKS_SUBMITTED" }
+  | { type: "OPPONENT_BATTLE_PICKS_LOCKED" }
+  | {
+      type: "BATTLE_PICKS_READY";
+      myBattlePicks: UnitDef[];
+      enemyBattlePicks: UnitDef[];
     }
   | { type: "OPPONENT_PLACEMENT_READY" }
   | { type: "PLACEMENT_SUBMITTED" }
@@ -184,11 +206,26 @@ function reducer(state: GameState, action: Action): GameState {
     case "PICKS_READY":
       return {
         ...state,
-        phase: "placement",
+        phase: "battleselect",
         myPicks: action.myPicks,
         enemyPicks: action.enemyPicks,
         isWaitingForOpponent: false,
         opponentPicksLocked: false,
+        submittedBattlePickIds: null,
+        opponentBattlePicksLocked: false,
+      };
+    case "BATTLE_PICKS_SUBMITTED":
+      return { ...state, isWaitingForOpponent: true };
+    case "OPPONENT_BATTLE_PICKS_LOCKED":
+      return { ...state, opponentBattlePicksLocked: true };
+    case "BATTLE_PICKS_READY":
+      return {
+        ...state,
+        phase: "placement",
+        myBattlePicks: action.myBattlePicks,
+        enemyBattlePicks: action.enemyBattlePicks,
+        isWaitingForOpponent: false,
+        opponentBattlePicksLocked: false,
       };
     case "PLACEMENT_SUBMITTED":
       return { ...state, isWaitingForOpponent: true };
@@ -277,14 +314,27 @@ function reducer(state: GameState, action: Action): GameState {
           submittedPickIds: p.submittedPickIds,
         };
       }
+      if (p.phase === "battleselect") {
+        return {
+          ...initial,
+          phase: "battleselect",
+          roomCode: p.code,
+          mySide: p.side,
+          myPicks: p.myPicks,
+          enemyPicks: p.enemyPicks,
+          isWaitingForOpponent: p.battlePicksSubmitted,
+          opponentBattlePicksLocked: p.enemyBattlePicksLocked,
+          submittedBattlePickIds: p.submittedBattlePickIds,
+        };
+      }
       if (p.phase === "placement") {
         return {
           ...initial,
           phase: "placement",
           roomCode: p.code,
           mySide: p.side,
-          myPicks: p.myPicks,
-          enemyPicks: p.enemyPicks,
+          myBattlePicks: p.myBattlePicks,
+          enemyBattlePicks: p.enemyBattlePicks,
           isWaitingForOpponent: p.placementSubmitted,
           submittedPlacement: p.submittedPlacement,
         };
@@ -334,6 +384,7 @@ interface SocketContextValue {
   createAiRoom: () => void;
   joinRoom: (code: string) => void;
   submitPicks: (picks: string[]) => void;
+  submitBattlePicks: (battlePicks: string[]) => void;
   submitPlacement: (placement: { unitId: string; x: number; y: number }[]) => void;
   submitActions: (actions: PlayerAction[]) => void;
   requestRematch: () => void;
@@ -394,6 +445,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       "picksReady",
       (data: { myPicks: UnitDef[]; enemyPicks: UnitDef[] }) => {
         dispatch({ type: "PICKS_READY", ...data });
+      }
+    );
+    socket.on("battlePicksSubmitted", () => dispatch({ type: "BATTLE_PICKS_SUBMITTED" }));
+    socket.on("opponentBattlePicksLocked", () => dispatch({ type: "OPPONENT_BATTLE_PICKS_LOCKED" }));
+    socket.on(
+      "battlePicksReady",
+      (data: { myBattlePicks: UnitDef[]; enemyBattlePicks: UnitDef[] }) => {
+        dispatch({ type: "BATTLE_PICKS_READY", ...data });
       }
     );
     socket.on("placementSubmitted", () => dispatch({ type: "PLACEMENT_SUBMITTED" }));
@@ -476,6 +535,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socketRef.current?.emit("submitPicks", { picks });
   }, []);
 
+  const submitBattlePicks = useCallback((battlePicks: string[]) => {
+    socketRef.current?.emit("submitBattlePicks", { battlePicks });
+  }, []);
+
   const submitPlacement = useCallback(
     (placement: { unitId: string; x: number; y: number }[]) => {
       socketRef.current?.emit("submitPlacement", { placement });
@@ -516,6 +579,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         createAiRoom,
         joinRoom,
         submitPicks,
+        submitBattlePicks,
         submitPlacement,
         submitActions,
         requestRematch,

@@ -33,6 +33,10 @@ function aiPickUnits(roster: string[]): string[] {
   return roster.slice(0, 6);
 }
 
+function aiBattlePickUnits(picks: string[]): string[] {
+  return picks.slice(0, 4);
+}
+
 function aiPlaceUnits(picks: string[]): { unitId: string; x: number; y: number }[] {
   // Place units across the front two columns of the AI side (x=3 is frontline)
   return picks.map((unitId, i) => ({
@@ -154,11 +158,22 @@ function buildReconnectPayload(room: RoomState, side: Side) {
     };
   }
 
-  if (phase === "placement") {
+  if (phase === "battleselect") {
     return {
       ...base,
       myPicks: getRosterDefs(sideState.picks ?? []),
       enemyPicks: getRosterDefs(otherState?.picks ?? []),
+      battlePicksSubmitted: !!sideState.battlePicks,
+      submittedBattlePickIds: sideState.battlePicks ?? null,
+      enemyBattlePicksLocked: !!otherState?.battlePicks,
+    };
+  }
+
+  if (phase === "placement") {
+    return {
+      ...base,
+      myBattlePicks: getRosterDefs(sideState.battlePicks ?? []),
+      enemyBattlePicks: getRosterDefs(otherState?.battlePicks ?? []),
       placementSubmitted: !!sideState.placement,
       submittedPlacement: sideState.placement ?? null,
     };
@@ -404,7 +419,7 @@ export function registerSocketHandlers(io: Server): void {
 
       const otherSideState = info.side === "A" ? room.sideB : room.sideA;
       if (otherSideState && otherSideState.picks) {
-        room.phase = "placement";
+        room.phase = "battleselect";
         socket.emit("picksReady", {
           myPicks: getRosterDefs(sideState.picks),
           enemyPicks: getRosterDefs(otherSideState.picks),
@@ -424,6 +439,50 @@ export function registerSocketHandlers(io: Server): void {
       logger.info({ code: info.code, side: info.side }, "Picks submitted");
     });
 
+    socket.on("submitBattlePicks", ({ battlePicks }: { battlePicks: string[] }) => {
+      const info = socketToRoom.get(socket.id);
+      if (!info) return;
+      const room = rooms.get(info.code);
+      if (!room) return;
+      if (room.phase !== "battleselect") return;
+
+      const sideState = info.side === "A" ? room.sideA : room.sideB;
+      if (!sideState) return;
+
+      const myPicks = sideState.picks ?? [];
+      const uniqueBattlePicks = [...new Set(battlePicks.filter((id) => myPicks.includes(id)))].slice(0, 4);
+      if (uniqueBattlePicks.length !== 4) {
+        socket.emit("gameError", { message: "Must choose exactly 4 units from your party for battle" });
+        return;
+      }
+      sideState.battlePicks = uniqueBattlePicks;
+
+      if (room.isAiRoom && info.side === "A" && room.sideB && !room.sideB.battlePicks) {
+        room.sideB.battlePicks = aiBattlePickUnits(room.sideB.picks ?? []);
+      }
+
+      const otherSideState = info.side === "A" ? room.sideB : room.sideA;
+      if (otherSideState && otherSideState.battlePicks) {
+        room.phase = "placement";
+        socket.emit("battlePicksReady", {
+          myBattlePicks: getRosterDefs(sideState.battlePicks),
+          enemyBattlePicks: getRosterDefs(otherSideState.battlePicks),
+        });
+        if (!room.isAiRoom) {
+          io.to(otherSideState.socketId).emit("battlePicksReady", {
+            myBattlePicks: getRosterDefs(otherSideState.battlePicks),
+            enemyBattlePicks: getRosterDefs(sideState.battlePicks),
+          });
+        }
+      } else {
+        socket.emit("battlePicksSubmitted", {});
+        if (!room.isAiRoom) {
+          io.to(info.code).except(socket.id).emit("opponentBattlePicksLocked", {});
+        }
+      }
+      logger.info({ code: info.code, side: info.side }, "Battle picks submitted");
+    });
+
     socket.on(
       "submitPlacement",
       ({ placement }: { placement: { unitId: string; x: number; y: number }[] }) => {
@@ -436,14 +495,14 @@ export function registerSocketHandlers(io: Server): void {
         const sideState = info.side === "A" ? room.sideA : room.sideB;
         if (!sideState) return;
 
-        const picks = sideState.picks ?? [];
+        const picks = sideState.battlePicks ?? [];
         if (placement.length !== picks.length) {
           socket.emit("gameError", { message: `Must place exactly ${picks.length} units` });
           return;
         }
         const invalidUnit = placement.find((p) => !picks.includes(p.unitId));
         if (invalidUnit) {
-          socket.emit("gameError", { message: `Unit ${invalidUnit.unitId} was not in your picks` });
+          socket.emit("gameError", { message: `Unit ${invalidUnit.unitId} was not in your battle party` });
           return;
         }
         const unitIdSet = new Set(placement.map((p) => p.unitId));
@@ -466,14 +525,14 @@ export function registerSocketHandlers(io: Server): void {
 
         // AI auto-places immediately
         if (room.isAiRoom && info.side === "A" && room.sideB && !room.sideB.placement) {
-          room.sideB.placement = aiPlaceUnits(room.sideB.picks ?? []);
+          room.sideB.placement = aiPlaceUnits(room.sideB.battlePicks ?? []);
         }
 
         const otherSide = info.side === "A" ? room.sideB : room.sideA;
         if (otherSide && otherSide.placement) {
           try {
-            const unitsA = createGridUnits(room.sideA.picks!, room.sideA.placement!, "A");
-            const unitsB = createGridUnits(room.sideB!.picks!, room.sideB!.placement!, "B");
+            const unitsA = createGridUnits(room.sideA.battlePicks!, room.sideA.placement!, "A");
+            const unitsB = createGridUnits(room.sideB!.battlePicks!, room.sideB!.placement!, "B");
             room.battleState = [...unitsA, ...unitsB];
             room.phase = "battle";
             room.turnNumber = 1;
@@ -596,11 +655,13 @@ export function registerSocketHandlers(io: Server): void {
       const fullRoster = ALL_UNITS.map((u) => u.id);
       room.sideA.roster = fullRoster;
       room.sideA.picks = undefined;
+      room.sideA.battlePicks = undefined;
       room.sideA.placement = undefined;
       room.sideA.actions = undefined;
       if (room.sideB) {
         room.sideB.roster = fullRoster;
         room.sideB.picks = undefined;
+        room.sideB.battlePicks = undefined;
         room.sideB.placement = undefined;
         room.sideB.actions = undefined;
       }
