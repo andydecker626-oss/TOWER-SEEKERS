@@ -53,7 +53,7 @@ function MiniUnitCard({
 }
 
 export default function BattleSelect() {
-  const { state, submitBattlePicks } = useSocket();
+  const { state, submitBattlePicks, requestGoBack } = useSocket();
   const [chosen, setChosen] = useState<string[]>([]);
 
   useEffect(() => {
@@ -83,6 +83,7 @@ export default function BattleSelect() {
       <div className="bs-bg" />
 
       <div className="bs-header">
+        <button className="back-btn" onClick={requestGoBack}>← Back</button>
         <h2 className="bs-title">Choose Your Battle Party</h2>
         <p className="bs-subtitle">Study your opponent — select 4 champions to send into battle</p>
       </div>
@@ -205,6 +206,18 @@ const CSS = `
     text-align: center;
     margin-bottom: 1rem;
     position: relative; z-index: 1;
+  }
+  .back-btn {
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    background: none; border: 1px solid rgba(240,192,64,0.3);
+    color: rgba(240,192,64,0.65); font-family: 'Cinzel', serif;
+    font-size: 0.75rem; letter-spacing: 0.05em;
+    padding: 0.28rem 0.7rem; border-radius: 4px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .back-btn:hover {
+    background: rgba(240,192,64,0.1); color: #f0c040;
+    border-color: rgba(240,192,64,0.6);
   }
   .bs-title {
     font-family: 'Cinzel Decorative', serif;

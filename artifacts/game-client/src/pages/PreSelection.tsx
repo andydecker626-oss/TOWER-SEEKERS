@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSocket } from "@/context/SocketContext";
 import { useParties } from "@/hooks/useParties";
 import { ALL_UNITS } from "@/lib/units";
@@ -101,8 +102,9 @@ function UnitCard({
 }
 
 export default function PreSelection() {
-  const { state, submitPicks } = useSocket();
+  const { state, submitPicks, reset } = useSocket();
   const { parties } = useParties();
+  const navigate = useNavigate();
   const [picks, setPicks] = useState<string[]>([]);
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
 
@@ -140,6 +142,7 @@ export default function PreSelection() {
       <div className="presel-bg" />
 
       <div className="presel-header">
+        <button className="back-btn" onClick={() => { reset(); navigate("/hub"); }}>← Back</button>
         <h2 className="presel-title">Choose Your Champions</h2>
         <div className="presel-subtitle">Select 6 from the full roster to bring into battle</div>
       </div>
@@ -254,6 +257,18 @@ const CSS = `
     text-align: center;
     margin-bottom: 1rem;
     position: relative; z-index: 1;
+  }
+  .back-btn {
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    background: none; border: 1px solid rgba(240,192,64,0.3);
+    color: rgba(240,192,64,0.65); font-family: 'Cinzel', serif;
+    font-size: 0.75rem; letter-spacing: 0.05em;
+    padding: 0.28rem 0.7rem; border-radius: 4px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .back-btn:hover {
+    background: rgba(240,192,64,0.1); color: #f0c040;
+    border-color: rgba(240,192,64,0.6);
   }
   .presel-title {
     font-family: 'Cinzel Decorative', serif;

@@ -174,7 +174,13 @@ type Action =
   | { type: "RECONNECT_SUCCESS"; payload: ReconnectPayload }
   | { type: "ERROR"; message: string }
   | { type: "CLEAR_PENDING_EVENTS" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | {
+      type: "WENT_BACK";
+      toPhase: "preselection" | "battleselect";
+      myPicks?: UnitDef[];
+      enemyPicks?: UnitDef[];
+    };
 
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
@@ -371,6 +377,33 @@ function reducer(state: GameState, action: Action): GameState {
       return { ...state, pendingEvents: null };
     case "RESET":
       return { ...initial };
+    case "WENT_BACK":
+      if (action.toPhase === "preselection") {
+        return {
+          ...state,
+          phase: "preselection",
+          isWaitingForOpponent: false,
+          opponentPicksLocked: false,
+          submittedPickIds: state.myPicks.map((p) => p.id),
+          myBattlePicks: [],
+          enemyBattlePicks: [],
+          submittedBattlePickIds: null,
+        };
+      }
+      if (action.toPhase === "battleselect") {
+        return {
+          ...state,
+          phase: "battleselect",
+          myPicks: action.myPicks ?? state.myPicks,
+          enemyPicks: action.enemyPicks ?? state.enemyPicks,
+          isWaitingForOpponent: false,
+          opponentBattlePicksLocked: false,
+          submittedBattlePickIds: null,
+          myBattlePicks: [],
+          enemyBattlePicks: [],
+        };
+      }
+      return state;
     default:
       return state;
   }
@@ -388,6 +421,7 @@ interface SocketContextValue {
   submitPlacement: (placement: { unitId: string; x: number; y: number }[]) => void;
   submitActions: (actions: PlayerAction[]) => void;
   requestRematch: () => void;
+  requestGoBack: () => void;
   reset: () => void;
   clearPendingEvents: () => void;
   confirmGameOver: () => void;
@@ -513,6 +547,16 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socket.on("gameError", ({ message }: { message: string }) => {
       dispatch({ type: "ERROR", message });
     });
+    socket.on(
+      "wentBack",
+      (data: {
+        toPhase: "preselection" | "battleselect";
+        myPicks?: UnitDef[];
+        enemyPicks?: UnitDef[];
+      }) => {
+        dispatch({ type: "WENT_BACK", ...data });
+      }
+    );
 
     return () => {
       socket.disconnect();
@@ -554,6 +598,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socketRef.current?.emit("requestRematch");
   }, []);
 
+  const requestGoBack = useCallback(() => {
+    socketRef.current?.emit("requestGoBack");
+  }, []);
+
   const reset = useCallback(() => {
     socketRef.current?.emit("leaveRoom");
     localStorage.removeItem(SESSION_TOKEN_KEY);
@@ -583,6 +631,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         submitPlacement,
         submitActions,
         requestRematch,
+        requestGoBack,
         reset,
         clearPendingEvents,
         confirmGameOver,

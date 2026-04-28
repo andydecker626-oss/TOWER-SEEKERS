@@ -483,6 +483,51 @@ export function registerSocketHandlers(io: Server): void {
       logger.info({ code: info.code, side: info.side }, "Battle picks submitted");
     });
 
+    socket.on("requestGoBack", () => {
+      const info = socketToRoom.get(socket.id);
+      if (!info) return;
+      const room = rooms.get(info.code);
+      if (!room) return;
+
+      if (room.phase === "battleselect") {
+        room.phase = "preselection";
+        room.sideA.battlePicks = undefined;
+        if (room.sideB) room.sideB.battlePicks = undefined;
+
+        socket.emit("wentBack", { toPhase: "preselection" });
+        if (!room.isAiRoom && room.sideB) {
+          io.to(room.sideB.socketId).emit("wentBack", { toPhase: "preselection" });
+        }
+        logger.info({ code: info.code, side: info.side }, "Went back to preselection");
+      } else if (room.phase === "placement") {
+        room.phase = "battleselect";
+        room.sideA.placement = undefined;
+        room.sideA.battlePicks = undefined;
+        if (room.sideB) {
+          room.sideB.placement = undefined;
+          room.sideB.battlePicks = undefined;
+        }
+
+        const mySideState = info.side === "A" ? room.sideA : room.sideB;
+        const otherSideState = info.side === "A" ? room.sideB : room.sideA;
+
+        socket.emit("wentBack", {
+          toPhase: "battleselect",
+          myPicks: getRosterDefs(mySideState?.picks ?? []),
+          enemyPicks: getRosterDefs(otherSideState?.picks ?? []),
+        });
+        if (!room.isAiRoom && room.sideB) {
+          const otherSocketId = info.side === "A" ? room.sideB.socketId : room.sideA.socketId;
+          io.to(otherSocketId).emit("wentBack", {
+            toPhase: "battleselect",
+            myPicks: getRosterDefs(otherSideState?.picks ?? []),
+            enemyPicks: getRosterDefs(mySideState?.picks ?? []),
+          });
+        }
+        logger.info({ code: info.code, side: info.side }, "Went back to battleselect");
+      }
+    });
+
     socket.on(
       "submitPlacement",
       ({ placement }: { placement: { unitId: string; x: number; y: number }[] }) => {
