@@ -264,6 +264,24 @@ uri = "file://artifacts/game-client/public/assets/bg-forest.png"
 type = "image"
 title = "forest battle background"
 
+[[generated]]
+id = "CnWsKjyo-6s7l5aLPiXBP"
+uri = "file://attached_assets/generated_images/title-bg-option-a.png"
+type = "image"
+title = "title bg option A golden hour"
+
+[[generated]]
+id = "PmeY068LC3Pz-d1S5_BCf"
+uri = "file://attached_assets/generated_images/title-bg-option-b.png"
+type = "image"
+title = "title bg option B twilight dusk"
+
+[[generated]]
+id = "yapevT4cKMBhMSD2dToLm"
+uri = "file://attached_assets/generated_images/title-bg-option-c.png"
+type = "image"
+title = "title bg option C golden blue afternoon"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
