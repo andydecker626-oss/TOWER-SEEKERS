@@ -22,8 +22,8 @@ function StatRow({ label, value, max, color = "#f0c040" }: { label: string; valu
   return (
     <div style={{ marginBottom: "0.45rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.6rem", color: "rgba(200,170,100,0.55)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</span>
-        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.65rem", color, fontWeight: 700 }}>{value}</span>
+        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.75rem", color: "rgba(200,170,100,0.7)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</span>
+        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.8rem", color, fontWeight: 700 }}>{value}</span>
       </div>
       <div style={{ height: 3, background: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
         <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2 }} />
@@ -369,7 +369,7 @@ function UnitDetailPanel({ unit, onClose }: { unit: UnitDef; onClose: () => void
 
         <div className="detail-portrait">
           <img src={`/assets/units/${unit.id}-portrait.png`} alt={`${unit.name} portrait`}
-            style={{ width: "100%", maxHeight: 340, objectFit: "cover", objectPosition: "top center", display: "block" }} />
+            style={{ width: "100%", maxHeight: 420, objectFit: "cover", objectPosition: "top center", display: "block" }} />
           <div className="detail-portrait-fade" />
         </div>
 
@@ -441,12 +441,12 @@ const HUB_CSS = `
     position: fixed; inset: 0; z-index: 0;
     background-image: url('/assets/hub/tavern-backdrop.png');
     background-size: cover; background-position: center bottom;
-    opacity: 0.22;
+    opacity: 0.48;
     pointer-events: none;
   }
   .hub-backdrop-overlay {
     position: fixed; inset: 0; z-index: 0;
-    background: linear-gradient(to bottom, rgba(6,4,14,0.55) 0%, rgba(6,4,14,0.2) 35%, rgba(6,4,14,0.65) 70%, rgba(6,4,14,0.92) 100%);
+    background: linear-gradient(to bottom, rgba(6,4,14,0.35) 0%, rgba(6,4,14,0.05) 30%, rgba(6,4,14,0.4) 65%, rgba(6,4,14,0.82) 100%);
     pointer-events: none;
   }
   .hub-header {
@@ -471,8 +471,8 @@ const HUB_CSS = `
     color: #f0c040; text-shadow: 0 0 20px rgba(240,192,64,0.5), 2px 2px 0 rgba(0,0,0,0.9); margin: 0;
   }
   .hub-subtitle {
-    font-family: 'Cinzel', serif; font-size: 0.7rem;
-    color: rgba(200,170,100,0.5); letter-spacing: 0.28em; text-transform: uppercase; margin-top: 0.2rem;
+    font-family: 'Cinzel', serif; font-size: 0.85rem;
+    color: rgba(200,170,100,0.65); letter-spacing: 0.28em; text-transform: uppercase; margin-top: 0.2rem;
   }
   .hub-body {
     position: relative; z-index: 1; flex: 1;
@@ -482,8 +482,8 @@ const HUB_CSS = `
     display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;
   }
   .section-label {
-    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.22em;
-    text-transform: uppercase; color: rgba(200,170,100,0.45);
+    font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.22em;
+    text-transform: uppercase; color: rgba(200,170,100,0.7);
   }
   .btn-gold {
     font-family: 'Cinzel', serif; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
@@ -534,8 +534,8 @@ const HUB_CSS = `
     cursor: pointer; transition: all 0.14s; position: relative;
   }
   .roster-card:hover { border-color: rgba(240,192,64,0.4); background: rgba(240,192,64,0.06); transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
-  .roster-card-name { font-family: 'Cinzel', serif; font-size: 0.78rem; font-weight: 700; color: rgba(220,190,120,0.92); text-align: center; line-height: 1.3; }
-  .roster-card-cls { font-size: 0.62rem; color: rgba(200,170,100,0.45); text-transform: capitalize; text-align: center; padding-bottom: 0.15rem; }
+  .roster-card-name { font-family: 'Cinzel', serif; font-size: 0.92rem; font-weight: 700; color: rgba(220,190,120,0.95); text-align: center; line-height: 1.3; }
+  .roster-card-cls { font-size: 0.72rem; color: rgba(200,170,100,0.65); text-transform: capitalize; text-align: center; padding-bottom: 0.15rem; }
 
   /* Modal */
   .modal-overlay {
@@ -604,26 +604,26 @@ const HUB_CSS = `
     display: flex; align-items: center; justify-content: space-between;
     padding: 1.1rem 1.1rem 0.8rem; border-bottom: 1px solid rgba(240,192,64,0.1); flex-shrink: 0;
   }
-  .detail-name { font-family: 'Cinzel', serif; font-size: 1.05rem; font-weight: 700; color: #f0c040; }
-  .detail-cls { font-family: 'Cinzel', serif; font-size: 0.6rem; color: rgba(200,170,100,0.45); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 0.1rem; }
+  .detail-name { font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 700; color: #f0c040; }
+  .detail-cls { font-family: 'Cinzel', serif; font-size: 0.78rem; color: rgba(200,170,100,0.7); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 0.2rem; }
   .detail-portrait { flex-shrink: 0; position: relative; }
-  .detail-portrait-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: linear-gradient(transparent, #080618); }
-  .detail-body { flex: 1; overflow-y: auto; padding: 0.85rem 1.1rem; scrollbar-width: thin; scrollbar-color: rgba(240,192,64,0.12) transparent; }
-  .detail-description { font-size: 0.7rem; color: rgba(200,175,130,0.65); line-height: 1.55; margin: 0 0 0.75rem; font-style: italic; }
-  .detail-tag { font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.15); border-radius: 4px; padding: 2px 6px; color: rgba(200,170,100,0.55); }
+  .detail-portrait-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #080618); }
+  .detail-body { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; scrollbar-width: thin; scrollbar-color: rgba(240,192,64,0.12) transparent; }
+  .detail-description { font-size: 0.88rem; color: rgba(200,175,130,0.8); line-height: 1.6; margin: 0 0 0.9rem; font-style: italic; }
+  .detail-tag { font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.2); border-radius: 4px; padding: 3px 8px; color: rgba(200,170,100,0.75); }
   .detail-section-label {
-    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
-    color: rgba(200,170,100,0.45); margin: 0.75rem 0 0.5rem;
-    padding-bottom: 0.25rem; border-bottom: 1px solid rgba(240,192,64,0.07);
+    font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(200,170,100,0.65); margin: 0.9rem 0 0.6rem;
+    padding-bottom: 0.3rem; border-bottom: 1px solid rgba(240,192,64,0.12);
   }
-  .skill-card { background: rgba(12,9,28,0.9); border: 1px solid rgba(240,192,64,0.1); border-radius: 6px; padding: 0.5rem 0.6rem; }
-  .skill-name { font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600; color: #f0c040; }
-  .skill-ap { font-family: 'Cinzel', serif; font-size: 0.62rem; font-weight: 700; color: #c084fc; background: rgba(192,132,252,0.1); border-radius: 4px; padding: 1px 5px; }
-  .skill-stat { font-size: 0.56rem; color: rgba(200,170,100,0.45); }
-  .skill-effect { font-size: 0.6rem; color: rgba(200,170,100,0.45); margin-top: 0.25rem; font-style: italic; line-height: 1.4; }
-  .passive-card { background: rgba(12,9,28,0.9); border: 1px solid rgba(192,132,252,0.12); border-radius: 6px; padding: 0.5rem 0.6rem; }
-  .passive-name { font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600; color: #c084fc; margin-bottom: 0.2rem; }
-  .passive-desc { font-size: 0.6rem; color: rgba(200,170,100,0.45); line-height: 1.4; }
+  .skill-card { background: rgba(12,9,28,0.9); border: 1px solid rgba(240,192,64,0.1); border-radius: 6px; padding: 0.65rem 0.75rem; }
+  .skill-name { font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 600; color: #f0c040; }
+  .skill-ap { font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 700; color: #c084fc; background: rgba(192,132,252,0.1); border-radius: 4px; padding: 2px 6px; }
+  .skill-stat { font-size: 0.72rem; color: rgba(200,170,100,0.65); }
+  .skill-effect { font-size: 0.78rem; color: rgba(200,170,100,0.7); margin-top: 0.3rem; font-style: italic; line-height: 1.5; }
+  .passive-card { background: rgba(12,9,28,0.9); border: 1px solid rgba(192,132,252,0.12); border-radius: 6px; padding: 0.65rem 0.75rem; }
+  .passive-name { font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 600; color: #c084fc; margin-bottom: 0.3rem; }
+  .passive-desc { font-size: 0.78rem; color: rgba(200,170,100,0.7); line-height: 1.5; }
 `;
 
 export default function GatheringHub() {

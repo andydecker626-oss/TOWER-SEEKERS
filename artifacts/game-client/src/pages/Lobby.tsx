@@ -35,14 +35,26 @@ export default function Lobby() {
           overflow: hidden;
         }
 
+        .lobby-title-bg {
+          position: fixed;
+          inset: 0;
+          background-image: url('/assets/title-bg.png');
+          background-size: 110%;
+          background-position: center 60%;
+          opacity: 0.55;
+          pointer-events: none;
+          z-index: 0;
+        }
+
         .lobby-bg {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(80,40,160,0.25) 0%, transparent 70%),
-            radial-gradient(ellipse 60% 40% at 20% 80%, rgba(40,20,80,0.3) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 30% at 80% 70%, rgba(20,40,100,0.2) 0%, transparent 50%);
+            radial-gradient(ellipse 100% 70% at 50% 100%, rgba(5,3,13,0.9) 0%, transparent 70%),
+            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(5,3,13,0.6) 0%, transparent 70%),
+            radial-gradient(ellipse 60% 40% at 20% 80%, rgba(40,20,80,0.15) 0%, transparent 60%);
           pointer-events: none;
+          z-index: 0;
         }
 
         .lobby-stars {
@@ -58,6 +70,7 @@ export default function Lobby() {
             radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
             radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.4) 0%, transparent 100%);
           pointer-events: none;
+          z-index: 0;
         }
 
         .lobby-content {
@@ -363,6 +376,7 @@ export default function Lobby() {
         }
       `}</style>
 
+      <div className="lobby-title-bg" />
       <div className="lobby-bg" />
       <div className="lobby-stars" />
 

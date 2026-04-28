@@ -47,7 +47,7 @@ export default function Placement() {
   }
 
   function handleConfirm() {
-    if (placed.length !== 4) return;
+    if (placed.length !== picks.length) return;
     submitPlacement(placed);
   }
 
@@ -316,13 +316,13 @@ export default function Placement() {
       </div>
 
       <div className="pl-footer">
-        <div className="pl-progress">{placed.length} / 4 units placed</div>
+        <div className="pl-progress">{placed.length} / {picks.length} units placed</div>
         {waiting ? (
           <div className="waiting-msg">Waiting for opponent…</div>
         ) : (
           <button
             className="btn-confirm"
-            disabled={placed.length !== 4}
+            disabled={placed.length !== picks.length}
             onClick={handleConfirm}
           >
             Begin Battle

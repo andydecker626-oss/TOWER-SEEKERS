@@ -29,12 +29,15 @@ function PhaseNavigator() {
   const location = useLocation();
 
   useEffect(() => {
-    // Never redirect away from the title screen
+    // Never redirect away from the title screen or hub
     if (location.pathname === "/") return;
     const isHubPhase = state.phase === "lobby" || state.phase === "waiting";
     if (location.pathname === "/hub" && isHubPhase) return;
-    navigate(PHASE_ROUTES[state.phase] ?? "/lobby", { replace: true });
-  }, [state.phase]);
+    const target = PHASE_ROUTES[state.phase] ?? "/lobby";
+    if (location.pathname !== target) {
+      navigate(target, { replace: true });
+    }
+  }, [state.phase, location.pathname]);
 
   return null;
 }

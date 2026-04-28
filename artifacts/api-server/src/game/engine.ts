@@ -11,7 +11,7 @@ export function createGridUnits(
   placements: { unitId: string; x: number; y: number }[],
   side: Side
 ): GridUnit[] {
-  if (placements.length !== 4) throw new Error("Must place exactly 4 units");
+  if (placements.length < 1) throw new Error("Must place at least 1 unit");
   const posKeys = new Set<string>();
   return placements.map((p) => {
     if (!picks.includes(p.unitId)) throw new Error(`Unit ${p.unitId} not in picks`);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { useParties } from "@/hooks/useParties";
+import { ALL_UNITS } from "@/lib/units";
 import type { UnitDef } from "@/lib/types";
 
 function StatBar({ val, max = 160 }: { val: number; max?: number }) {
@@ -66,14 +67,14 @@ export default function PreSelection() {
   const waiting = state.isWaitingForOpponent;
   const opponentLocked = state.opponentPicksLocked;
 
-  const rosterIds = new Set(myRoster.map((u) => u.id));
-  const matchingParties = parties.filter((p) => p.units.length === 4 && p.units.every((ul) => rosterIds.has(ul.unitId)));
+  const allUnitIds = new Set(ALL_UNITS.map((u) => u.id));
+  const matchingParties = parties.filter((p) => p.units.length === 6 && p.units.every((ul) => allUnitIds.has(ul.unitId)));
 
   function togglePick(id: string) {
     if (waiting) return;
     if (picks.includes(id)) {
       setPicks(picks.filter((p) => p !== id));
-    } else if (picks.length < 4) {
+    } else if (picks.length < 6) {
       setPicks([...picks, id]);
     }
   }
@@ -404,10 +405,10 @@ export default function PreSelection() {
 
       <div className="presel-header">
         <h2 className="presel-title">Choose Your Champions</h2>
-        <div className="presel-subtitle">Select 4 from your roster · Opponent's roster shown for scouting</div>
+        <div className="presel-subtitle">Select 6 from the full roster to bring into battle</div>
       </div>
 
-      <div className="presel-counter">{picks.length} / 4 selected</div>
+      <div className="presel-counter">{picks.length} / 6 selected</div>
 
       {!waiting && parties.length > 0 && (
         <div className="load-party-bar">
@@ -420,14 +421,14 @@ export default function PreSelection() {
           {partyPanelOpen && (
             <div className="load-party-panel">
               {matchingParties.length === 0 ? (
-                <div className="load-party-empty">No saved parties match your current roster.</div>
+                <div className="load-party-empty">No saved 6-unit parties found. Build one in the Gathering Hub.</div>
               ) : (
                 matchingParties.map((party) => (
                   <div key={party.id} className="party-chip" onClick={() => loadParty(party.units.map((ul) => ul.unitId))}>
                     <div>
                       <div className="party-chip-name">{party.name}</div>
                       <div className="party-chip-units">
-                        {party.units.map((ul) => myRoster.find((u) => u.id === ul.unitId)?.name ?? ul.unitId).join(", ")}
+                        {party.units.map((ul) => ALL_UNITS.find((u) => u.id === ul.unitId)?.name ?? ul.unitId).join(", ")}
                       </div>
                     </div>
                     <span className="party-chip-load">Load</span>
@@ -440,51 +441,34 @@ export default function PreSelection() {
       )}
 
       <div className="presel-panels">
-        <div className="presel-panel">
-          <div className="panel-label mine">Your Roster — Pick 4</div>
-          <div className="unit-grid">
-            {myRoster.map((unit) => (
-              <UnitCard
-                key={unit.id}
-                unit={unit}
-                selected={picks.includes(unit.id)}
-                locked={waiting || (!picks.includes(unit.id) && picks.length >= 4)}
-                onClick={() => togglePick(unit.id)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="panel-divider" />
-
-        <div className="presel-panel">
-          <div className="panel-label opp" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            Opponent's Roster
+        <div className="presel-panel" style={{ maxWidth: 900, width: "100%" }}>
+          <div className="panel-label mine" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            Full Roster — Pick 6 to bring into battle
             {opponentLocked && (
               <span style={{ fontSize: "0.6rem", background: "#c04040", color: "#fff", borderRadius: 3, padding: "1px 6px", fontFamily: "Cinzel, serif", letterSpacing: "0.05em", verticalAlign: "middle" }}>
-                LOCKED IN
+                Opponent locked in
               </span>
             )}
           </div>
           <div className="unit-grid">
-            {enemyRoster.length > 0
-              ? enemyRoster.map((unit) => (
-                  <UnitCard key={unit.id} unit={unit} locked enemy />
-                ))
-              : Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="unit-card locked" style={{ minHeight: 120, opacity: 0.25 }}>
-                    <div style={{ fontSize: "0.65rem", color: "rgba(200,170,100,0.4)", fontFamily: "Cinzel, serif", textAlign: "center", padding: "1rem" }}>?</div>
-                  </div>
-                ))}
+            {ALL_UNITS.map((unit) => (
+              <UnitCard
+                key={unit.id}
+                unit={unit}
+                selected={picks.includes(unit.id)}
+                locked={waiting || (!picks.includes(unit.id) && picks.length >= 6)}
+                onClick={() => togglePick(unit.id)}
+              />
+            ))}
           </div>
         </div>
       </div>
 
       <div className="presel-footer">
         <div className="selected-row">
-          {Array.from({ length: 4 }).map((_, i) => {
+          {Array.from({ length: 6 }).map((_, i) => {
             const pickedId = picks[i];
-            const pickedUnit = pickedId ? myRoster.find((u) => u.id === pickedId) : null;
+            const pickedUnit = pickedId ? ALL_UNITS.find((u) => u.id === pickedId) : null;
             return (
               <div key={i} className={`selected-slot${pickedUnit ? " filled" : ""}`}>
                 {pickedUnit ? (
@@ -505,7 +489,7 @@ export default function PreSelection() {
         ) : (
           <button
             className="btn-confirm"
-            disabled={picks.length !== 4}
+            disabled={picks.length !== 6}
             onClick={() => submitPicks(picks)}
           >
             Confirm Selection

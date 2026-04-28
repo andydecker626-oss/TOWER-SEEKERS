@@ -30,12 +30,16 @@ function getRosterDefs(ids: string[]) {
 // ─── AI helpers ──────────────────────────────────────────────────────────────
 
 function aiPickUnits(roster: string[]): string[] {
-  return roster.slice(0, 4);
+  return roster.slice(0, 6);
 }
 
 function aiPlaceUnits(picks: string[]): { unitId: string; x: number; y: number }[] {
-  // Front row (x=3 is closest to Side A for Side B units)
-  return picks.map((unitId, i) => ({ unitId, x: 3, y: i }));
+  // Place units across the front two columns of the AI side (x=3 is frontline)
+  return picks.map((unitId, i) => ({
+    unitId,
+    x: 3 - Math.floor(i / 4),
+    y: i % 4,
+  }));
 }
 
 function generateAiActions(battleState: GridUnit[], aiSide: Side): PlayerAction[] {
@@ -282,12 +286,12 @@ export function registerSocketHandlers(io: Server): void {
 
     socket.on("createRoom", () => {
       const code = generateCode();
-      const { rosterA, rosterB } = assignRosters();
+      const fullRoster = ALL_UNITS.map((u) => u.id);
       const sessionToken = randomUUID();
       const room: RoomState = {
         code,
         phase: "waiting",
-        sideA: { socketId: socket.id, sessionToken, roster: rosterA },
+        sideA: { socketId: socket.id, sessionToken, roster: fullRoster },
         battleState: [],
         turnNumber: 0,
         disconnectTimers: {},
@@ -299,7 +303,7 @@ export function registerSocketHandlers(io: Server): void {
       socket.emit("roomCreated", {
         code,
         side: "A",
-        roster: getRosterDefs(rosterA),
+        roster: getRosterDefs(fullRoster),
         sessionToken,
       });
       logger.info({ code, socketId: socket.id }, "Room created");
@@ -308,14 +312,14 @@ export function registerSocketHandlers(io: Server): void {
     // ── vs AI ────────────────────────────────────────────────────────────────
     socket.on("createAiRoom", () => {
       const code = generateCode();
-      const { rosterA, rosterB } = assignRosters();
+      const fullRoster = ALL_UNITS.map((u) => u.id);
       const sessionToken = randomUUID();
       const room: RoomState = {
         code,
         phase: "preselection",
         isAiRoom: true,
-        sideA: { socketId: socket.id, sessionToken, roster: rosterA },
-        sideB: { socketId: AI_SOCKET_ID, sessionToken: AI_SOCKET_ID, roster: rosterB },
+        sideA: { socketId: socket.id, sessionToken, roster: fullRoster },
+        sideB: { socketId: AI_SOCKET_ID, sessionToken: AI_SOCKET_ID, roster: fullRoster },
         battleState: [],
         turnNumber: 0,
         disconnectTimers: {},
@@ -327,8 +331,8 @@ export function registerSocketHandlers(io: Server): void {
       socket.emit("roomReady", {
         code,
         side: "A",
-        myRoster: getRosterDefs(rosterA),
-        enemyRoster: getRosterDefs(rosterB),
+        myRoster: getRosterDefs(fullRoster),
+        enemyRoster: getRosterDefs(fullRoster),
         sessionToken,
       });
       logger.info({ code, socketId: socket.id }, "AI room created");
@@ -349,31 +353,28 @@ export function registerSocketHandlers(io: Server): void {
         return;
       }
 
-      const allIds = shuffleArray(ALL_UNITS.map((u) => u.id));
-      const finalRosterB = allIds.filter((id) => !room.sideA.roster.includes(id)).slice(0, 6);
-
+      const fullRoster = ALL_UNITS.map((u) => u.id);
       const normalizedCode = code.toUpperCase();
       const sessionToken = randomUUID();
-      room.sideB = { socketId: socket.id, sessionToken, roster: finalRosterB };
+      room.sideB = { socketId: socket.id, sessionToken, roster: fullRoster };
       room.phase = "preselection";
       socketToRoom.set(socket.id, { code: normalizedCode, side: "B" });
       sessionTokenToRoom.set(sessionToken, { code: normalizedCode, side: "B" });
       socket.join(normalizedCode);
 
-      const rosterADefs = getRosterDefs(room.sideA.roster);
-      const rosterBDefs = getRosterDefs(finalRosterB);
+      const fullRosterDefs = getRosterDefs(fullRoster);
 
       io.to(room.sideA.socketId).emit("roomReady", {
         code: normalizedCode,
         side: "A",
-        myRoster: rosterADefs,
-        enemyRoster: rosterBDefs,
+        myRoster: fullRosterDefs,
+        enemyRoster: fullRosterDefs,
       });
       socket.emit("roomReady", {
         code: normalizedCode,
         side: "B",
-        myRoster: rosterBDefs,
-        enemyRoster: rosterADefs,
+        myRoster: fullRosterDefs,
+        enemyRoster: fullRosterDefs,
         sessionToken,
       });
       logger.info({ code: normalizedCode }, "Both players joined — preselection");
@@ -389,9 +390,9 @@ export function registerSocketHandlers(io: Server): void {
       const sideState = info.side === "A" ? room.sideA : room.sideB;
       if (!sideState) return;
 
-      const uniquePicks = [...new Set(picks.filter((id) => sideState.roster.includes(id)))].slice(0, 4);
-      if (uniquePicks.length !== 4) {
-        socket.emit("gameError", { message: "Must pick exactly 4 distinct units from your roster" });
+      const uniquePicks = [...new Set(picks.filter((id) => sideState.roster.includes(id)))].slice(0, 6);
+      if (uniquePicks.length !== 6) {
+        socket.emit("gameError", { message: "Must pick exactly 6 distinct units from the roster" });
         return;
       }
       sideState.picks = uniquePicks;
@@ -436,8 +437,8 @@ export function registerSocketHandlers(io: Server): void {
         if (!sideState) return;
 
         const picks = sideState.picks ?? [];
-        if (placement.length !== 4) {
-          socket.emit("gameError", { message: "Must place exactly 4 units" });
+        if (placement.length !== picks.length) {
+          socket.emit("gameError", { message: `Must place exactly ${picks.length} units` });
           return;
         }
         const invalidUnit = placement.find((p) => !picks.includes(p.unitId));
@@ -451,7 +452,7 @@ export function registerSocketHandlers(io: Server): void {
           return;
         }
         const posSet = new Set(placement.map((p) => `${p.x},${p.y}`));
-        if (posSet.size !== 4) {
+        if (posSet.size !== placement.length) {
           socket.emit("gameError", { message: "Duplicate placement positions" });
           return;
         }
@@ -592,29 +593,30 @@ export function registerSocketHandlers(io: Server): void {
       room.turnNumber = 0;
       room.winner = undefined;
 
-      const { rosterA, rosterB } = assignRosters();
-      room.sideA.roster = rosterA;
+      const fullRoster = ALL_UNITS.map((u) => u.id);
+      room.sideA.roster = fullRoster;
       room.sideA.picks = undefined;
       room.sideA.placement = undefined;
       room.sideA.actions = undefined;
       if (room.sideB) {
-        room.sideB.roster = rosterB;
+        room.sideB.roster = fullRoster;
         room.sideB.picks = undefined;
         room.sideB.placement = undefined;
         room.sideB.actions = undefined;
       }
 
+      const fullRosterDefs = getRosterDefs(fullRoster);
       socket.emit("rematchReady", {
         side: "A",
-        myRoster: getRosterDefs(rosterA),
-        enemyRoster: getRosterDefs(rosterB),
+        myRoster: fullRosterDefs,
+        enemyRoster: fullRosterDefs,
       });
 
       if (!room.isAiRoom && room.sideB) {
         io.to(room.sideB.socketId).emit("rematchReady", {
           side: "B",
-          myRoster: getRosterDefs(rosterB),
-          enemyRoster: getRosterDefs(rosterA),
+          myRoster: fullRosterDefs,
+          enemyRoster: fullRosterDefs,
         });
       }
     });

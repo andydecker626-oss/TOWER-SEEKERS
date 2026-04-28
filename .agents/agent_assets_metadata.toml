@@ -106,7 +106,7 @@ title = "tavern backdrop"
 id = "i_NSMg9VUKiWb_-YdbjPR"
 uri = "file://artifacts/game-client/public/assets/units/warlock-portrait.png"
 type = "image"
-title = "generated_image"
+title = "warlock portrait art"
 
 [[generated]]
 id = "3rFqaMe1rz39e0I-6ztpi"
@@ -160,7 +160,7 @@ title = "generated_image"
 id = "Z2jtqGG3KumqS8I5QXFMI"
 uri = "file://artifacts/game-client/public/assets/units/shaman-portrait.png"
 type = "image"
-title = "generated_image"
+title = "shaman portrait art"
 
 [[generated]]
 id = "9YmRCbsiy9-xFyGguXbcU"
@@ -172,7 +172,7 @@ title = "generated_image"
 id = "iFM2fplLGmPFY0S7AhyHc"
 uri = "file://artifacts/game-client/public/assets/units/warlock-sprite.png"
 type = "image"
-title = "generated_image"
+title = "warlock sprite pixel art"
 
 [[generated]]
 id = "oDOA6pq7--6Zvpn1Y5a-H"
@@ -226,7 +226,7 @@ title = "generated_image"
 id = "Hx9cCQ3fkBOxzmsEf_Rob"
 uri = "file://artifacts/game-client/public/assets/units/shaman-sprite.png"
 type = "image"
-title = "generated_image"
+title = "shaman sprite pixel art"
 
 [[generated]]
 id = "X0fzEEYhQsewJHMDF1pb-"

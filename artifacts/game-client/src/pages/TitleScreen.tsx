@@ -48,9 +48,7 @@ export default function TitleScreen() {
       {/* Main content */}
       <div className={`ts-content${titleVisible ? " ts-visible" : ""}`}>
         <div className="ts-logo-block">
-          <div className="ts-logo-sub">An Epic</div>
           <h1 className="ts-title">TOWER<br />SEEKERS</h1>
-          <div className="ts-tagline">Turn-Based Strategy Battler</div>
         </div>
 
         <div className="ts-menu">
@@ -60,13 +58,6 @@ export default function TitleScreen() {
           <button className="ts-btn ts-btn-secondary" onClick={handleOpenSettings}>
             Settings
           </button>
-        </div>
-
-        <div className="ts-tower-labels">
-          <span>🔥 Fire Tower</span>
-          <span>🌿 Earth Tower</span>
-          <span>💧 Water Tower</span>
-          <span>🌀 Wind Tower</span>
         </div>
       </div>
 
@@ -183,22 +174,21 @@ const CSS = `
     position: absolute;
     inset: 0;
     background-image: url('/assets/title-bg.png');
-    background-size: cover;
-    background-position: center 30%;
-    transform: scale(1.04);
-    transition: transform 30s ease-out;
+    background-size: 110%;
+    background-position: center 60%;
+    transition: background-size 30s ease-out;
   }
   .ts-root:hover .ts-bg {
-    transform: scale(1.0);
+    background-size: 105%;
   }
 
   .ts-vignette {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 80% 60% at 50% 100%, rgba(5,3,13,0.98) 0%, transparent 70%),
-      linear-gradient(to bottom, rgba(5,3,13,0.55) 0%, transparent 35%, transparent 55%, rgba(5,3,13,0.85) 85%, rgba(5,3,13,0.99) 100%),
-      linear-gradient(to right, rgba(5,3,13,0.5) 0%, transparent 20%, transparent 80%, rgba(5,3,13,0.5) 100%);
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(5,3,13,0.55) 0%, transparent 65%),
+      linear-gradient(to bottom, rgba(5,3,13,0.5) 0%, transparent 30%, transparent 60%, rgba(5,3,13,0.7) 88%, rgba(5,3,13,0.88) 100%),
+      linear-gradient(to right, rgba(5,3,13,0.35) 0%, transparent 18%, transparent 82%, rgba(5,3,13,0.35) 100%);
     pointer-events: none;
   }
 
@@ -223,15 +213,6 @@ const CSS = `
     text-align: center;
   }
 
-  .ts-logo-sub {
-    font-family: 'Cinzel', serif;
-    font-size: 0.85rem;
-    letter-spacing: 0.45em;
-    text-transform: uppercase;
-    color: rgba(240,192,64,0.65);
-    margin-bottom: 0.4rem;
-  }
-
   .ts-title {
     font-family: 'Cinzel Decorative', serif;
     font-size: clamp(3rem, 10vw, 6.5rem);
@@ -244,15 +225,6 @@ const CSS = `
       0 4px 20px rgba(0,0,0,0.9);
     letter-spacing: 0.04em;
     margin: 0;
-  }
-
-  .ts-tagline {
-    font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: rgba(200,170,100,0.55);
-    margin-top: 0.8rem;
   }
 
   .ts-menu {
@@ -294,18 +266,6 @@ const CSS = `
     background: rgba(240,192,64,0.08);
     border-color: rgba(240,192,64,0.6);
     color: #f0c040;
-  }
-
-  .ts-tower-labels {
-    display: flex;
-    gap: 1.5rem;
-    font-family: 'Cinzel', serif;
-    font-size: 0.6rem;
-    letter-spacing: 0.12em;
-    color: rgba(200,170,100,0.35);
-    text-transform: uppercase;
-    flex-wrap: wrap;
-    justify-content: center;
   }
 
   /* Settings modal */
