@@ -77,6 +77,7 @@ export default function Battle() {
   const [animating, setAnimating] = useState(false);
   const [flashUnits, setFlashUnits] = useState<Record<string, string>>({});
   const [hoveredTile, setHoveredTile] = useState<{ x: number; y: number; onEnemy: boolean } | null>(null);
+  const lingerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   // Pick a random battle background once per mount
   const battleBg = useRef(BATTLE_BACKGROUNDS[Math.floor(Math.random() * BATTLE_BACKGROUNDS.length)]);
@@ -97,7 +98,10 @@ export default function Battle() {
 
   // Unmount: cancel all queued animation timers to prevent stale state updates
   useEffect(() => {
-    return () => { animTimers.current.forEach(clearTimeout); };
+    return () => {
+      animTimers.current.forEach(clearTimeout);
+      if (lingerRef.current) clearTimeout(lingerRef.current);
+    };
   }, []);
 
   const aliveMyUnits = myUnits.filter((u) => u.alive);
@@ -349,6 +353,8 @@ export default function Battle() {
     setSelectedSkill(null);
     setHighlights([]);
     setSkillMenuOpen(null);
+    if (lingerRef.current) clearTimeout(lingerRef.current);
+    setHoveredTile(null);
   }
 
   function handleSubmit() {
@@ -446,18 +452,25 @@ export default function Battle() {
             {Array.from({ length: 4 }).map((_, row) =>
               Array.from({ length: 4 }).map((_, col) => {
                 const hl = isHighlighted(col, row, false);
+                const hlClass = hl ? ` b-tile-hl-${selectMode}` : "";
                 return (
                   <div
                     key={`at-${col}-${row}`}
                     role={hl ? "button" : undefined}
                     aria-label={`Ally grid column ${col + 1} row ${row + 1}`}
                     tabIndex={hl ? 0 : -1}
-                    className={`b-tile${hl ? " b-tile-hl" : ""}`}
+                    className={`b-tile${hlClass}`}
                     style={{ left: col * STEP, top: row * STEP, width: TILE, height: TILE }}
                     onClick={() => hl && handleTileClick(col, row, false)}
                     onKeyDown={(e) => e.key === "Enter" && hl && handleTileClick(col, row, false)}
-                    onMouseEnter={() => hl && setHoveredTile({ x: col, y: row, onEnemy: false })}
-                    onMouseLeave={() => setHoveredTile(null)}
+                    onMouseEnter={() => {
+                      if (lingerRef.current) clearTimeout(lingerRef.current);
+                      if (hl) setHoveredTile({ x: col, y: row, onEnemy: false });
+                    }}
+                    onMouseLeave={() => {
+                      if (lingerRef.current) clearTimeout(lingerRef.current);
+                      lingerRef.current = setTimeout(() => setHoveredTile(null), 320);
+                    }}
                   />
                 );
               })
@@ -466,18 +479,25 @@ export default function Battle() {
             {Array.from({ length: 4 }).map((_, row) =>
               Array.from({ length: 4 }).map((_, col) => {
                 const hl = isHighlighted(col, row, true);
+                const hlClass = hl ? ` b-tile-hl-${selectMode}` : "";
                 return (
                   <div
                     key={`et-${col}-${row}`}
                     role={hl ? "button" : undefined}
                     aria-label={`Enemy grid column ${col + 1} row ${row + 1}`}
                     tabIndex={hl ? 0 : -1}
-                    className={`b-tile b-tile-enemy${hl ? " b-tile-hl" : ""}`}
+                    className={`b-tile b-tile-enemy${hlClass}`}
                     style={{ left: ENEMY_OFFSET + col * STEP, top: row * STEP, width: TILE, height: TILE, zIndex: hl ? 25 : undefined }}
                     onClick={() => hl && handleTileClick(col, row, true)}
                     onKeyDown={(e) => e.key === "Enter" && hl && handleTileClick(col, row, true)}
-                    onMouseEnter={() => hl && setHoveredTile({ x: col, y: row, onEnemy: true })}
-                    onMouseLeave={() => setHoveredTile(null)}
+                    onMouseEnter={() => {
+                      if (lingerRef.current) clearTimeout(lingerRef.current);
+                      if (hl) setHoveredTile({ x: col, y: row, onEnemy: true });
+                    }}
+                    onMouseLeave={() => {
+                      if (lingerRef.current) clearTimeout(lingerRef.current);
+                      lingerRef.current = setTimeout(() => setHoveredTile(null), 320);
+                    }}
                   />
                 );
               })
@@ -492,6 +512,8 @@ export default function Battle() {
                 unit={unit}
                 isAlly
                 isSelected={selectedId === unit.instanceId}
+                isAnimating={animating}
+                isHoveredTarget={false}
                 flashType={flashUnits[unit.instanceId]}
                 left={unit.x * STEP + TILE / 2}
                 top={unit.y * STEP + TILE / 2}
@@ -502,20 +524,30 @@ export default function Battle() {
             ))}
 
             {/* Enemy units */}
-            {enemyUnits.map((unit) => (
-              <UnitToken
-                key={unit.instanceId}
-                unit={unit}
-                isAlly={false}
-                isSelected={false}
-                flashType={flashUnits[unit.instanceId]}
-                left={ENEMY_OFFSET + unit.x * STEP + TILE / 2}
-                top={unit.y * STEP + TILE / 2}
-                onClick={() => {}}
-                queuedAction={undefined}
-                floats={floats.filter((f) => f.onEnemy && f.x === unit.x && f.y === unit.y)}
-              />
-            ))}
+            {enemyUnits.map((unit) => {
+              const isHoveredTarget =
+                (selectMode === "attack" || selectMode === "skill") &&
+                hoveredTile !== null &&
+                hoveredTile.onEnemy &&
+                hoveredTile.x === unit.x &&
+                hoveredTile.y === unit.y;
+              return (
+                <UnitToken
+                  key={unit.instanceId}
+                  unit={unit}
+                  isAlly={false}
+                  isSelected={false}
+                  isAnimating={animating}
+                  isHoveredTarget={isHoveredTarget}
+                  flashType={flashUnits[unit.instanceId]}
+                  left={ENEMY_OFFSET + unit.x * STEP + TILE / 2}
+                  top={unit.y * STEP + TILE / 2}
+                  onClick={() => {}}
+                  queuedAction={undefined}
+                  floats={floats.filter((f) => f.onEnemy && f.x === unit.x && f.y === unit.y)}
+                />
+              );
+            })}
 
             {/* Targeting line SVG overlay */}
             {(() => {
@@ -529,24 +561,29 @@ export default function Battle() {
                 : hoveredTile.x * STEP + TILE / 2;
               const ty = hoveredTile.y * STEP + TILE / 2;
               const bfW = ENEMY_OFFSET + 4 * STEP;
+              const arrowColor = selectMode === "attack" ? "rgba(255,80,80,0.95)" : selectMode === "skill" ? "rgba(160,80,255,0.95)" : "rgba(240,192,64,0.95)";
+              const lineColor = selectMode === "attack" ? "rgba(255,80,80,0.8)" : selectMode === "skill" ? "rgba(160,80,255,0.8)" : "rgba(240,192,64,0.8)";
               return (
                 <svg
                   style={{ position: "absolute", inset: 0, width: bfW, height: BOARD_H, pointerEvents: "none", zIndex: 28, overflow: "visible" }}
                 >
                   <defs>
-                    <marker id="tgt-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                      <polygon points="0 0, 8 3, 0 6" fill="rgba(240,192,64,0.85)" />
+                    <marker id="tgt-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                      <polygon points="0 0, 10 3.5, 0 7" fill={arrowColor} />
                     </marker>
                   </defs>
                   <line
                     x1={ax} y1={ay} x2={tx} y2={ty}
-                    stroke="rgba(240,192,64,0.75)"
-                    strokeWidth="2"
-                    strokeDasharray="9 5"
+                    stroke={lineColor}
+                    strokeWidth="3.5"
+                    strokeDasharray="12 6"
                     strokeLinecap="round"
                     markerEnd="url(#tgt-arrow)"
+                    style={{ animation: "arrowDash 0.5s linear infinite" }}
                   />
-                  <circle cx={ax} cy={ay} r="5" fill="none" stroke="rgba(240,192,64,0.6)" strokeWidth="1.5" />
+                  <circle cx={ax} cy={ay} r="7" fill="none" stroke={lineColor} strokeWidth="2" opacity="0.7" />
+                  <circle cx={tx} cy={ty} r="14" fill="none" stroke={arrowColor} strokeWidth="2"
+                    style={{ animation: "targetPulse 0.7s ease-in-out infinite alternate", transformBox: "fill-box", transformOrigin: "center" }} />
                 </svg>
               );
             })()}
@@ -682,11 +719,13 @@ export default function Battle() {
 }
 
 function UnitToken({
-  unit, isAlly, isSelected, flashType, left, top, onClick, queuedAction, floats,
+  unit, isAlly, isSelected, isAnimating, isHoveredTarget, flashType, left, top, onClick, queuedAction, floats,
 }: {
   unit: GridUnit;
   isAlly: boolean;
   isSelected: boolean;
+  isAnimating: boolean;
+  isHoveredTarget: boolean;
   flashType?: string;
   left: number;
   top: number;
@@ -702,7 +741,7 @@ function UnitToken({
 
   return (
     <div
-      className={`b-unit-token${isSelected ? " b-token-sel" : ""}${isKo ? " b-token-ko" : ""}${flashType === "damage" ? " b-token-damage" : ""}${flashType === "attack" ? " b-token-attack" : ""}${flashType === "skill" ? " b-token-skill" : ""}${flashType === "defend" ? " b-token-defend" : ""}${flashType === "wait" ? " b-token-wait" : ""}`}
+      className={`b-unit-token${isSelected ? " b-token-sel" : ""}${isKo ? " b-token-ko" : ""}${flashType === "damage" ? " b-token-damage" : ""}${flashType === "attack" ? " b-token-attack" : ""}${flashType === "skill" ? " b-token-skill" : ""}${flashType === "defend" ? " b-token-defend" : ""}${flashType === "wait" ? " b-token-wait" : ""}${isHoveredTarget ? " b-token-hovered-target" : ""}`}
       style={{
         position: "absolute",
         left: left,
@@ -710,17 +749,25 @@ function UnitToken({
         transform: "translate(-50%, -50%)",
         zIndex: isSelected ? 20 : unit.y + 5,
         cursor: isAlly && !isKo ? "pointer" : "default",
-        transition: "left 0.45s ease, top 0.45s ease",
+        transition: isAnimating ? "left 0.45s ease, top 0.45s ease" : "none",
         filter: unit.y === 0 ? "blur(0.6px) brightness(0.78)" : unit.y === 1 ? "blur(0.25px) brightness(0.9)" : "none",
       }}
       onClick={onClick}
     >
-      <img
-        src={SPRITE_MAP[def.id] ?? "/assets/units/knight-sprite.png"}
-        alt={def.name}
-        className={`unit-sprite${isAlly ? "" : " sprite-enemy"}${flashType === "wait" ? " sprite-wait" : " sprite-idle"}`}
-        draggable={false}
-      />
+      {/* Selected glow ring beneath sprite */}
+      {isSelected && (
+        <div className="b-glow-ring" aria-hidden="true" />
+      )}
+
+      {/* Sprite lift wrapper — handles scale/lift independently from idle animation */}
+      <div className={`b-sprite-lift${isSelected ? " b-sprite-lift-sel" : ""}`}>
+        <img
+          src={SPRITE_MAP[def.id] ?? "/assets/units/knight-sprite.png"}
+          alt={def.name}
+          className={`unit-sprite${isAlly ? "" : " sprite-enemy"}${flashType === "wait" ? " sprite-wait" : " sprite-idle"}`}
+          draggable={false}
+        />
+      </div>
 
       {/* Nameplate */}
       <div className="b-nameplate">
@@ -812,19 +859,57 @@ function spriteCSS() {
       66%     { transform: translateY(-1px) rotate(1deg); }
     }
 
-    /* Selected unit — glow on sprite */
+    /* Sprite lift wrapper — composes with sprite's own idle/wait animation */
+    .b-sprite-lift {
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s ease;
+    }
+    .b-sprite-lift-sel {
+      transform: scale(1.12) translateY(-5px);
+    }
+
+    /* Selected unit — glow on sprite (no transform here, handled by wrapper) */
     .b-token-sel .unit-sprite {
       filter: brightness(1.35) drop-shadow(0 0 10px rgba(240,192,64,0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.5)) !important;
     }
 
-    /* Damage taken flash */
+    /* Glow ring beneath selected token */
+    .b-glow-ring {
+      position: absolute;
+      bottom: 52px;
+      left: 50%; transform: translateX(-50%);
+      width: 56px; height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(240,192,64,0.55) 0%, rgba(240,192,64,0) 70%);
+      animation: glowRingPulse 1s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes glowRingPulse {
+      from { opacity: 0.6; transform: translateX(-50%) scaleX(1); }
+      to   { opacity: 1;   transform: translateX(-50%) scaleX(1.15); }
+    }
+
+    /* Enemy token hover in targeting mode */
+    .b-token-hovered-target .unit-sprite {
+      animation: enemyHoverPulse 0.45s ease-in-out infinite alternate !important;
+    }
+    @keyframes enemyHoverPulse {
+      from { filter: hue-rotate(170deg) saturate(1.4) brightness(1.05) drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+      to   { filter: hue-rotate(170deg) saturate(2) brightness(1.6) drop-shadow(0 0 16px rgba(255,60,60,1)); }
+    }
+
+    /* Damage taken flash + shake */
     .b-token-damage .unit-sprite {
       animation: unitDamageFlash 0.55s ease !important;
     }
     @keyframes unitDamageFlash {
-      0%,100% { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
-      20%,60% { filter: brightness(2.5) saturate(0) sepia(1) hue-rotate(-30deg) drop-shadow(0 0 12px rgba(255,80,80,0.9)); transform: translateX(-4px); }
-      40%,80% { transform: translateX(4px); }
+      0%   { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); transform: translateX(0); }
+      15%  { filter: brightness(2.5) saturate(0) sepia(1) hue-rotate(-30deg) drop-shadow(0 0 12px rgba(255,80,80,0.9)); transform: translateX(-6px); }
+      30%  { transform: translateX(6px); }
+      45%  { filter: brightness(2) saturate(0) sepia(1) hue-rotate(-30deg) drop-shadow(0 0 8px rgba(255,80,80,0.7)); transform: translateX(-4px); }
+      60%  { transform: translateX(4px); }
+      75%  { transform: translateX(-2px); }
+      100% { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); transform: translateX(0); }
     }
 
     /* Attack lunge */
@@ -991,16 +1076,53 @@ function battleCSS() {
       border-color: rgba(200,60,60,0.2);
       background: rgba(40,10,20,0.6);
     }
-    .b-tile-hl {
-      background: rgba(240,192,64,0.22) !important;
-      border-color: rgba(240,192,64,0.7) !important;
-      cursor: pointer;
-      box-shadow: inset 0 0 8px rgba(240,192,64,0.15);
-      animation: tileGlow 0.8s ease-in-out infinite alternate;
+    /* Tile highlight pop-in */
+    @keyframes tilePopIn {
+      0%   { transform: scale(0.7); opacity: 0; }
+      70%  { transform: scale(1.06); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
-    @keyframes tileGlow {
-      from { box-shadow: inset 0 0 8px rgba(240,192,64,0.15); }
-      to   { box-shadow: inset 0 0 16px rgba(240,192,64,0.3); }
+    @keyframes tileGlowMove {
+      from { box-shadow: inset 0 0 8px rgba(60,130,255,0.2); }
+      to   { box-shadow: inset 0 0 18px rgba(60,130,255,0.45); }
+    }
+    @keyframes tileGlowAttack {
+      from { box-shadow: inset 0 0 8px rgba(255,60,60,0.2); }
+      to   { box-shadow: inset 0 0 18px rgba(255,60,60,0.45); }
+    }
+    @keyframes tileGlowSkill {
+      from { box-shadow: inset 0 0 8px rgba(60,200,120,0.2); }
+      to   { box-shadow: inset 0 0 18px rgba(60,200,120,0.45); }
+    }
+    /* Movement tiles: blue */
+    .b-tile-hl-move {
+      background: rgba(60,130,255,0.22) !important;
+      border-color: rgba(80,160,255,0.8) !important;
+      cursor: pointer;
+      animation: tilePopIn 0.18s ease-out, tileGlowMove 0.8s 0.18s ease-in-out infinite alternate;
+    }
+    /* Attack tiles: red */
+    .b-tile-hl-attack {
+      background: rgba(255,60,60,0.22) !important;
+      border-color: rgba(255,80,80,0.8) !important;
+      cursor: pointer;
+      animation: tilePopIn 0.18s ease-out, tileGlowAttack 0.8s 0.18s ease-in-out infinite alternate;
+    }
+    /* Skill tiles: green */
+    .b-tile-hl-skill {
+      background: rgba(60,200,120,0.22) !important;
+      border-color: rgba(80,220,140,0.8) !important;
+      cursor: pointer;
+      animation: tilePopIn 0.18s ease-out, tileGlowSkill 0.8s 0.18s ease-in-out infinite alternate;
+    }
+    /* Arrow dash animation */
+    @keyframes arrowDash {
+      from { stroke-dashoffset: 36; }
+      to   { stroke-dashoffset: 0; }
+    }
+    @keyframes targetPulse {
+      from { transform: scale(0.85); opacity: 0.3; }
+      to   { transform: scale(1.35); opacity: 0.7; }
     }
 
     .b-divider {
@@ -1079,6 +1201,13 @@ function battleCSS() {
       font-family: 'Cinzel', serif;
       font-size: 0.5rem; font-weight: 700;
       border-radius: 4px; padding: 1px 4px;
+      animation: badgePop 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+    }
+    @keyframes badgePop {
+      0%   { transform: scale(0); opacity: 0; }
+      55%  { transform: scale(1.35); opacity: 1; }
+      75%  { transform: scale(0.92); }
+      100% { transform: scale(1); }
     }
 
     /* Action panel */
@@ -1171,6 +1300,7 @@ function battleCSS() {
       color: #050310; font-size: 0.55rem;
       font-family: 'Cinzel', serif; font-weight: 700;
       border-radius: 3px; padding: 1px 4px;
+      animation: badgePop 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
     }
 
     .b-action-menu {
@@ -1178,6 +1308,11 @@ function battleCSS() {
       display: flex; flex-wrap: wrap; gap: 3px;
       border-top: 1px solid rgba(240,192,64,0.15);
       padding-top: 0.4rem;
+      animation: actionMenuSlideIn 0.22s ease-out;
+    }
+    @keyframes actionMenuSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .b-act-btn {
       font-family: 'Cinzel', serif; font-size: 0.62rem;
