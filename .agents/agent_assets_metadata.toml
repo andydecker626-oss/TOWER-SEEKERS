@@ -300,6 +300,24 @@ uri = "file://attached_assets/generated_images/title-v2-option-c.png"
 type = "image"
 title = "title v2 aerial gathering hub elemental towers"
 
+[[generated]]
+id = "pwJMVo9ipa1wH8yq4psv4"
+uri = "file://attached_assets/generated_images/title-v3-option-a.png"
+type = "image"
+title = "title v3 wide city panorama elemental towers distance"
+
+[[generated]]
+id = "yTCa46hyVGEL4i7WrQqR8"
+uri = "file://attached_assets/generated_images/title-v3-option-b.png"
+type = "image"
+title = "title v3 wide panorama castle forest towers"
+
+[[generated]]
+id = "XcUEBtBb06AX3QDsaJdxS"
+uri = "file://attached_assets/generated_images/title-v3-option-c.png"
+type = "image"
+title = "title v3 birds eye city all towers castle"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
