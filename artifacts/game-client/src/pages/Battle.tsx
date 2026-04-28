@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSocket } from "@/context/SocketContext";
+import { useSettings } from "@/context/SettingsContext";
 import { getUnitDef } from "@/lib/units";
 import type { GridUnit, PlayerAction, TurnEvent, SkillDef } from "@/lib/types";
 import { audioManager } from "@/lib/audio";
@@ -62,6 +63,7 @@ let floatId = 0;
 
 export default function Battle() {
   const { state, submitActions, clearPendingEvents, confirmGameOver } = useSocket();
+  const { settings, setMuted } = useSettings();
 
   const [myUnits, setMyUnits] = useState<GridUnit[]>(state.myUnits);
   const [enemyUnits, setEnemyUnits] = useState<GridUnit[]>(state.enemyUnits);
@@ -390,7 +392,28 @@ export default function Battle() {
       <div className="b-hud-top">
         <div className="b-side-label b-side-you">YOU</div>
         <div className="b-turn-badge">Turn {state.turnNumber}</div>
-        <div className="b-side-label b-side-opp">OPP</div>
+        <div className="b-hud-right">
+          <button
+            className={`b-music-btn${settings.muted ? " b-music-btn-muted" : ""}`}
+            onClick={() => setMuted(!settings.muted)}
+            title={settings.muted ? "Unmute music" : "Mute music"}
+            aria-label={settings.muted ? "Unmute music" : "Mute music"}
+          >
+            {settings.muted ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+            )}
+          </button>
+          <div className="b-side-label b-side-opp">OPP</div>
+        </div>
       </div>
 
       {/* Turn-order strip */}
@@ -847,6 +870,34 @@ function battleCSS() {
       background: rgba(240,192,64,0.08);
       border: 1px solid rgba(240,192,64,0.25);
       border-radius: 6px; padding: 0.3rem 0.8rem;
+    }
+    .b-hud-right {
+      display: flex; align-items: center; gap: 0.55rem;
+    }
+    .b-music-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px;
+      background: rgba(240,192,64,0.08);
+      border: 1px solid rgba(240,192,64,0.28);
+      border-radius: 6px;
+      color: #f0c040;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      padding: 0;
+    }
+    .b-music-btn:hover {
+      background: rgba(240,192,64,0.18);
+      border-color: rgba(240,192,64,0.55);
+    }
+    .b-music-btn-muted {
+      color: rgba(240,192,64,0.38);
+      border-color: rgba(240,192,64,0.15);
+      background: rgba(240,192,64,0.03);
+    }
+    .b-music-btn-muted:hover {
+      color: rgba(240,192,64,0.65);
+      border-color: rgba(240,192,64,0.35);
+      background: rgba(240,192,64,0.1);
     }
 
     /* Stage */
