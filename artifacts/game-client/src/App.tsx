@@ -12,6 +12,7 @@ import Battle from "@/pages/Battle";
 import GameOver from "@/pages/GameOver";
 import GatheringHub from "@/pages/GatheringHub";
 import TitleScreen from "@/pages/TitleScreen";
+import ArenaDemo from "@/pages/ArenaDemo";
 
 const queryClient = new QueryClient();
 
@@ -31,8 +32,8 @@ function PhaseNavigator() {
   const location = useLocation();
 
   useEffect(() => {
-    // Never redirect away from the title screen or hub
-    if (location.pathname === "/") return;
+    // Never redirect away from standalone demo/title/hub pages
+    if (location.pathname === "/" || location.pathname === "/arena-demo") return;
     const isHubPhase = state.phase === "lobby" || state.phase === "waiting";
     if (location.pathname === "/hub" && isHubPhase) return;
     const target = PHASE_ROUTES[state.phase] ?? "/lobby";
@@ -92,6 +93,7 @@ function App() {
               <Route path="/place" element={<Placement />} />
               <Route path="/battle" element={<Battle />} />
               <Route path="/gameover" element={<GameOver />} />
+              <Route path="/arena-demo" element={<ArenaDemo />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </SocketProvider>
