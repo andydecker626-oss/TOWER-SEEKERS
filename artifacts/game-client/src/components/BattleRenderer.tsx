@@ -27,6 +27,53 @@ const MAP_GROUND_COLOR: Record<MapType, number> = {
   colosseum: 0x301a08,
 };
 
+// ── 3D environment constants ──────────────────────────────────────────────────
+const WALL_H     = 60;  // Wall height in local-space units (same coord system as lx/ly)
+const WALL_THICK = 20;  // Wall top-cap depth in local units
+
+// Lighter tile colour per map
+const MAP_STONE_A: Record<MapType, number> = {
+  castle:    0x8c8272,
+  desert:    0xc4a87a,
+  forest:    0x6e8060,
+  colosseum: 0xa09262,
+};
+// Darker tile colour per map
+const MAP_STONE_B: Record<MapType, number> = {
+  castle:    0x6c6055,
+  desert:    0xa08450,
+  forest:    0x526048,
+  colosseum: 0x826e48,
+};
+// Mortar / grout lines
+const MAP_MORTAR: Record<MapType, number> = {
+  castle:    0x38302a,
+  desert:    0x5c4018,
+  forest:    0x283820,
+  colosseum: 0x463c20,
+};
+// Inner (visible) wall face colour
+const MAP_WALL_FACE: Record<MapType, number> = {
+  castle:    0x68604e,
+  desert:    0x887448,
+  forest:    0x485a40,
+  colosseum: 0x7e6848,
+};
+// Wall top / cap face colour
+const MAP_WALL_TOP: Record<MapType, number> = {
+  castle:    0x887e6c,
+  desert:    0xa89060,
+  forest:    0x68785a,
+  colosseum: 0xa08460,
+};
+// Centre divider water / surface colour
+const MAP_WATER: Record<MapType, number> = {
+  castle:    0x1e4870,
+  desert:    0x7a5820,
+  forest:    0x267aaa,
+  colosseum: 0x463c12,
+};
+
 // ── Perspective constants — must match Battle.tsx CSS ────────────────────────
 // perspective: 900px; rotateX(30deg); perspective-origin: 50% 42%
 const ROT_DEG   = 30;
@@ -266,7 +313,6 @@ export default function BattleRenderer({
       root.addChild(groundLayer);
       const groundGfx = new Graphics();
       groundLayer.addChild(groundGfx);
-      const groundColor = MAP_GROUND_COLOR[mapType];
 
       // ── Particle layer ────────────────────────────────────────────────────
       const particleContainer = new Container();
@@ -350,105 +396,167 @@ export default function BattleRenderer({
           if (midSprite) { midSprite.x = w / 2 + swayX;       midSprite.y = h / 2 + swayY; }
         }
 
-        // ── Perspective-correct 3D floor grid ───────────────────────────────
-        // Matches CSS: perspective(PERSP_PX) rotateX(ROT_DEG) on .b-battlefield
+        // ── 3D Castle Map: stone tiles + raised walls + water + torches ─────
+        // Uses projH(lx, ly, h) for correct perspective on elevated geometry,
+        // matching CSS: perspective(PERSP_PX) rotateX(ROT_DEG) on .b-battlefield
         const bfEl = document.querySelector<HTMLElement>(".b-battlefield");
         const fwEl = document.querySelector<HTMLElement>(".b-field-wrap");
         groundGfx.clear();
         if (bfEl && fwEl) {
-          const fwRect = fwEl.getBoundingClientRect();
+          const fwRect  = fwEl.getBoundingClientRect();
           const BW      = bfEl.offsetWidth;
           const BH      = bfEl.offsetHeight;
-          const BH_STEP = BH / 4; // = STEP (78px): vertical spacing between rows
+          const BH_STEP = BH / 4;
 
-          const θ = ROT_DEG * Math.PI / 180;
+          const θ    = ROT_DEG * Math.PI / 180;
           const cosθ = Math.cos(θ);
           const sinθ = Math.sin(θ);
           const d    = PERSP_PX;
 
-          // Perspective-origin in canvas coords.
-          // CSS perspective-origin: 50% PERSP_OY*100% on .b-field-wrap
           const fw_cx = (fwRect.left + fwRect.right) / 2 - canvasRect.left;
           const fw_cy = fwRect.top + fwRect.height * PERSP_OY - canvasRect.top;
+          const dx    = bfEl.offsetLeft + BW / 2 - fwEl.offsetWidth  * 0.5;
+          const dy    = bfEl.offsetTop  + BH / 2 - fwEl.offsetHeight * PERSP_OY;
 
-          // Offset of battlefield center from the perspective-origin
-          const dx = bfEl.offsetLeft + BW / 2 - fwEl.offsetWidth  * 0.5;
-          const dy = bfEl.offsetTop  + BH / 2 - fwEl.offsetHeight * PERSP_OY;
-
-          // Project a point in battlefield local space (relative to bf center) → canvas
+          // Ground-level projection
           const proj = (lx: number, ly: number) => {
             const z     = ly * sinθ;
             const scale = d / (d - z);
-            return {
-              x: fw_cx + (dx + lx) * scale,
-              y: fw_cy + (dy + ly * cosθ) * scale,
-            };
+            return { x: fw_cx + (dx + lx) * scale, y: fw_cy + (dy + ly * cosθ) * scale };
+          };
+          // Elevated projection — h in same local-space units as lx/ly
+          const projH = (lx: number, ly: number, h: number) => {
+            const z     = ly * sinθ + h * cosθ;
+            const y_rot = ly * cosθ - h * sinθ;
+            const scale = d / (d - z);
+            return { x: fw_cx + (dx + lx) * scale, y: fw_cy + (dy + y_rot) * scale };
           };
 
           const hw = BW / 2, hh = BH / 2;
-          const TL = proj(-hw, -hh), TR = proj(hw, -hh);
-          const BL = proj(-hw,  hh), BR = proj(hw,  hh);
 
-          // ─ Base floor fill ───────────────────────────────────────────────
-          groundGfx
-            .poly([TL.x, TL.y, TR.x, TR.y, BR.x, BR.y, BL.x, BL.y])
-            .fill({ color: groundColor, alpha: 0.72 });
+          const stoneA    = MAP_STONE_A[mapType];
+          const stoneB    = MAP_STONE_B[mapType];
+          const mortar    = MAP_MORTAR[mapType];
+          const wallFaceC = MAP_WALL_FACE[mapType];
+          const wallTopC  = MAP_WALL_TOP[mapType];
+          const waterC    = MAP_WATER[mapType];
 
-          // ─ Row depth bands (front rows slightly lighter) ─────────────────
-          for (let r = 0; r < 4; r++) {
-            const ly0 = -hh + r       * BH_STEP;
-            const ly1 = -hh + (r + 1) * BH_STEP;
-            const L0 = proj(-hw, ly0), R0 = proj(hw, ly0);
-            const L1 = proj(-hw, ly1), R1 = proj(hw, ly1);
-            groundGfx
-              .poly([L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y])
-              .fill({ color: 0xffffff, alpha: 0.03 + r * 0.025 });
+          // Helper: draw a filled quad from 4 {x,y} points
+          const quad = (pts: { x: number; y: number }[], color: number, alpha: number) =>
+            groundGfx.poly(pts.flatMap(p => [p.x, p.y])).fill({ color, alpha });
+
+          // ── 1. Wall inner faces (back → sides → front for depth order) ──
+          // Back wall (far edge, ly = -hh)
+          quad([projH(-hw, -hh, WALL_H), projH(hw, -hh, WALL_H),
+                proj(hw, -hh),           proj(-hw, -hh)],
+               wallFaceC, 0.94);
+          // Left wall
+          quad([projH(-hw, -hh, WALL_H), proj(-hw, -hh),
+                proj(-hw,  hh),          projH(-hw, hh, WALL_H)],
+               wallFaceC, 0.78);
+          // Right wall
+          quad([proj(hw, -hh),           projH(hw, -hh, WALL_H),
+                projH(hw,  hh, WALL_H),  proj(hw, hh)],
+               wallFaceC, 0.78);
+          // Front wall (faces away — thin shadow sliver visible from above)
+          quad([proj(-hw, hh),            proj(hw, hh),
+                projH(hw, hh, WALL_H),   projH(-hw, hh, WALL_H)],
+               wallFaceC, 0.48);
+
+          // ── 2. Stone floor tiles (back rows first for depth ordering) ────
+          const GROUT = 2.5;
+          const drawTile = (lx0: number, ly0: number, lx1: number, ly1: number,
+                            col: number, row: number) => {
+            const depth   = row / 3.5;
+            const isLight = (row + col) % 2 === 0;
+            const baseA   = 0.78 + depth * 0.14;
+            // Outer mortar / grout
+            quad([proj(lx0, ly0), proj(lx1, ly0), proj(lx1, ly1), proj(lx0, ly1)],
+                 mortar, baseA);
+            // Inner stone face (inset by GROUT on all sides)
+            quad([proj(lx0 + GROUT, ly0 + GROUT), proj(lx1 - GROUT, ly0 + GROUT),
+                  proj(lx1 - GROUT, ly1 - GROUT), proj(lx0 + GROUT, ly1 - GROUT)],
+                 isLight ? stoneA : stoneB, baseA);
+          };
+
+          for (let row = 0; row < 4; row++) {
+            const ly0 = -hh + row * BH_STEP;
+            const ly1 = ly0 + BH_STEP;
+            for (let col = 0; col < 4; col++) {
+              drawTile(-hw + col * BF_STEP, ly0, -hw + col * BF_STEP + BF_STEP, ly1, col, row);
+              const ex0 = -hw + BF_ENEMY_OFFSET + col * BF_STEP;
+              drawTile(ex0, ly0, ex0 + BF_STEP, ly1, col + 4, row);
+            }
           }
 
-          // ─ Row grid lines (5 lines including top/bottom edges) ───────────
-          for (let r = 0; r <= 4; r++) {
-            const ly   = -hh + r * BH_STEP;
-            const L    = proj(-hw, ly), R = proj(hw, ly);
-            const edge = r === 0 || r === 4;
-            groundGfx
-              .moveTo(L.x, L.y).lineTo(R.x, R.y)
-              .stroke({ color: 0xffffff, alpha: edge ? 0.28 : 0.10, width: edge ? 2 : 1 });
+          // ── 3. Water channel (the 36 px centre gap) ─────────────────────
+          const chanL = -hw + BF_STEP * 4;       // −18 in local space
+          const chanR = -hw + BF_ENEMY_OFFSET;   // +18 in local space
+          quad([proj(chanL, -hh), proj(chanR, -hh), proj(chanR, hh), proj(chanL, hh)],
+               waterC, 0.90);
+          // Animated ripple highlights
+          for (let wr = 0; wr < 4; wr++) {
+            const phase = (tick * 0.018 + wr * 1.4) % (Math.PI * 2);
+            const wave  = Math.sin(phase) * 4;
+            const ly0   = -hh + wr * BH_STEP + 10;
+            const ly1   = -hh + wr * BH_STEP + BH_STEP - 10;
+            const wx    = (chanL + chanR) / 2 + wave;
+            quad([proj(wx - 5, ly0), proj(wx + 5, ly0), proj(wx + 5, ly1), proj(wx - 5, ly1)],
+                 0xaaddff, 0.06 + 0.04 * Math.sin(phase));
           }
 
-          // ─ Column grid lines (ally cols + divider gap + enemy cols) ──────
-          for (const colX of BF_COL_XS) {
-            const lx         = colX - hw;
-            const T          = proj(lx, -hh), Bo = proj(lx, hh);
-            const isEdge     = colX === 0;
-            const isDivider  = colX === BF_STEP * 4;
-            groundGfx
-              .moveTo(T.x, T.y).lineTo(Bo.x, Bo.y)
-              .stroke({
-                color: 0xffffff,
-                alpha: isEdge ? 0.20 : isDivider ? 0.16 : 0.07,
-                width: 1,
-              });
+          // ── 4. Wall top / cap faces (drawn after tiles so they sit on top) ─
+          const WT = WALL_THICK;
+          // Back
+          quad([projH(-hw, -hh - WT, WALL_H), projH(hw, -hh - WT, WALL_H),
+                projH(hw, -hh, WALL_H),        projH(-hw, -hh, WALL_H)],
+               wallTopC, 0.92);
+          // Left
+          quad([projH(-hw - WT, -hh, WALL_H), projH(-hw, -hh, WALL_H),
+                projH(-hw,  hh, WALL_H),       projH(-hw - WT, hh, WALL_H)],
+               wallTopC, 0.88);
+          // Right
+          quad([projH(hw, -hh, WALL_H),        projH(hw + WT, -hh, WALL_H),
+                projH(hw + WT, hh, WALL_H),    projH(hw, hh, WALL_H)],
+               wallTopC, 0.88);
+          // Front
+          quad([projH(-hw, hh, WALL_H),        projH(hw, hh, WALL_H),
+                projH(hw, hh + WT, WALL_H),    projH(-hw, hh + WT, WALL_H)],
+               wallTopC, 0.80);
+
+          // ── 5. Masonry lines on the back wall face ───────────────────────
+          // Two horizontal mortar courses
+          for (let c = 1; c <= 2; c++) {
+            const yf = (c / 3) * WALL_H;
+            const L  = projH(-hw, -hh, yf), R = projH(hw, -hh, yf);
+            groundGfx.moveTo(L.x, L.y).lineTo(R.x, R.y)
+              .stroke({ color: 0x000000, alpha: 0.16, width: 1 });
           }
-          // Right edge column
-          { const lx = hw; const T = proj(lx, -hh), Bo = proj(lx, hh);
-            groundGfx.moveTo(T.x, T.y).lineTo(Bo.x, Bo.y).stroke({ color: 0xffffff, alpha: 0.20, width: 1 }); }
+          // Vertical stone joints at every grid column
+          for (let s = 1; s <= 7; s++) {
+            const lx_s = -hw + s * (BW / 8);
+            const bot  = proj(lx_s, -hh);
+            const top  = projH(lx_s, -hh, WALL_H);
+            groundGfx.moveTo(bot.x, bot.y).lineTo(top.x, top.y)
+              .stroke({ color: 0x000000, alpha: 0.12, width: 1 });
+          }
 
-          // ─ Front edge highlight ──────────────────────────────────────────
-          groundGfx
-            .moveTo(BL.x, BL.y).lineTo(BR.x, BR.y)
-            .stroke({ color: 0xffffff, alpha: 0.50, width: 3 });
-
-          // ─ Back (far) edge — horizon glow in map color ───────────────────
-          groundGfx
-            .moveTo(TL.x, TL.y).lineTo(TR.x, TR.y)
-            .stroke({ color: groundColor, alpha: 0.80, width: 4 });
-
-          // ─ Center divider glow (between ally/enemy halves) ───────────────
-          const divMidX  = (BF_STEP * 4 + BF_ENEMY_OFFSET) / 2 - hw;
-          const T_div    = proj(divMidX, -hh), B_div = proj(divMidX, hh);
-          groundGfx
-            .moveTo(T_div.x, T_div.y).lineTo(B_div.x, B_div.y)
-            .stroke({ color: 0xffcc44, alpha: 0.12, width: 3 });
+          // ── 6. Corner torch glows ─────────────────────────────────────────
+          const TORCH_H = WALL_H + 20;
+          for (const [clx, cly] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]] as [number, number][]) {
+            const tp  = projH(clx, cly, TORCH_H);
+            const f   = Math.sin(tick * 0.13 + clx * 0.01 + cly * 0.01) * 0.18;
+            const f2  = Math.sin(tick * 0.19 + clx * 0.02) * 0.10;
+            // Outer atmospheric corona
+            groundGfx.circle(tp.x, tp.y, 24 + f * 8)
+              .fill({ color: 0xff4400, alpha: 0.12 + f2 * 0.04 });
+            // Flame body
+            groundGfx.circle(tp.x, tp.y, 11 + f * 3)
+              .fill({ color: 0xff9900, alpha: 0.72 + f2 * 0.10 });
+            // Hot core
+            groundGfx.circle(tp.x, tp.y, 5)
+              .fill({ color: 0xffee88, alpha: 0.92 });
+          }
         }
 
         // ── Particles ─────────────────────────────────────────────────────
