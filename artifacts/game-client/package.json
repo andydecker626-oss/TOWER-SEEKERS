@@ -75,9 +75,11 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@types/three": "^0.184.0",
     "@workspace/game-data": "workspace:*",
     "pixi.js": "^8.18.1",
     "react-router-dom": "^7.14.2",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "three": "^0.184.0"
   }
 }

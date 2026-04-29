@@ -1,702 +1,367 @@
 import { useEffect, useRef } from "react";
-import type { ColorMatrix } from "pixi.js";
+import * as THREE from "three";
 import type { GridUnit } from "@/lib/types";
 
-type MapType = "castle" | "desert" | "forest" | "colosseum";
+type SelectMode = "none" | "move" | "attack" | "skill";
 
-function getMapType(bgUrl: string): MapType {
-  if (bgUrl.includes("castle")) return "castle";
-  if (bgUrl.includes("desert")) return "desert";
-  if (bgUrl.includes("forest")) return "forest";
-  return "colosseum";
-}
+// ── World-space grid layout ───────────────────────────────────────────────────
+const CELL   = 1.0;                            // world units per tile
+const GAP    = 0.5;                            // water channel width
+const COLS   = 4;                              // tiles per side
+const ROWS   = 4;
 
-// Ambient light tint per map: diagonal scale matrix [r, g, b]
-const MAP_AMBIENT: Record<MapType, [number, number, number]> = {
-  castle:    [0.88, 0.85, 1.12],
-  desert:    [1.18, 1.05, 0.75],
-  forest:    [0.82, 1.10, 0.88],
-  colosseum: [1.06, 0.98, 0.82],
+const ALLY_X  = 0;
+const WATER_X = COLS * CELL;                   // 4.0
+const ENEMY_X = WATER_X + GAP;                // 4.5
+const TOTAL_W = ENEMY_X + COLS * CELL;        // 8.5
+const TOTAL_D = ROWS * CELL;                  // 4.0
+
+// Geometry heights / thicknesses
+const TILE_H  = 0.10;   // floor tile block height
+const WALL_H  = 0.80;   // perimeter wall height
+const WALL_T  = 0.30;   // wall thickness
+const UNIT_SZ = 0.62;   // unit box side length
+
+// Palette
+const C = {
+  STONE_L:   0x8a8072,   // light tile
+  STONE_D:   0x6a6055,   // dark tile
+  MORTAR:    0x3a3028,   // grout between tiles (thin gap)
+  WALL:      0x60584a,   // wall face
+  WALL_TOP:  0x8a7e6a,   // wall cap
+  WATER:     0x1a3860,   // water channel base
+  WATER_H:   0x3a70b0,   // water highlight
+  ALLY:      0x2255cc,
+  ENEMY:     0xcc2222,
+  SELECTED:  0x44bbff,
+  QUEUED:    0x4477dd,
+  HL_MOVE:   0x44cc55,
+  HL_ATCK:   0xff4422,
+  HL_SKILL:  0xaa44ff,
+  DEAD:      0x333333,
 };
 
-// Ground plane color per map (for the PixiJS ground plane)
-const MAP_GROUND_COLOR: Record<MapType, number> = {
-  castle:    0x2a1a3a,
-  desert:    0x4a3010,
-  forest:    0x102015,
-  colosseum: 0x301a08,
-};
+// Tile world centre
+const TX = (col: number, onEnemy: boolean) =>
+  (onEnemy ? ENEMY_X : ALLY_X) + col * CELL + CELL / 2;
+const TZ = (row: number) => row * CELL + CELL / 2;
 
-// ── 3D environment constants ──────────────────────────────────────────────────
-const WALL_H     = 60;  // Wall height in local-space units (same coord system as lx/ly)
-const WALL_THICK = 20;  // Wall top-cap depth in local units
-
-// Lighter tile colour per map
-const MAP_STONE_A: Record<MapType, number> = {
-  castle:    0x8c8272,
-  desert:    0xc4a87a,
-  forest:    0x6e8060,
-  colosseum: 0xa09262,
-};
-// Darker tile colour per map
-const MAP_STONE_B: Record<MapType, number> = {
-  castle:    0x6c6055,
-  desert:    0xa08450,
-  forest:    0x526048,
-  colosseum: 0x826e48,
-};
-// Mortar / grout lines
-const MAP_MORTAR: Record<MapType, number> = {
-  castle:    0x38302a,
-  desert:    0x5c4018,
-  forest:    0x283820,
-  colosseum: 0x463c20,
-};
-// Inner (visible) wall face colour
-const MAP_WALL_FACE: Record<MapType, number> = {
-  castle:    0x68604e,
-  desert:    0x887448,
-  forest:    0x485a40,
-  colosseum: 0x7e6848,
-};
-// Wall top / cap face colour
-const MAP_WALL_TOP: Record<MapType, number> = {
-  castle:    0x887e6c,
-  desert:    0xa89060,
-  forest:    0x68785a,
-  colosseum: 0xa08460,
-};
-// Centre divider water / surface colour
-const MAP_WATER: Record<MapType, number> = {
-  castle:    0x1e4870,
-  desert:    0x7a5820,
-  forest:    0x267aaa,
-  colosseum: 0x463c12,
-};
-
-// ── Perspective constants — must match Battle.tsx CSS ────────────────────────
-// perspective: 900px; rotateX(30deg); perspective-origin: 50% 42%
-const ROT_DEG   = 30;
-const PERSP_PX  = 900;
-const PERSP_OY  = 0.42; // perspective-origin Y fraction (0=top, 0.5=center, 1=bottom)
-// Battlefield layout constants (match Battle.tsx: STEP=78, ENEMY_OFFSET=348, BOARD_H=312)
-const BF_STEP   = 78;
-const BF_ENEMY_OFFSET = 348; // 4*STEP + 36
-// Column X positions in unrotated battlefield local space (left-edge = 0)
-const BF_COL_XS = [
-  0, BF_STEP, BF_STEP * 2, BF_STEP * 3, BF_STEP * 4,
-  BF_ENEMY_OFFSET, BF_ENEMY_OFFSET + BF_STEP, BF_ENEMY_OFFSET + BF_STEP * 2,
-  BF_ENEMY_OFFSET + BF_STEP * 3,
-];
-
-/** Build a 20-element PixiJS ColorMatrix from per-channel multipliers. */
-function buildScaleMatrix(r: number, g: number, b: number): ColorMatrix {
-  return [
-    r, 0, 0, 0, 0,
-    0, g, 0, 0, 0,
-    0, 0, b, 0, 0,
-    0, 0, 0, 1, 0,
-  ] as ColorMatrix;
-}
-
-// Per-map particle config
-type ParticleConfig = {
-  count: number;
-  color: number;
-  alphaRange: [number, number];
-  speedX: [number, number];
-  speedY: [number, number];
-  sizeRange: [number, number];
-  shape: "circle" | "leaf";
-  turbulence: number;
-};
-
-const MAP_PARTICLES: Record<MapType, ParticleConfig> = {
-  castle: {
-    count: 40, color: 0xff6020,
-    alphaRange: [0.3, 0.85],
-    speedX: [-0.6, 0.8], speedY: [-1.2, -0.3],
-    sizeRange: [1.5, 4], shape: "circle", turbulence: 0.08,
-  },
-  desert: {
-    count: 35, color: 0xd4b882,
-    alphaRange: [0.12, 0.45],
-    speedX: [0.3, 1.1], speedY: [-0.2, 0.2],
-    sizeRange: [2, 5], shape: "circle", turbulence: 0.04,
-  },
-  forest: {
-    count: 30, color: 0x5a8a30,
-    alphaRange: [0.35, 0.75],
-    speedX: [-0.4, -1.2], speedY: [0.5, 1.4],
-    sizeRange: [3, 7], shape: "leaf", turbulence: 0.12,
-  },
-  colosseum: {
-    count: 28, color: 0xffe0a0,
-    alphaRange: [0.1, 0.4],
-    speedX: [-0.2, 0.3], speedY: [-0.8, -0.2],
-    sizeRange: [2, 4], shape: "circle", turbulence: 0.05,
-  },
-};
-
-interface Particle {
-  x: number; y: number;
-  vx: number; vy: number;
-  alpha: number; size: number;
-  rotation: number; rotationSpeed: number;
-  life: number; maxLife: number;
-  turbOffset: number;
-}
-
-function createParticle(cfg: ParticleConfig, w: number, h: number): Particle {
-  const maxLife = 120 + Math.random() * 180;
-  return {
-    x: Math.random() * w, y: Math.random() * h,
-    vx: cfg.speedX[0] + Math.random() * (cfg.speedX[1] - cfg.speedX[0]),
-    vy: cfg.speedY[0] + Math.random() * (cfg.speedY[1] - cfg.speedY[0]),
-    alpha: cfg.alphaRange[0] + Math.random() * (cfg.alphaRange[1] - cfg.alphaRange[0]),
-    size: cfg.sizeRange[0] + Math.random() * (cfg.sizeRange[1] - cfg.sizeRange[0]),
-    rotation: Math.random() * Math.PI * 2,
-    rotationSpeed: (Math.random() - 0.5) * 0.06,
-    life: Math.random() * maxLife, maxLife,
-    turbOffset: Math.random() * Math.PI * 2,
-  };
-}
-
-interface VfxBurst {
-  x: number; y: number;
-  radius: number; maxRadius: number;
-  alpha: number; color: number;
-  time: number; maxTime: number;
-}
-
-interface Props {
-  battleBg: string;
-  myUnits: GridUnit[];
-  enemyUnits: GridUnit[];
-  mySide: string;
-  flashUnits: Record<string, string>;
-  stageRef: React.RefObject<HTMLDivElement | null>;
+export interface Props {
+  myUnits:     GridUnit[];
+  enemyUnits:  GridUnit[];
+  mySide:      "A" | "B";
+  selectedId:  string | null;
+  highlights:  { x: number; y: number; onEnemy: boolean }[];
+  selectMode:  SelectMode;
+  queued:      Record<string, unknown>;
+  flashUnits:  Record<string, string>;
+  onUnitClick: (id: string) => void;
+  onTileClick: (x: number, y: number, onEnemy: boolean) => void;
 }
 
 export default function BattleRenderer({
-  battleBg, myUnits, enemyUnits, mySide, flashUnits, stageRef,
+  myUnits, enemyUnits, selectedId, highlights, selectMode,
+  queued, flashUnits, onUnitClick, onTileClick,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const prevFlashRef = useRef<Record<string, string>>({});
-  const vfxQueueRef = useRef<Array<{ instanceId: string; type: string }>>([]);
+  const mountRef = useRef<HTMLDivElement>(null);
 
-  // Live ref so the ticker always reads current prop values
-  const liveRef = useRef({ myUnits, enemyUnits, mySide, flashUnits });
+  // Live ref so the animation loop always reads current props
+  const live = useRef({
+    myUnits, enemyUnits, selectedId, highlights, selectMode,
+    queued, flashUnits, onUnitClick, onTileClick,
+  });
   useEffect(() => {
-    liveRef.current = { myUnits, enemyUnits, mySide, flashUnits };
-  }, [myUnits, enemyUnits, mySide, flashUnits]);
+    live.current = {
+      myUnits, enemyUnits, selectedId, highlights, selectMode,
+      queued, flashUnits, onUnitClick, onTileClick,
+    };
+  });
 
-  // Queue VFX events when flashUnits changes
   useEffect(() => {
-    const prev = prevFlashRef.current;
-    Object.entries(flashUnits).forEach(([id, type]) => {
-      if (type && prev[id] !== type) {
-        vfxQueueRef.current.push({ instanceId: id, type });
-      }
+    const el = mountRef.current as HTMLDivElement;
+    if (!el) return;
+
+    // ── Renderer ──────────────────────────────────────────────────────────────
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    } catch {
+      // WebGL not available in this environment (e.g. headless server).
+      // The component renders nothing — real user browsers have WebGL.
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(el.clientWidth, el.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    el.appendChild(renderer.domElement);
+
+    // ── Scene ─────────────────────────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070311);
+    scene.fog = new THREE.FogExp2(0x070311, 0.028);
+
+    // ── Camera ────────────────────────────────────────────────────────────────
+    const camera = new THREE.PerspectiveCamera(44, el.clientWidth / el.clientHeight, 0.1, 120);
+    const CAM_TARGET = new THREE.Vector3(TOTAL_W / 2, 0, TOTAL_D / 2 - 0.5);
+    camera.position.set(TOTAL_W / 2, 9.0, TOTAL_D + 6.5);
+    camera.lookAt(CAM_TARGET);
+
+    // ── Lights ────────────────────────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0xfff2e0, 0.50));
+
+    const sun = new THREE.DirectionalLight(0xfff8f0, 1.15);
+    sun.position.set(TOTAL_W / 2, 14, TOTAL_D + 5);
+    sun.target.position.copy(CAM_TARGET);
+    sun.castShadow = true;
+    sun.shadow.mapSize.setScalar(1024);
+    const sc = sun.shadow.camera as THREE.OrthographicCamera;
+    sc.left = -11; sc.right = 11; sc.top = 8; sc.bottom = -8;
+    scene.add(sun); scene.add(sun.target);
+
+    // Corner torch point lights
+    const TORCH_CORNERS: [number, number, number][] = [
+      [-WALL_T * 0.5, WALL_H + 0.7, -WALL_T * 0.5],
+      [TOTAL_W + WALL_T * 0.5, WALL_H + 0.7, -WALL_T * 0.5],
+      [-WALL_T * 0.5, WALL_H + 0.7, TOTAL_D + WALL_T * 0.5],
+      [TOTAL_W + WALL_T * 0.5, WALL_H + 0.7, TOTAL_D + WALL_T * 0.5],
+    ];
+    const torchLights = TORCH_CORNERS.map(([x, y, z]) => {
+      const pl = new THREE.PointLight(0xff8820, 2.8, 7.5);
+      pl.position.set(x, y, z);
+      scene.add(pl);
+      return pl;
     });
-    prevFlashRef.current = { ...flashUnits };
-  }, [flashUnits]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const stage = stageRef.current;
-    if (!canvas || !stage) return;
+    // ── Floor tiles ───────────────────────────────────────────────────────────
+    // Each tile: slightly inset box (gap creates mortar look)
+    const tileGeo = new THREE.BoxGeometry(CELL * 0.93, TILE_H, CELL * 0.93);
 
-    const stageEl: HTMLDivElement = stage;
-    const canvasEl: HTMLCanvasElement = canvas;
+    interface TileRecord { mesh: THREE.Mesh; mat: THREE.MeshLambertMaterial; baseColor: number }
+    const tileMeshes = new Map<string, TileRecord>();
 
-    let destroyed = false;
-    let appInstance: import("pixi.js").Application | null = null;
-    // Closure variable for ResizeObserver cleanup — avoids `as any` on app object
-    let roCleanup: (() => void) | null = null;
-
-    async function init() {
-      const {
-        Application, Assets, Sprite, Container, Graphics,
-        ColorMatrixFilter, BlurFilter,
-      } = await import("pixi.js");
-
-      const app = new Application();
-      await app.init({
-        canvas: canvasEl,
-        backgroundAlpha: 0,
-        antialias: true,
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
-        autoDensity: true,
-      });
-
-      if (destroyed) { app.destroy(false); return; }
-      appInstance = app;
-
-      const mapType = getMapType(battleBg);
-      const partCfg = MAP_PARTICLES[mapType];
-
-      // ── Resize handler ───────────────────────────────────────────────────
-      function resize() {
-        const { width, height } = stageEl.getBoundingClientRect();
-        app.renderer.resize(width, height);
-      }
-      resize();
-      const roResize = new ResizeObserver(resize);
-      roResize.observe(stageEl);
-
-      // ── Root container with ambient color grading ─────────────────────────
-      const root = new Container();
-      app.stage.addChild(root);
-
-      const ambientFilter = new ColorMatrixFilter();
-      const [ar, ag, ab] = MAP_AMBIENT[mapType];
-      ambientFilter.matrix = buildScaleMatrix(ar, ag, ab);
-      root.filters = [ambientFilter];
-
-      // ── Background layers ─────────────────────────────────────────────────
-      const bgContainer = new Container();
-      root.addChild(bgContainer);
-
-      let farSprite: import("pixi.js").Sprite | null = null;
-      let midSprite: import("pixi.js").Sprite | null = null;
-
-      try {
-        const bgTexture = await Assets.load(battleBg);
-        if (destroyed) return;
-
-        farSprite = new Sprite(bgTexture);
-        midSprite = new Sprite(bgTexture);
-
-        for (const sp of [farSprite, midSprite]) {
-          sp.anchor.set(0.5, 0.5);
-          bgContainer.addChild(sp);
-        }
-
-        // Mid-ground layer gets a blur+additive blend for persistent HD-2D glow
-        const midBlur = new BlurFilter({ strength: 1.5, quality: 2 });
-        midSprite.filters = [midBlur];
-        midSprite.alpha = 0.55;
-        midSprite.blendMode = "add";
-      } catch {
-        // Background failed to load — canvas stays transparent
-      }
-
-      function scaleBg() {
-        const w = app.renderer.width / (app.renderer.resolution ?? 1);
-        const h = app.renderer.height / (app.renderer.resolution ?? 1);
-        for (const sp of [farSprite, midSprite]) {
-          if (!sp) continue;
-          const tex = sp.texture;
-          const scale = Math.max(w / tex.width, h / tex.height) * 1.08;
-          sp.scale.set(scale);
-          sp.x = w / 2;
-          sp.y = h / 2;
+    function makeTiles(onEnemy: boolean) {
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const baseColor = (row + col) % 2 === 0 ? C.STONE_L : C.STONE_D;
+          const mat = new THREE.MeshLambertMaterial({ color: baseColor });
+          const mesh = new THREE.Mesh(tileGeo, mat);
+          mesh.position.set(TX(col, onEnemy), TILE_H / 2, TZ(row));
+          mesh.receiveShadow = true;
+          mesh.userData = { type: "tile", col, row, onEnemy };
+          scene.add(mesh);
+          tileMeshes.set(`${onEnemy ? "e" : "a"}-${col}-${row}`, { mesh, mat, baseColor });
         }
       }
-      scaleBg();
-      const roScale = new ResizeObserver(scaleBg);
-      roScale.observe(stageEl);
+    }
+    makeTiles(false);
+    makeTiles(true);
 
-      roCleanup = () => { roResize.disconnect(); roScale.disconnect(); };
+    // Dark mortar base plane (fills the gaps between tiles)
+    const mortarGeo = new THREE.PlaneGeometry(COLS * CELL, TOTAL_D);
+    const mortarMat = new THREE.MeshLambertMaterial({ color: C.MORTAR });
+    const mAlly  = new THREE.Mesh(mortarGeo, mortarMat);
+    const mEnemy = new THREE.Mesh(mortarGeo, mortarMat.clone());
+    mAlly.rotation.x  = -Math.PI / 2; mAlly.position.set(ALLY_X + COLS * CELL / 2,  0, TOTAL_D / 2);
+    mEnemy.rotation.x = -Math.PI / 2; mEnemy.position.set(ENEMY_X + COLS * CELL / 2, 0, TOTAL_D / 2);
+    scene.add(mAlly); scene.add(mEnemy);
 
-      // Parallax settling: camera drifts in from an offset over ~1.6 s
-      let parallaxX = -18;
-      let parallaxY = -10;
-      let parallaxTime = 0;
-      const PARALLAX_DURATION = 100; // ticks @ 60 fps
+    // ── Water channel ─────────────────────────────────────────────────────────
+    const waterGeo = new THREE.BoxGeometry(GAP, TILE_H * 0.5, TOTAL_D);
+    const waterMat = new THREE.MeshLambertMaterial({ color: C.WATER });
+    const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+    waterMesh.position.set(WATER_X + GAP / 2, TILE_H * 0.25, TOTAL_D / 2);
+    scene.add(waterMesh);
 
-      // ── Ground plane layer ────────────────────────────────────────────────
-      // Drawn as a PixiJS Graphics rect matching the battlefield element's
-      // actual screen-space bounding rect (after CSS rotateX transform).
-      const groundLayer = new Container();
-      root.addChild(groundLayer);
-      const groundGfx = new Graphics();
-      groundLayer.addChild(groundGfx);
+    // ── Perimeter walls ───────────────────────────────────────────────────────
+    const wallMat    = new THREE.MeshLambertMaterial({ color: C.WALL });
+    const wallTopMat = new THREE.MeshLambertMaterial({ color: C.WALL_TOP });
 
-      // ── Particle layer ────────────────────────────────────────────────────
-      const particleContainer = new Container();
-      root.addChild(particleContainer);
-      const particleGfx = new Graphics();
-      particleContainer.addChild(particleGfx);
-
-      const particles: Particle[] = [];
-      function spawnParticles(count: number) {
-        const w = app.renderer.width / (app.renderer.resolution ?? 1);
-        const h = app.renderer.height / (app.renderer.resolution ?? 1);
-        for (let i = 0; i < count; i++) particles.push(createParticle(partCfg, w, h));
-      }
-      spawnParticles(partCfg.count);
-
-      // ── Shadow layer ──────────────────────────────────────────────────────
-      const shadowLayer = new Container();
-      root.addChild(shadowLayer);
-      const unitShadows = new Map<string, import("pixi.js").Graphics>();
-
-      function ensureShadow(instanceId: string): import("pixi.js").Graphics {
-        if (unitShadows.has(instanceId)) return unitShadows.get(instanceId)!;
-        const g = new Graphics();
-        shadowLayer.addChild(g);
-        unitShadows.set(instanceId, g);
-        return g;
-      }
-
-      // ── VFX / Bloom layer ─────────────────────────────────────────────────
-      // Separate container above the ambient root so bloom is unaffected by
-      // scene color grading. Additive blending + blur creates a genuine
-      // light-bloom pipeline: bright shapes → spread via blur → add over scene.
-      const vfxRoot = new Container();
-      app.stage.addChild(vfxRoot);
-
-      // Glow layer: blurred additive shapes that simulate light spreading
-      const glowContainer = new Container();
-      glowContainer.blendMode = "add";
-      const glowBlur = new BlurFilter({ strength: 18, quality: 4 });
-      glowContainer.filters = [glowBlur];
-      vfxRoot.addChild(glowContainer);
-
-      // Sharp layer: crisp expanding ring on top of the glow, also additive
-      const sharpContainer = new Container();
-      sharpContainer.blendMode = "add";
-      vfxRoot.addChild(sharpContainer);
-
-      const glowGfx = new Graphics();
-      glowContainer.addChild(glowGfx);
-      const sharpGfx = new Graphics();
-      sharpContainer.addChild(sharpGfx);
-
-      const vfxBursts: VfxBurst[] = [];
-
-      // ── Main ticker ───────────────────────────────────────────────────────
-      let tick = 0;
-
-      app.ticker.add(() => {
-        if (destroyed) return;
-        tick++;
-
-        const res = app.renderer.resolution ?? 1;
-        const w = app.renderer.width / res;
-        const h = app.renderer.height / res;
-        const canvasRect = canvasEl.getBoundingClientRect();
-
-        // ── Parallax settling ────────────────────────────────────────────
-        if (parallaxTime < PARALLAX_DURATION) {
-          parallaxTime++;
-          const t = parallaxTime / PARALLAX_DURATION;
-          const ease = 1 - Math.pow(1 - t, 3);
-          const cx = parallaxX * (1 - ease);
-          const cy = parallaxY * (1 - ease);
-          if (farSprite) { farSprite.x = w / 2 + cx * 0.5; farSprite.y = h / 2 + cy * 0.5; }
-          if (midSprite) { midSprite.x = w / 2 + cx;       midSprite.y = h / 2 + cy; }
-        } else {
-          // Subtle ambient sway after settling
-          const swayX = Math.sin(tick * 0.003) * 2;
-          const swayY = Math.cos(tick * 0.0022) * 2;
-          if (farSprite) { farSprite.x = w / 2 + swayX * 0.5; farSprite.y = h / 2 + swayY * 0.5; }
-          if (midSprite) { midSprite.x = w / 2 + swayX;       midSprite.y = h / 2 + swayY; }
-        }
-
-        // ── 3D Castle Map: stone tiles + raised walls + water + torches ─────
-        // Uses projH(lx, ly, h) for correct perspective on elevated geometry,
-        // matching CSS: perspective(PERSP_PX) rotateX(ROT_DEG) on .b-battlefield
-        const bfEl = document.querySelector<HTMLElement>(".b-battlefield");
-        const fwEl = document.querySelector<HTMLElement>(".b-field-wrap");
-        groundGfx.clear();
-        if (bfEl && fwEl) {
-          const fwRect  = fwEl.getBoundingClientRect();
-          const BW      = bfEl.offsetWidth;
-          const BH      = bfEl.offsetHeight;
-          const BH_STEP = BH / 4;
-
-          const θ    = ROT_DEG * Math.PI / 180;
-          const cosθ = Math.cos(θ);
-          const sinθ = Math.sin(θ);
-          const d    = PERSP_PX;
-
-          const fw_cx = (fwRect.left + fwRect.right) / 2 - canvasRect.left;
-          const fw_cy = fwRect.top + fwRect.height * PERSP_OY - canvasRect.top;
-          const dx    = bfEl.offsetLeft + BW / 2 - fwEl.offsetWidth  * 0.5;
-          const dy    = bfEl.offsetTop  + BH / 2 - fwEl.offsetHeight * PERSP_OY;
-
-          // Ground-level projection
-          const proj = (lx: number, ly: number) => {
-            const z     = ly * sinθ;
-            const scale = d / (d - z);
-            return { x: fw_cx + (dx + lx) * scale, y: fw_cy + (dy + ly * cosθ) * scale };
-          };
-          // Elevated projection — h in same local-space units as lx/ly
-          const projH = (lx: number, ly: number, h: number) => {
-            const z     = ly * sinθ + h * cosθ;
-            const y_rot = ly * cosθ - h * sinθ;
-            const scale = d / (d - z);
-            return { x: fw_cx + (dx + lx) * scale, y: fw_cy + (dy + y_rot) * scale };
-          };
-
-          const hw = BW / 2, hh = BH / 2;
-
-          const stoneA    = MAP_STONE_A[mapType];
-          const stoneB    = MAP_STONE_B[mapType];
-          const mortar    = MAP_MORTAR[mapType];
-          const wallFaceC = MAP_WALL_FACE[mapType];
-          const wallTopC  = MAP_WALL_TOP[mapType];
-          const waterC    = MAP_WATER[mapType];
-
-          // Helper: draw a filled quad from 4 {x,y} points
-          const quad = (pts: { x: number; y: number }[], color: number, alpha: number) =>
-            groundGfx.poly(pts.flatMap(p => [p.x, p.y])).fill({ color, alpha });
-
-          // ── 1. Wall inner faces (back → sides → front for depth order) ──
-          // Back wall (far edge, ly = -hh)
-          quad([projH(-hw, -hh, WALL_H), projH(hw, -hh, WALL_H),
-                proj(hw, -hh),           proj(-hw, -hh)],
-               wallFaceC, 0.94);
-          // Left wall
-          quad([projH(-hw, -hh, WALL_H), proj(-hw, -hh),
-                proj(-hw,  hh),          projH(-hw, hh, WALL_H)],
-               wallFaceC, 0.78);
-          // Right wall
-          quad([proj(hw, -hh),           projH(hw, -hh, WALL_H),
-                projH(hw,  hh, WALL_H),  proj(hw, hh)],
-               wallFaceC, 0.78);
-          // Front wall (faces away — thin shadow sliver visible from above)
-          quad([proj(-hw, hh),            proj(hw, hh),
-                projH(hw, hh, WALL_H),   projH(-hw, hh, WALL_H)],
-               wallFaceC, 0.48);
-
-          // ── 2. Stone floor tiles (back rows first for depth ordering) ────
-          const GROUT = 2.5;
-          const drawTile = (lx0: number, ly0: number, lx1: number, ly1: number,
-                            col: number, row: number) => {
-            const depth   = row / 3.5;
-            const isLight = (row + col) % 2 === 0;
-            const baseA   = 0.78 + depth * 0.14;
-            // Outer mortar / grout
-            quad([proj(lx0, ly0), proj(lx1, ly0), proj(lx1, ly1), proj(lx0, ly1)],
-                 mortar, baseA);
-            // Inner stone face (inset by GROUT on all sides)
-            quad([proj(lx0 + GROUT, ly0 + GROUT), proj(lx1 - GROUT, ly0 + GROUT),
-                  proj(lx1 - GROUT, ly1 - GROUT), proj(lx0 + GROUT, ly1 - GROUT)],
-                 isLight ? stoneA : stoneB, baseA);
-          };
-
-          for (let row = 0; row < 4; row++) {
-            const ly0 = -hh + row * BH_STEP;
-            const ly1 = ly0 + BH_STEP;
-            for (let col = 0; col < 4; col++) {
-              drawTile(-hw + col * BF_STEP, ly0, -hw + col * BF_STEP + BF_STEP, ly1, col, row);
-              const ex0 = -hw + BF_ENEMY_OFFSET + col * BF_STEP;
-              drawTile(ex0, ly0, ex0 + BF_STEP, ly1, col + 4, row);
-            }
-          }
-
-          // ── 3. Water channel (the 36 px centre gap) ─────────────────────
-          const chanL = -hw + BF_STEP * 4;       // −18 in local space
-          const chanR = -hw + BF_ENEMY_OFFSET;   // +18 in local space
-          quad([proj(chanL, -hh), proj(chanR, -hh), proj(chanR, hh), proj(chanL, hh)],
-               waterC, 0.90);
-          // Animated ripple highlights
-          for (let wr = 0; wr < 4; wr++) {
-            const phase = (tick * 0.018 + wr * 1.4) % (Math.PI * 2);
-            const wave  = Math.sin(phase) * 4;
-            const ly0   = -hh + wr * BH_STEP + 10;
-            const ly1   = -hh + wr * BH_STEP + BH_STEP - 10;
-            const wx    = (chanL + chanR) / 2 + wave;
-            quad([proj(wx - 5, ly0), proj(wx + 5, ly0), proj(wx + 5, ly1), proj(wx - 5, ly1)],
-                 0xaaddff, 0.06 + 0.04 * Math.sin(phase));
-          }
-
-          // ── 4. Wall top / cap faces (drawn after tiles so they sit on top) ─
-          const WT = WALL_THICK;
-          // Back
-          quad([projH(-hw, -hh - WT, WALL_H), projH(hw, -hh - WT, WALL_H),
-                projH(hw, -hh, WALL_H),        projH(-hw, -hh, WALL_H)],
-               wallTopC, 0.92);
-          // Left
-          quad([projH(-hw - WT, -hh, WALL_H), projH(-hw, -hh, WALL_H),
-                projH(-hw,  hh, WALL_H),       projH(-hw - WT, hh, WALL_H)],
-               wallTopC, 0.88);
-          // Right
-          quad([projH(hw, -hh, WALL_H),        projH(hw + WT, -hh, WALL_H),
-                projH(hw + WT, hh, WALL_H),    projH(hw, hh, WALL_H)],
-               wallTopC, 0.88);
-          // Front
-          quad([projH(-hw, hh, WALL_H),        projH(hw, hh, WALL_H),
-                projH(hw, hh + WT, WALL_H),    projH(-hw, hh + WT, WALL_H)],
-               wallTopC, 0.80);
-
-          // ── 5. Masonry lines on the back wall face ───────────────────────
-          // Two horizontal mortar courses
-          for (let c = 1; c <= 2; c++) {
-            const yf = (c / 3) * WALL_H;
-            const L  = projH(-hw, -hh, yf), R = projH(hw, -hh, yf);
-            groundGfx.moveTo(L.x, L.y).lineTo(R.x, R.y)
-              .stroke({ color: 0x000000, alpha: 0.16, width: 1 });
-          }
-          // Vertical stone joints at every grid column
-          for (let s = 1; s <= 7; s++) {
-            const lx_s = -hw + s * (BW / 8);
-            const bot  = proj(lx_s, -hh);
-            const top  = projH(lx_s, -hh, WALL_H);
-            groundGfx.moveTo(bot.x, bot.y).lineTo(top.x, top.y)
-              .stroke({ color: 0x000000, alpha: 0.12, width: 1 });
-          }
-
-          // ── 6. Corner torch glows ─────────────────────────────────────────
-          const TORCH_H = WALL_H + 20;
-          for (const [clx, cly] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]] as [number, number][]) {
-            const tp  = projH(clx, cly, TORCH_H);
-            const f   = Math.sin(tick * 0.13 + clx * 0.01 + cly * 0.01) * 0.18;
-            const f2  = Math.sin(tick * 0.19 + clx * 0.02) * 0.10;
-            // Outer atmospheric corona
-            groundGfx.circle(tp.x, tp.y, 24 + f * 8)
-              .fill({ color: 0xff4400, alpha: 0.12 + f2 * 0.04 });
-            // Flame body
-            groundGfx.circle(tp.x, tp.y, 11 + f * 3)
-              .fill({ color: 0xff9900, alpha: 0.72 + f2 * 0.10 });
-            // Hot core
-            groundGfx.circle(tp.x, tp.y, 5)
-              .fill({ color: 0xffee88, alpha: 0.92 });
-          }
-        }
-
-        // ── Particles ─────────────────────────────────────────────────────
-        particleGfx.clear();
-        const col = partCfg.color;
-        for (const p of particles) {
-          p.x += p.vx + Math.sin(tick * 0.04 + p.turbOffset) * partCfg.turbulence;
-          p.y += p.vy;
-          p.rotation += p.rotationSpeed;
-          p.life++;
-
-          const lifePct = p.life / p.maxLife;
-          const fade = lifePct < 0.15 ? lifePct / 0.15
-                     : lifePct > 0.8  ? (1 - lifePct) / 0.2
-                     : 1;
-          const alpha = p.alpha * fade;
-
-          if (p.life > p.maxLife || p.x < -20 || p.x > w + 20 || p.y < -20 || p.y > h + 20) {
-            const r = createParticle(partCfg, w, h);
-            Object.assign(p, r);
-            p.life = 0;
-            if (mapType === "desert")   { p.x = -5; }
-            if (mapType === "castle")   { p.x = Math.random() * w; p.y = h + 5; }
-            if (mapType === "forest")   { p.x = w + 5; p.y = Math.random() * h * 0.6; }
-            if (mapType === "colosseum") { p.x = Math.random() * w; p.y = h + 5; }
-            continue;
-          }
-
-          if (partCfg.shape === "leaf") {
-            particleGfx.rect(p.x - p.size / 2, p.y - p.size * 0.4, p.size, p.size * 0.8)
-              .fill({ color: col, alpha });
-          } else {
-            particleGfx.circle(p.x, p.y, p.size).fill({ color: col, alpha });
-          }
-        }
-
-        // ── Ground shadows (PixiJS tracks DOM positions for depth-aware shadows) ──
-        const { myUnits: lmy, enemyUnits: len, flashUnits: lfu } = liveRef.current;
-        const allUnits = [...lmy, ...len];
-
-        for (const unit of allUnits) {
-          const spriteEl = document.querySelector<HTMLElement>(`[data-sprite-id="${unit.instanceId}"]`);
-          const shadow = ensureShadow(unit.instanceId);
-
-          if (!spriteEl || !unit.alive) {
-            shadow.clear(); shadow.visible = false;
-            continue;
-          }
-
-          const sr = spriteEl.getBoundingClientRect();
-          const sx = sr.left + sr.width  / 2 - canvasRect.left;
-          const sy = sr.bottom           - canvasRect.top;
-          const depthScale = 0.82 + (unit.y / 3) * 0.18;
-
-          const dmgFlash = lfu[unit.instanceId] === "damage";
-          const shadowAlpha = (0.42 + (unit.y / 3) * 0.22) * (dmgFlash ? 1.6 : 1);
-          shadow.clear();
-          shadow.visible = true;
-          shadow.ellipse(sx, sy + 2, 36 * depthScale, 7 * depthScale)
-            .fill({ color: 0x000000, alpha: Math.min(shadowAlpha, 0.85) });
-        }
-
-        // Remove shadows for units that left the field
-        for (const [id, g] of unitShadows) {
-          if (!allUnits.find(u => u.instanceId === id)) {
-            shadowLayer.removeChild(g);
-            g.destroy();
-            unitShadows.delete(id);
-          }
-        }
-
-        // ── VFX / Bloom bursts ─────────────────────────────────────────────
-        // Flash event taxonomy (from Battle.tsx applyEventAnimation):
-        //   "attack" — set on the ACTOR during attack/skill (amber lunge glow)
-        //   "skill"  — set on the ACTOR during skill cast (purple burst)
-        //   "damage" — set on the TARGET when it receives damage from any source
-        //              (includes critical hits, which use the same flash; there is
-        //               no separate "crit" event type in the game engine)
-        //   "ko"     — KO'd unit (no bloom, sprite fades out)
-        //   "defend" / "wait" — no bloom
-        // Each event produces: a large blurred additive circle (bloom spread)
-        // + a crisp expanding ring (flash front), composited additively over scene.
-        const pending = vfxQueueRef.current.splice(0);
-        for (const ev of pending) {
-          const el = document.querySelector<HTMLElement>(`[data-unit-id="${ev.instanceId}"]`);
-          if (!el) continue;
-          const r = el.getBoundingClientRect();
-          const bx = r.left + r.width / 2 - canvasRect.left;
-          const by = r.top  + r.height / 2 - canvasRect.top;
-          const color = ev.type === "skill"  ? 0xaa66ff  // purple — skill cast on actor
-                      : ev.type === "damage" ? 0xff5522  // red-orange — damage on target
-                      : ev.type === "attack" ? 0xffaa33  // amber — attack lunge on actor
-                      : 0x44ffaa;                        // green — heal or fallback
-          const maxR = ev.type === "skill" ? 72 : 52;
-          vfxBursts.push({ x: bx, y: by, radius: 4, maxRadius: maxR,
-                           alpha: 0.9, color, time: 0, maxTime: 22 });
-        }
-
-        glowGfx.clear();
-        sharpGfx.clear();
-        for (let i = vfxBursts.length - 1; i >= 0; i--) {
-          const b = vfxBursts[i];
-          b.time++;
-          const progress = b.time / b.maxTime;
-          const eased = 1 - Math.pow(1 - Math.min(progress, 1), 2);
-          b.radius = b.maxRadius * eased;
-          b.alpha  = 0.9 * (1 - Math.min(progress, 1));
-
-          if (b.alpha <= 0.01) { vfxBursts.splice(i, 1); continue; }
-
-          // Glow layer: large translucent filled circle — blurred into bloom spread
-          glowGfx.circle(b.x, b.y, b.radius * 1.4).fill({ color: b.color, alpha: b.alpha * 0.65 });
-          // Sharp layer: thin ring at the expansion front
-          sharpGfx.circle(b.x, b.y, b.radius).stroke({ color: b.color, alpha: b.alpha, width: 3 });
-        }
-      });
+    function wall(x: number, z: number, w: number, d: number) {
+      // Body
+      const geo = new THREE.BoxGeometry(w, WALL_H, d);
+      const m   = new THREE.Mesh(geo, wallMat);
+      m.position.set(x, WALL_H / 2, z);
+      m.castShadow = true; m.receiveShadow = true;
+      scene.add(m);
+      // Cap
+      const capH = WALL_T * 0.45;
+      const cap  = new THREE.Mesh(new THREE.BoxGeometry(w, capH, d), wallTopMat);
+      cap.position.set(x, WALL_H + capH / 2, z);
+      scene.add(cap);
     }
 
-    init().catch(console.error);
+    const FULL_W = TOTAL_W + WALL_T * 2;
+    wall(TOTAL_W / 2,                -WALL_T / 2,          FULL_W, WALL_T); // back
+    wall(TOTAL_W / 2,                TOTAL_D + WALL_T / 2, FULL_W, WALL_T); // front
+    wall(-WALL_T / 2,                TOTAL_D / 2,           WALL_T, TOTAL_D); // left
+    wall(TOTAL_W + WALL_T / 2,       TOTAL_D / 2,           WALL_T, TOTAL_D); // right
 
+    // Subtle stone-block lines on back wall
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18 });
+    for (let s = 1; s < COLS * 2; s++) {
+      const lx = s * (TOTAL_W / (COLS * 2));
+      const pts = [
+        new THREE.Vector3(lx, 0,      -WALL_T / 2),
+        new THREE.Vector3(lx, WALL_H, -WALL_T / 2),
+      ];
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+    }
+
+    // ── Unit boxes ────────────────────────────────────────────────────────────
+    const unitGeo  = new THREE.BoxGeometry(UNIT_SZ, UNIT_SZ, UNIT_SZ);
+    const shadowGeo = new THREE.CircleGeometry(UNIT_SZ * 0.38, 12);
+    const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
+
+    interface UnitRecord { mesh: THREE.Mesh; shadow: THREE.Mesh; mat: THREE.MeshLambertMaterial }
+    const unitMeshes = new Map<string, UnitRecord>();
+
+    function getUnitColor(instanceId: string, isEnemy: boolean): number {
+      const { selectedId, queued, flashUnits } = live.current;
+      if (flashUnits[instanceId] === "damage") return 0xffffff;
+      if (flashUnits[instanceId] === "ko")     return 0x333333;
+      if (instanceId === selectedId)           return C.SELECTED;
+      if (!isEnemy && queued[instanceId])      return C.QUEUED;
+      return isEnemy ? C.ENEMY : C.ALLY;
+    }
+
+    function syncUnits() {
+      const { myUnits, enemyUnits } = live.current;
+      const all = [
+        ...myUnits.map(u  => ({ ...u, isEnemy: false })),
+        ...enemyUnits.map(u => ({ ...u, isEnemy: true })),
+      ];
+
+      // Remove stale meshes
+      for (const [id, rec] of unitMeshes) {
+        if (!all.find(u => u.instanceId === id)) {
+          scene.remove(rec.mesh); scene.remove(rec.shadow);
+          unitMeshes.delete(id);
+        }
+      }
+
+      for (const unit of all) {
+        const wx = TX(unit.x, unit.isEnemy);
+        const wz = TZ(unit.y);
+
+        if (!unit.alive) {
+          // Keep a flattened "dead" marker briefly then remove
+          const rec = unitMeshes.get(unit.instanceId);
+          if (rec) { scene.remove(rec.mesh); scene.remove(rec.shadow); unitMeshes.delete(unit.instanceId); }
+          continue;
+        }
+
+        let rec = unitMeshes.get(unit.instanceId);
+        if (!rec) {
+          const mat  = new THREE.MeshLambertMaterial({ color: unit.isEnemy ? C.ENEMY : C.ALLY });
+          const mesh = new THREE.Mesh(unitGeo, mat);
+          mesh.castShadow = true;
+          mesh.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
+          const shadow = new THREE.Mesh(shadowGeo, shadowMat.clone());
+          shadow.rotation.x = -Math.PI / 2;
+          scene.add(mesh); scene.add(shadow);
+          rec = { mesh, shadow, mat };
+          unitMeshes.set(unit.instanceId, rec);
+        }
+        rec.mesh.position.set(wx, TILE_H + UNIT_SZ / 2, wz);
+        rec.shadow.position.set(wx, TILE_H + 0.005, wz);
+        rec.mat.color.setHex(getUnitColor(unit.instanceId, unit.isEnemy));
+      }
+    }
+
+    // ── Tile highlight colours ────────────────────────────────────────────────
+    function syncHighlights() {
+      const { highlights, selectMode } = live.current;
+      const hlColor = selectMode === "attack" ? C.HL_ATCK
+                    : selectMode === "skill"  ? C.HL_SKILL
+                    :                           C.HL_MOVE;
+      for (const [key, rec] of tileMeshes) {
+        const [side, c, r] = key.split("-");
+        const col = parseInt(c), row = parseInt(r);
+        const isEnemy = side === "e";
+        const hl = highlights.find(h => h.x === col && h.y === row && h.onEnemy === isEnemy);
+        rec.mat.color.setHex(hl ? hlColor : rec.baseColor);
+        rec.mat.emissive.setHex(hl ? hlColor : 0x000000);
+        rec.mat.emissiveIntensity = hl ? 0.3 : 0;
+      }
+    }
+
+    // ── Raycasting ────────────────────────────────────────────────────────────
+    const raycaster = new THREE.Raycaster();
+    const mouse2d   = new THREE.Vector2();
+
+    function onPointerDown(e: PointerEvent) {
+      const rect = el.getBoundingClientRect();
+      mouse2d.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+      mouse2d.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse2d, camera);
+
+      // Units have priority
+      const unitArr = [...unitMeshes.values()].map(r => r.mesh);
+      const unitHits = raycaster.intersectObjects(unitArr, false);
+      if (unitHits.length) {
+        live.current.onUnitClick(unitHits[0].object.userData.instanceId as string);
+        return;
+      }
+      // Then tiles
+      const tileArr = [...tileMeshes.values()].map(r => r.mesh);
+      const tileHits = raycaster.intersectObjects(tileArr, false);
+      if (tileHits.length) {
+        const { col, row, onEnemy } = tileHits[0].object.userData as { col: number; row: number; onEnemy: boolean };
+        live.current.onTileClick(col, row, onEnemy);
+      }
+    }
+    el.addEventListener("pointerdown", onPointerDown);
+
+    // ── Resize ────────────────────────────────────────────────────────────────
+    const ro = new ResizeObserver(() => {
+      if (!el.clientWidth || !el.clientHeight) return;
+      camera.aspect = el.clientWidth / el.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(el.clientWidth, el.clientHeight);
+    });
+    ro.observe(el);
+
+    // ── Animation loop ────────────────────────────────────────────────────────
+    let tick = 0;
+    let rafId = 0;
+    let alive = true;
+
+    function animate() {
+      if (!alive) return;
+      rafId = requestAnimationFrame(animate);
+      tick++;
+
+      // Torch flicker
+      torchLights.forEach((pl, i) => {
+        pl.intensity = 2.4 + Math.sin(tick * 0.10 + i * 1.57) * 0.9
+                           + Math.sin(tick * 0.23 + i * 0.8)  * 0.4;
+      });
+
+      // Water colour pulse
+      waterMat.color.setHSL(0.60, 0.65, 0.12 + Math.sin(tick * 0.035) * 0.04);
+
+      syncUnits();
+      syncHighlights();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ── Cleanup ───────────────────────────────────────────────────────────────
     return () => {
-      destroyed = true;
-      roCleanup?.();
-      appInstance?.destroy(false);
+      alive = false;
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+      el.removeEventListener("pointerdown", onPointerDown);
+      renderer.dispose();
+      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleBg]);
+  }, []); // intentionally empty — everything is read through `live` ref
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 0,
-        pointerEvents: "none",
-        display: "block",
-      }}
+    <div
+      ref={mountRef}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
     />
   );
 }
