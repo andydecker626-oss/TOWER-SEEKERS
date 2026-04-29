@@ -2,21 +2,6 @@ import { useEffect, useRef } from "react";
 import type { ColorMatrix } from "pixi.js";
 import type { GridUnit } from "@/lib/types";
 
-const UNIT_SPRITE_MAP: Record<string, string> = {
-  warlock:   "/assets/units/warlock-sprite.png",
-  paladin:   "/assets/units/paladin-sprite.png",
-  knight:    "/assets/units/knight-sprite.png",
-  cleric:    "/assets/units/cleric-sprite.png",
-  mage:      "/assets/units/mage-sprite.png",
-  rogue:     "/assets/units/rogue-sprite.png",
-  archer:    "/assets/units/archer-sprite.png",
-  shaman:    "/assets/units/shaman-sprite.png",
-  lancer:    "/assets/units/lancer-sprite.png",
-  berserker: "/assets/units/berserker-sprite.png",
-  bard:      "/assets/units/bard-sprite.png",
-  wanderer:  "/assets/units/wanderer-sprite.png",
-};
-
 type MapType = "castle" | "desert" | "forest" | "colosseum";
 
 function getMapType(bgUrl: string): MapType {
@@ -49,27 +34,6 @@ function buildScaleMatrix(r: number, g: number, b: number): ColorMatrix {
     0, g, 0, 0, 0,
     0, 0, b, 0, 0,
     0, 0, 0, 1, 0,
-  ] as ColorMatrix;
-}
-
-/**
- * Enemy tint per map: each row is [r_mult, r_off, g_mult, g_off, b_mult, b_off]
- * These are applied via setMatrix in a typed helper.
- */
-const ENEMY_TINT: Record<MapType, [number, number, number, number, number, number]> = {
-  castle:    [0.70, 0.05, 0.55, 0.02, 0.85, 0.05],
-  desert:    [0.88, 0.06, 0.52, 0.02, 0.58, 0.00],
-  forest:    [0.52, 0.04, 0.72, 0.02, 0.52, 0.00],
-  colosseum: [0.80, 0.05, 0.55, 0.02, 0.62, 0.00],
-};
-
-/** Build a 20-element ColorMatrix for enemy scene-aware tinting. */
-function buildEnemyMatrix(t: [number, number, number, number, number, number]): ColorMatrix {
-  return [
-    t[0], 0,    0,    0, t[1],
-    0,    t[2], 0,    0, t[3],
-    0,    0,    t[4], 0, t[5],
-    0,    0,    0,    1, 0,
   ] as ColorMatrix;
 }
 
@@ -316,58 +280,6 @@ export default function BattleRenderer({
         return g;
       }
 
-      // ── Unit sprite layer ─────────────────────────────────────────────────
-      const unitLayer = new Container();
-      unitLayer.sortableChildren = true;
-      root.addChild(unitLayer);
-
-      const unitSprites = new Map<string, import("pixi.js").Sprite>();
-      const unitLoadedUrls = new Set<string>();
-
-      // Pre-load all textures; re-check on every tick if not yet ready
-      function loadUnitSprites() {
-        const allUnits = [...liveRef.current.myUnits, ...liveRef.current.enemyUnits];
-        for (const unit of allUnits) {
-          const url = UNIT_SPRITE_MAP[unit.defId] ?? "/assets/units/knight-sprite.png";
-          if (unitLoadedUrls.has(url)) continue;
-          unitLoadedUrls.add(url);
-          Assets.load(url).catch(() => { unitLoadedUrls.delete(url); });
-        }
-      }
-      loadUnitSprites();
-
-      const enemyColorMatrix = buildEnemyMatrix(ENEMY_TINT[mapType]);
-
-      function getOrCreateUnitSprite(
-        unit: GridUnit,
-        isEnemy: boolean,
-      ): import("pixi.js").Sprite | null {
-        if (unitSprites.has(unit.instanceId)) return unitSprites.get(unit.instanceId)!;
-
-        const url = UNIT_SPRITE_MAP[unit.defId] ?? "/assets/units/knight-sprite.png";
-        // Retry load if url wasn't in the initial set (e.g. transformed unit)
-        if (!unitLoadedUrls.has(url)) {
-          unitLoadedUrls.add(url);
-          Assets.load(url).catch(() => { unitLoadedUrls.delete(url); });
-        }
-
-        const texture = Assets.get(url);
-        if (!texture) return null; // Not yet loaded — will appear on next tick
-
-        const sp = new Sprite(texture);
-        sp.anchor.set(0.5, 1.0);
-
-        if (isEnemy) {
-          const ef = new ColorMatrixFilter();
-          ef.matrix = enemyColorMatrix;
-          sp.filters = [ef];
-        }
-
-        unitLayer.addChild(sp);
-        unitSprites.set(unit.instanceId, sp);
-        return sp;
-      }
-
       // ── VFX / Bloom layer ─────────────────────────────────────────────────
       // Separate container above the ambient root so bloom is unaffected by
       // scene color grading. Additive blending + blur creates a genuine
@@ -482,21 +394,15 @@ export default function BattleRenderer({
           }
         }
 
-        // ── Unit sprites ──────────────────────────────────────────────────
-        const { myUnits: lmy, enemyUnits: len, mySide: lms, flashUnits: lfu } = liveRef.current;
+        // ── Ground shadows (PixiJS tracks DOM positions for depth-aware shadows) ──
+        const { myUnits: lmy, enemyUnits: len, flashUnits: lfu } = liveRef.current;
         const allUnits = [...lmy, ...len];
-        const isEnemy = (u: GridUnit) => u.side !== lms;
-
-        // Retry texture loads for units not yet in the sprite map
-        loadUnitSprites();
 
         for (const unit of allUnits) {
           const spriteEl = document.querySelector<HTMLElement>(`[data-sprite-id="${unit.instanceId}"]`);
-          const sprite = getOrCreateUnitSprite(unit, isEnemy(unit));
           const shadow = ensureShadow(unit.instanceId);
 
           if (!spriteEl || !unit.alive) {
-            if (sprite) sprite.visible = false;
             shadow.clear(); shadow.visible = false;
             continue;
           }
@@ -504,29 +410,8 @@ export default function BattleRenderer({
           const sr = spriteEl.getBoundingClientRect();
           const sx = sr.left + sr.width  / 2 - canvasRect.left;
           const sy = sr.bottom           - canvasRect.top;
-
-          // Depth scale: row 0 (back) = 0.82×, row 3 (front) = 1.0×
           const depthScale = 0.82 + (unit.y / 3) * 0.18;
 
-          if (sprite) {
-            sprite.x = sx;
-            sprite.y = sy;
-            sprite.width  = 64 * depthScale;
-            sprite.height = 80 * depthScale;
-            sprite.visible = true;
-            sprite.zIndex  = unit.y;
-            sprite.alpha   = 1;
-
-            const flash = lfu[unit.instanceId];
-            sprite.tint = flash === "damage" ? 0xff4444
-                        : flash === "skill"  ? 0xcc88ff
-                        : flash === "attack" ? 0xffdd88
-                        : flash === "ko"     ? 0x888888
-                        : 0xffffff;
-            if (flash === "ko") sprite.alpha = 0.18;
-          }
-
-          // Ground shadow — deepens on damage flash
           const dmgFlash = lfu[unit.instanceId] === "damage";
           const shadowAlpha = (0.42 + (unit.y / 3) * 0.22) * (dmgFlash ? 1.6 : 1);
           shadow.clear();
@@ -535,14 +420,7 @@ export default function BattleRenderer({
             .fill({ color: 0x000000, alpha: Math.min(shadowAlpha, 0.85) });
         }
 
-        // Remove sprites for units that left the field
-        for (const [id, sp] of unitSprites) {
-          if (!allUnits.find(u => u.instanceId === id)) {
-            unitLayer.removeChild(sp);
-            sp.destroy();
-            unitSprites.delete(id);
-          }
-        }
+        // Remove shadows for units that left the field
         for (const [id, g] of unitShadows) {
           if (!allUnits.find(u => u.instanceId === id)) {
             shadowLayer.removeChild(g);
@@ -550,7 +428,6 @@ export default function BattleRenderer({
             unitShadows.delete(id);
           }
         }
-        unitLayer.sortChildren();
 
         // ── VFX / Bloom bursts ─────────────────────────────────────────────
         // Flash event taxonomy (from Battle.tsx applyEventAnimation):

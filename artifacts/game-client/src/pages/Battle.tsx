@@ -769,7 +769,6 @@ function UnitToken({
       )}
 
       {/* Sprite lift wrapper — handles scale/lift independently from idle animation */}
-      {/* The img acts as a layout placeholder; PixiJS renders the actual sprite */}
       <div className={`b-sprite-lift${isSelected ? " b-sprite-lift-sel" : ""}`}>
         <img
           data-sprite-id={unit.instanceId}
@@ -777,7 +776,6 @@ function UnitToken({
           alt={def.name}
           className={`unit-sprite${flashType === "wait" ? " sprite-wait" : " sprite-idle"}`}
           draggable={false}
-          style={{ opacity: 0 }}
         />
       </div>
 
