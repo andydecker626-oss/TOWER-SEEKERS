@@ -19,13 +19,28 @@ const MAP_AMBIENT: Record<MapType, [number, number, number]> = {
   colosseum: [1.06, 0.98, 0.82],
 };
 
-// Ground plane color per map (for the PixiJS ground plane rectangle)
+// Ground plane color per map (for the PixiJS ground plane)
 const MAP_GROUND_COLOR: Record<MapType, number> = {
   castle:    0x2a1a3a,
   desert:    0x4a3010,
   forest:    0x102015,
   colosseum: 0x301a08,
 };
+
+// ── Perspective constants — must match Battle.tsx CSS ────────────────────────
+// perspective: 900px; rotateX(30deg); perspective-origin: 50% 42%
+const ROT_DEG   = 30;
+const PERSP_PX  = 900;
+const PERSP_OY  = 0.42; // perspective-origin Y fraction (0=top, 0.5=center, 1=bottom)
+// Battlefield layout constants (match Battle.tsx: STEP=78, ENEMY_OFFSET=348, BOARD_H=312)
+const BF_STEP   = 78;
+const BF_ENEMY_OFFSET = 348; // 4*STEP + 36
+// Column X positions in unrotated battlefield local space (left-edge = 0)
+const BF_COL_XS = [
+  0, BF_STEP, BF_STEP * 2, BF_STEP * 3, BF_STEP * 4,
+  BF_ENEMY_OFFSET, BF_ENEMY_OFFSET + BF_STEP, BF_ENEMY_OFFSET + BF_STEP * 2,
+  BF_ENEMY_OFFSET + BF_STEP * 3,
+];
 
 /** Build a 20-element PixiJS ColorMatrix from per-channel multipliers. */
 function buildScaleMatrix(r: number, g: number, b: number): ColorMatrix {
@@ -335,29 +350,105 @@ export default function BattleRenderer({
           if (midSprite) { midSprite.x = w / 2 + swayX;       midSprite.y = h / 2 + swayY; }
         }
 
-        // ── Ground plane ─────────────────────────────────────────────────
-        // Read the battlefield's actual screen-space bounding rect to draw
-        // a PixiJS ground plane that aligns with the CSS rotateX perspective.
+        // ── Perspective-correct 3D floor grid ───────────────────────────────
+        // Matches CSS: perspective(PERSP_PX) rotateX(ROT_DEG) on .b-battlefield
         const bfEl = document.querySelector<HTMLElement>(".b-battlefield");
-        if (bfEl) {
-          const bfRect = bfEl.getBoundingClientRect();
-          const bx = bfRect.left - canvasRect.left;
-          const by = bfRect.top  - canvasRect.top;
-          const bw = bfRect.width;
-          const bh = bfRect.height;
+        const fwEl = document.querySelector<HTMLElement>(".b-field-wrap");
+        groundGfx.clear();
+        if (bfEl && fwEl) {
+          const fwRect = fwEl.getBoundingClientRect();
+          const BW      = bfEl.offsetWidth;
+          const BH      = bfEl.offsetHeight;
+          const BH_STEP = BH / 4; // = STEP (78px): vertical spacing between rows
 
-          groundGfx.clear();
-          // Back half of the ground is slightly lighter (depth illusion)
-          groundGfx.rect(bx, by, bw, bh * 0.5).fill({ color: groundColor, alpha: 0.22 });
-          // Front half is darker and more opaque (closer to viewer)
-          groundGfx.rect(bx, by + bh * 0.5, bw, bh * 0.5).fill({ color: groundColor, alpha: 0.35 });
-          // Subtle grid line overlay — faint horizontal rules mirroring tile rows
-          for (let row = 0; row <= 4; row++) {
-            const lineY = by + (row / 4) * bh;
+          const θ = ROT_DEG * Math.PI / 180;
+          const cosθ = Math.cos(θ);
+          const sinθ = Math.sin(θ);
+          const d    = PERSP_PX;
+
+          // Perspective-origin in canvas coords.
+          // CSS perspective-origin: 50% PERSP_OY*100% on .b-field-wrap
+          const fw_cx = (fwRect.left + fwRect.right) / 2 - canvasRect.left;
+          const fw_cy = fwRect.top + fwRect.height * PERSP_OY - canvasRect.top;
+
+          // Offset of battlefield center from the perspective-origin
+          const dx = bfEl.offsetLeft + BW / 2 - fwEl.offsetWidth  * 0.5;
+          const dy = bfEl.offsetTop  + BH / 2 - fwEl.offsetHeight * PERSP_OY;
+
+          // Project a point in battlefield local space (relative to bf center) → canvas
+          const proj = (lx: number, ly: number) => {
+            const z     = ly * sinθ;
+            const scale = d / (d - z);
+            return {
+              x: fw_cx + (dx + lx) * scale,
+              y: fw_cy + (dy + ly * cosθ) * scale,
+            };
+          };
+
+          const hw = BW / 2, hh = BH / 2;
+          const TL = proj(-hw, -hh), TR = proj(hw, -hh);
+          const BL = proj(-hw,  hh), BR = proj(hw,  hh);
+
+          // ─ Base floor fill ───────────────────────────────────────────────
+          groundGfx
+            .poly([TL.x, TL.y, TR.x, TR.y, BR.x, BR.y, BL.x, BL.y])
+            .fill({ color: groundColor, alpha: 0.72 });
+
+          // ─ Row depth bands (front rows slightly lighter) ─────────────────
+          for (let r = 0; r < 4; r++) {
+            const ly0 = -hh + r       * BH_STEP;
+            const ly1 = -hh + (r + 1) * BH_STEP;
+            const L0 = proj(-hw, ly0), R0 = proj(hw, ly0);
+            const L1 = proj(-hw, ly1), R1 = proj(hw, ly1);
             groundGfx
-              .rect(bx, lineY, bw, 1)
-              .fill({ color: 0xffffff, alpha: 0.04 });
+              .poly([L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y])
+              .fill({ color: 0xffffff, alpha: 0.03 + r * 0.025 });
           }
+
+          // ─ Row grid lines (5 lines including top/bottom edges) ───────────
+          for (let r = 0; r <= 4; r++) {
+            const ly   = -hh + r * BH_STEP;
+            const L    = proj(-hw, ly), R = proj(hw, ly);
+            const edge = r === 0 || r === 4;
+            groundGfx
+              .moveTo(L.x, L.y).lineTo(R.x, R.y)
+              .stroke({ color: 0xffffff, alpha: edge ? 0.28 : 0.10, width: edge ? 2 : 1 });
+          }
+
+          // ─ Column grid lines (ally cols + divider gap + enemy cols) ──────
+          for (const colX of BF_COL_XS) {
+            const lx         = colX - hw;
+            const T          = proj(lx, -hh), Bo = proj(lx, hh);
+            const isEdge     = colX === 0;
+            const isDivider  = colX === BF_STEP * 4;
+            groundGfx
+              .moveTo(T.x, T.y).lineTo(Bo.x, Bo.y)
+              .stroke({
+                color: 0xffffff,
+                alpha: isEdge ? 0.20 : isDivider ? 0.16 : 0.07,
+                width: 1,
+              });
+          }
+          // Right edge column
+          { const lx = hw; const T = proj(lx, -hh), Bo = proj(lx, hh);
+            groundGfx.moveTo(T.x, T.y).lineTo(Bo.x, Bo.y).stroke({ color: 0xffffff, alpha: 0.20, width: 1 }); }
+
+          // ─ Front edge highlight ──────────────────────────────────────────
+          groundGfx
+            .moveTo(BL.x, BL.y).lineTo(BR.x, BR.y)
+            .stroke({ color: 0xffffff, alpha: 0.50, width: 3 });
+
+          // ─ Back (far) edge — horizon glow in map color ───────────────────
+          groundGfx
+            .moveTo(TL.x, TL.y).lineTo(TR.x, TR.y)
+            .stroke({ color: groundColor, alpha: 0.80, width: 4 });
+
+          // ─ Center divider glow (between ally/enemy halves) ───────────────
+          const divMidX  = (BF_STEP * 4 + BF_ENEMY_OFFSET) / 2 - hw;
+          const T_div    = proj(divMidX, -hh), B_div = proj(divMidX, hh);
+          groundGfx
+            .moveTo(T_div.x, T_div.y).lineTo(B_div.x, B_div.y)
+            .stroke({ color: 0xffcc44, alpha: 0.12, width: 3 });
         }
 
         // ── Particles ─────────────────────────────────────────────────────

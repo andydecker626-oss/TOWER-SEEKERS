@@ -1043,12 +1043,13 @@ function battleCSS() {
 
     .b-field-wrap {
       position: relative; z-index: 2;
-      perspective: 700px;
+      perspective: 900px;
+      perspective-origin: 50% 42%;
     }
 
     .b-battlefield {
       position: relative;
-      transform: rotateX(22deg);
+      transform: rotateX(30deg);
       transform-style: preserve-3d;
     }
 
