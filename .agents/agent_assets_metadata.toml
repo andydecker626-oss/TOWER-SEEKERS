@@ -318,6 +318,24 @@ uri = "file://attached_assets/generated_images/title-v3-option-c.png"
 type = "image"
 title = "title v3 birds eye city all towers castle"
 
+[[generated]]
+id = "BHMjjNU8CsDoHdaRjGlAN"
+uri = "file://artifacts/game-client/public/assets/arenas/arena-castle.png"
+type = "image"
+title = "castle battlements arena"
+
+[[generated]]
+id = "CsAwGF46RJbUbPqylEA4l"
+uri = "file://artifacts/game-client/public/assets/arenas/arena-volcano.png"
+type = "image"
+title = "volcanic crater arena"
+
+[[generated]]
+id = "vuKV7afB9VDXYHvvSC4V0"
+uri = "file://artifacts/game-client/public/assets/arenas/arena-forest.png"
+type = "image"
+title = "ancient forest glade arena"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
@@ -335,3 +353,21 @@ id = "oSI-MQ8JLnMxEWhAiv3V4"
 uri = "file://.local/game-bible.pdf"
 type = "pdf"
 title = "Tower Seekers — Game Bible (section-paginated)"
+
+[[outputs]]
+id = "nIm8gGISfgcXXcspAfGMN"
+uri = "file://artifacts/game-client/public/assets/arenas/arena-castle.png"
+type = "image"
+title = "Castle Battlements"
+
+[[outputs]]
+id = "GR3i78ZIL0-_rEvsMi9pW"
+uri = "file://artifacts/game-client/public/assets/arenas/arena-volcano.png"
+type = "image"
+title = "Volcanic Crater"
+
+[[outputs]]
+id = "qrhO9fmy9uJWRi7az4jpc"
+uri = "file://artifacts/game-client/public/assets/arenas/arena-forest.png"
+type = "image"
+title = "Ancient Forest Glade"
