@@ -4,6 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { getUnitDef } from "@/lib/units";
 import type { GridUnit, PlayerAction, TurnEvent, SkillDef } from "@/lib/types";
 import { audioManager } from "@/lib/audio";
+import BattleRenderer from "@/components/BattleRenderer";
 
 // Local sprite map — indexed by unit def.id
 const SPRITE_MAP: Record<string, string> = {
@@ -81,6 +82,7 @@ export default function Battle() {
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   // Pick a random battle background once per mount
   const battleBg = useRef(BATTLE_BACKGROUNDS[Math.floor(Math.random() * BATTLE_BACKGROUNDS.length)]);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   // Start battle music
   useEffect(() => {
@@ -441,10 +443,17 @@ export default function Battle() {
       </div>
 
       {/* Battlefield stage */}
-      <div className="b-stage">
-        <div className="b-arena-bg" style={{ backgroundImage: `url('${battleBg.current}')` }}>
+      <div className="b-stage" ref={stageRef}>
+        <BattleRenderer
+          battleBg={battleBg.current}
+          myUnits={myUnits}
+          enemyUnits={enemyUnits}
+          mySide={state.mySide ?? "A"}
+          flashUnits={flashUnits}
+          stageRef={stageRef}
+        />
+        <div className="b-arena-bg">
           <div className="b-arena-overlay" />
-          <div className="b-bokeh b-bokeh1" /><div className="b-bokeh b-bokeh2" /><div className="b-bokeh b-bokeh3" />
         </div>
         <div className="b-field-wrap">
           <div className="b-battlefield" style={{ width: ENEMY_OFFSET + 4 * STEP, height: BOARD_H }}>
@@ -741,6 +750,7 @@ function UnitToken({
 
   return (
     <div
+      data-unit-id={unit.instanceId}
       className={`b-unit-token${isSelected ? " b-token-sel" : ""}${isKo ? " b-token-ko" : ""}${flashType === "damage" ? " b-token-damage" : ""}${flashType === "attack" ? " b-token-attack" : ""}${flashType === "skill" ? " b-token-skill" : ""}${flashType === "defend" ? " b-token-defend" : ""}${flashType === "wait" ? " b-token-wait" : ""}${isHoveredTarget ? " b-token-hovered-target" : ""}`}
       style={{
         position: "absolute",
@@ -750,7 +760,6 @@ function UnitToken({
         zIndex: isSelected ? 20 : unit.y + 5,
         cursor: isAlly && !isKo ? "pointer" : "default",
         transition: isAnimating ? "left 0.45s ease, top 0.45s ease" : "none",
-        filter: unit.y === 0 ? "blur(0.6px) brightness(0.78)" : unit.y === 1 ? "blur(0.25px) brightness(0.9)" : "none",
       }}
       onClick={onClick}
     >
@@ -760,12 +769,15 @@ function UnitToken({
       )}
 
       {/* Sprite lift wrapper — handles scale/lift independently from idle animation */}
+      {/* The img acts as a layout placeholder; PixiJS renders the actual sprite */}
       <div className={`b-sprite-lift${isSelected ? " b-sprite-lift-sel" : ""}`}>
         <img
+          data-sprite-id={unit.instanceId}
           src={SPRITE_MAP[def.id] ?? "/assets/units/knight-sprite.png"}
           alt={def.name}
-          className={`unit-sprite${isAlly ? "" : " sprite-enemy"}${flashType === "wait" ? " sprite-wait" : " sprite-idle"}`}
+          className={`unit-sprite${flashType === "wait" ? " sprite-wait" : " sprite-idle"}`}
           draggable={false}
+          style={{ opacity: 0 }}
         />
       </div>
 
@@ -834,11 +846,6 @@ function spriteCSS() {
       filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
     }
 
-    /* Enemy tint — cooler hue */
-    .unit-sprite.sprite-enemy {
-      filter: hue-rotate(170deg) saturate(1.4) brightness(1.05) drop-shadow(0 4px 8px rgba(0,0,0,0.6));
-    }
-
     /* Idle breathing bob */
     .unit-sprite.sprite-idle {
       animation: unitIdleBob 2.4s ease-in-out infinite;
@@ -887,15 +894,6 @@ function spriteCSS() {
     @keyframes glowRingPulse {
       from { opacity: 0.6; transform: translateX(-50%) scaleX(1); }
       to   { opacity: 1;   transform: translateX(-50%) scaleX(1.15); }
-    }
-
-    /* Enemy token hover in targeting mode */
-    .b-token-hovered-target .unit-sprite {
-      animation: enemyHoverPulse 0.45s ease-in-out infinite alternate !important;
-    }
-    @keyframes enemyHoverPulse {
-      from { filter: hue-rotate(170deg) saturate(1.4) brightness(1.05) drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
-      to   { filter: hue-rotate(170deg) saturate(2) brightness(1.6) drop-shadow(0 0 16px rgba(255,60,60,1)); }
     }
 
     /* Damage taken flash + shake */
@@ -1035,26 +1033,18 @@ function battleCSS() {
     }
     .b-arena-bg {
       position: absolute; inset: 0;
-      background-size: cover;
-      background-position: center center;
-      background-color: #0a0614;
+      z-index: 1;
+      pointer-events: none;
     }
     .b-arena-overlay {
       position: absolute; inset: 0;
       background:
-        linear-gradient(to bottom, rgba(6,4,16,0.35) 0%, rgba(6,4,16,0.15) 40%, rgba(6,4,16,0.55) 100%),
-        radial-gradient(ellipse 80% 50% at 50% 100%, rgba(6,4,16,0.7) 0%, transparent 70%);
+        linear-gradient(to bottom, rgba(6,4,16,0.25) 0%, rgba(6,4,16,0.08) 40%, rgba(6,4,16,0.45) 100%),
+        radial-gradient(ellipse 80% 50% at 50% 100%, rgba(6,4,16,0.6) 0%, transparent 70%);
     }
-    .b-bokeh {
-      position: absolute; border-radius: 50%;
-      filter: blur(60px); pointer-events: none;
-    }
-    .b-bokeh1 { width:300px; height:200px; background:rgba(80,30,180,0.18); top:-60px; left:10%; }
-    .b-bokeh2 { width:250px; height:150px; background:rgba(20,60,160,0.15); bottom:0; right:5%; }
-    .b-bokeh3 { width:200px; height:200px; background:rgba(180,60,20,0.12); top:20%; right:30%; }
 
     .b-field-wrap {
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
       perspective: 700px;
     }
 

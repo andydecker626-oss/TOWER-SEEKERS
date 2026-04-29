@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@workspace/game-data": "workspace:*",
+    "pixi.js": "^8.18.1",
     "react-router-dom": "^7.14.2",
     "socket.io-client": "^4.8.3"
   }
