@@ -55,6 +55,7 @@ export default function TitleScreen() {
   function handleMode(action: string) {
     if (action === "pvp" || action === "ai") navigate("/lobby");
     if (action === "hub") navigate("/hub");
+    if (action === "sprites") navigate("/sprites");
   }
 
   return (
@@ -163,6 +164,16 @@ export default function TitleScreen() {
               ))}
             </div>
           </div>
+
+          {/* Sprite gallery link */}
+          <button className="wr-sprite-link" onClick={() => handleMode("sprites")}>
+            <span className="wr-sprite-link-icon">🖼</span>
+            <span className="wr-sprite-link-text">
+              <span className="wr-sprite-link-title">Unit Sprite Gallery</span>
+              <span className="wr-sprite-link-sub">Preview all 12 unit sprites &amp; sheets</span>
+            </span>
+            <span className="wr-sprite-link-arrow">›</span>
+          </button>
 
           <div className="wr-season-card">
             <span className="wr-season-icon">🔥</span>
@@ -733,6 +744,69 @@ const CSS = `
     color: rgba(200,180,150,0.65);
     letter-spacing: 0.05em;
     white-space: nowrap;
+  }
+
+  /* Sprite gallery link */
+  .wr-sprite-link {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px,1.2vw,14px);
+    background: linear-gradient(135deg, rgba(80,40,120,0.45), rgba(50,20,80,0.55));
+    border: 1px solid rgba(160,80,240,0.28);
+    border-radius: 12px;
+    padding: clamp(8px,1.1vh,13px) clamp(12px,1.6vw,18px);
+    flex-shrink: 0;
+    cursor: pointer;
+    text-align: left;
+    transition: filter 0.18s, transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    width: 100%;
+  }
+  .wr-sprite-link::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(90deg, transparent, rgba(160,80,240,0.5), transparent);
+    pointer-events: none;
+  }
+  .wr-sprite-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.45);
+    border-color: rgba(160,80,240,0.55);
+    filter: brightness(1.1);
+  }
+  .wr-sprite-link-icon { font-size: clamp(14px,1.6vw,20px); flex-shrink: 0; }
+  .wr-sprite-link-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .wr-sprite-link-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(10px,1.05vw,13px);
+    font-weight: 700;
+    color: rgba(200,160,255,0.9);
+    letter-spacing: 0.05em;
+  }
+  .wr-sprite-link-sub {
+    font-size: clamp(8px,0.75vw,9px);
+    color: rgba(160,120,220,0.5);
+    letter-spacing: 0.04em;
+  }
+  .wr-sprite-link-arrow {
+    font-size: clamp(16px,1.8vw,22px);
+    color: rgba(160,80,240,0.4);
+    font-family: sans-serif;
+    font-weight: 300;
+    flex-shrink: 0;
+    transition: transform 0.15s, color 0.15s;
+  }
+  .wr-sprite-link:hover .wr-sprite-link-arrow {
+    transform: translateX(3px);
+    color: rgba(160,80,240,0.8);
   }
 
   /* Season info card */
