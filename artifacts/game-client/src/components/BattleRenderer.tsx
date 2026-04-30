@@ -43,7 +43,7 @@ const TZ = (row: number) => row * CELL + CELL / 2;
 // ── Camera presets ────────────────────────────────────────────────────────────
 const PRESETS = [
   { name: "Overview",  pos: new THREE.Vector3(CX,    9.0, TOTAL_D + 6.5), look: new THREE.Vector3(CX, 0, CZ - 0.5) },
-  { name: "Ally View", pos: new THREE.Vector3(-4.5,  3.5, TOTAL_D + 5.5), look: new THREE.Vector3(CX + 1, 0.3, CZ) },
+  { name: "Ally View", pos: new THREE.Vector3( 1.5,  4.5, TOTAL_D + 5.5), look: new THREE.Vector3(CX + 1, 0.3, CZ) },
   { name: "Side",      pos: new THREE.Vector3(14.0,  5.5, CZ),            look: new THREE.Vector3(CX, 0, CZ) },
   { name: "Cinematic", pos: new THREE.Vector3(CX,    2.2, TOTAL_D + 9.5), look: new THREE.Vector3(CX, 0.6, CZ) },
   { name: "Aerial",    pos: new THREE.Vector3(CX,   15.5, CZ + 1.5),      look: new THREE.Vector3(CX, 0, CZ) },
