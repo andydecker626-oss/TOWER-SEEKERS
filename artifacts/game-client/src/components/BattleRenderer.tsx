@@ -580,9 +580,9 @@ export default function BattleRenderer({
     const leavesMat = new THREE.MeshLambertMaterial({ color: 0x0e2208 });
     const leavesMatB = new THREE.MeshLambertMaterial({ color: 0x091c06 });
     const TREES: [number, number, number][] = [
-      // Left
-      [-7.5,-2,3.6], [-8.5,0.5,4.4], [-7.8,2.5,3.9], [-8.2,4.5,4.7],
-      [-7.5,6.5,3.3], [-9.0,-0.5,5.2], [-6.8,1.5,3.1], [-9.5,3.5,4.0],
+      // Left (pushed further out so Ally View camera stays clear)
+      [-11.0,-2,3.6], [-12.0,0.5,4.4], [-11.3,2.5,3.9], [-11.7,4.5,4.7],
+      [-11.0,6.5,3.3], [-12.5,-0.5,5.2], [-10.3,1.5,3.1], [-13.0,3.5,4.0],
       // Right
       [16.0,-2,3.6], [17.0,0.5,4.4], [16.3,2.5,3.9], [16.7,4.5,4.7],
       [16.0,6.5,3.3], [17.5,-0.5,5.2], [15.3,1.5,3.1], [18.0,3.5,4.0],
