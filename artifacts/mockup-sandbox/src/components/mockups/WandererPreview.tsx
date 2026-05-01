@@ -2,24 +2,30 @@ import { useState } from "react";
 
 /* ── Animation slots ─────────────────────────────────────────────────────── */
 interface AnimSlot {
-  id:    string;
-  label: string;
-  sub:   string;
-  type:  "base" | "evade" | "buff" | "physical" | "magical";
-  ap?:   number;
+  id:       string;
+  label:    string;
+  sub:      string;
+  type:     "base" | "evade" | "buff" | "physical" | "magical";
+  ap?:      number;
+  featured?: boolean;
+  liveUrl?: string;
 }
 
 const ANIM_SLOTS: AnimSlot[] = [
-  { id: "base-attack",      label: "Base Attack",      sub: "Default melee swing",                          type: "base"     },
-  { id: "evade",            label: "Evade",             sub: "Evasion dodge step",                           type: "evade"    },
-  { id: "feint",            label: "Feint",             sub: "Crit-set stance shift",                        type: "buff",     ap: 1 },
-  { id: "rising-slash",     label: "Rising Slash",      sub: "Upward blade arc",                             type: "physical", ap: 2 },
-  { id: "falling-edge",     label: "Falling Edge",      sub: "Downward combo finisher",                      type: "physical", ap: 2 },
-  { id: "shadow-step",      label: "Shadow Step",       sub: "3-tile teleport + evasion buff",               type: "buff",     ap: 2 },
-  { id: "phantom-strike",   label: "Phantom Strike",    sub: "Teleport-slash, ignores PhysDef",              type: "physical", ap: 3 },
-  { id: "mirage-veil",      label: "Mirage Veil",       sub: "+40% evasion for 4 turns",                     type: "buff",     ap: 4 },
-  { id: "wind-slash",       label: "Wind Slash",        sub: "Blade of wind — 4-tile range",                 type: "magical",  ap: 2 },
-  { id: "arcane-tempest",   label: "Arcane Tempest",    sub: "AoE storm of magical blades (Phantom Stance)", type: "magical",  ap: 6 },
+  {
+    id: "base-attack", label: "Base Attack", sub: "Default melee slash",
+    type: "base", featured: true,
+    liveUrl: "/__mockup/preview/pvp-battler/SwordAttackDemo",
+  },
+  { id: "evade",          label: "Evade",          sub: "Evasion dodge step",                           type: "evade"                },
+  { id: "feint",          label: "Feint",          sub: "Crit-set stance shift",                        type: "buff",     ap: 1      },
+  { id: "rising-slash",   label: "Rising Slash",   sub: "Upward blade arc",                             type: "physical", ap: 2      },
+  { id: "falling-edge",   label: "Falling Edge",   sub: "Downward combo finisher",                      type: "physical", ap: 2      },
+  { id: "shadow-step",    label: "Shadow Step",    sub: "3-tile teleport + evasion buff",               type: "buff",     ap: 2      },
+  { id: "phantom-strike", label: "Phantom Strike", sub: "Teleport-slash, ignores PhysDef",              type: "physical", ap: 3      },
+  { id: "mirage-veil",    label: "Mirage Veil",    sub: "+40% evasion for 4 turns",                     type: "buff",     ap: 4      },
+  { id: "wind-slash",     label: "Wind Slash",     sub: "Blade of wind — 4-tile range",                 type: "magical",  ap: 2      },
+  { id: "arcane-tempest", label: "Arcane Tempest", sub: "AoE storm of magical blades (Phantom Stance)", type: "magical",  ap: 6      },
 ];
 
 const TYPE_META: Record<AnimSlot["type"], { color: string; label: string; icon: string }> = {
@@ -30,10 +36,44 @@ const TYPE_META: Record<AnimSlot["type"], { color: string; label: string; icon: 
   magical:  { color: "#aa44ff", label: "Magical",  icon: "✦" },
 };
 
+/* ── Featured live slot (Base Attack) ───────────────────────────────────── */
+function FeaturedSlot({ slot }: { slot: AnimSlot }) {
+  const meta = TYPE_META[slot.type];
+  return (
+    <div
+      className="gif-slot gif-slot--featured"
+      style={{ "--c": meta.color } as React.CSSProperties}
+    >
+      {/* Type pill */}
+      <div className="gif-slot-pill">
+        <span className="gif-slot-pill-icon">{meta.icon}</span>
+        <span className="gif-slot-pill-label">{meta.label}</span>
+        <span className="gif-slot-live-badge">● LIVE</span>
+      </div>
+
+      {/* Embedded live animation */}
+      <div className="gif-frame gif-frame--featured">
+        <iframe
+          src={slot.liveUrl}
+          className="gif-live-iframe"
+          title={slot.label}
+        />
+      </div>
+
+      {/* Info */}
+      <div className="gif-slot-info">
+        <span className="gif-slot-name">{slot.label}</span>
+        <span className="gif-slot-sub">{slot.sub}</span>
+      </div>
+      <div className="gif-slot-status loaded">✓ Live preview</div>
+    </div>
+  );
+}
+
 /* ── GIF Placeholder tile ────────────────────────────────────────────────── */
 function GifSlot({ slot, onUpload }: { slot: AnimSlot; onUpload: (id: string, url: string) => void }) {
-  const [gifUrl, setGifUrl]   = useState<string | null>(null);
-  const [hover,  setHover]    = useState(false);
+  const [gifUrl, setGifUrl] = useState<string | null>(null);
+  const [hover,  setHover ] = useState(false);
   const meta = TYPE_META[slot.type];
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -51,14 +91,12 @@ function GifSlot({ slot, onUpload }: { slot: AnimSlot; onUpload: (id: string, ur
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {/* Type pill */}
       <div className="gif-slot-pill">
         <span className="gif-slot-pill-icon">{meta.icon}</span>
         <span className="gif-slot-pill-label">{meta.label}</span>
         {slot.ap != null && <span className="gif-slot-ap">{slot.ap} AP</span>}
       </div>
 
-      {/* GIF display or placeholder */}
       <div className="gif-frame">
         {gifUrl ? (
           <img src={gifUrl} alt={slot.label} className="gif-img" />
@@ -69,16 +107,12 @@ function GifSlot({ slot, onUpload }: { slot: AnimSlot; onUpload: (id: string, ur
             <div className="gif-placeholder-sub">drop or click to load</div>
           </div>
         )}
-
-        {/* Hover overlay to swap */}
         {gifUrl && hover && (
           <label className="gif-swap-overlay">
             <input type="file" accept=".gif,image/gif" onChange={handleFile} style={{ display: "none" }} />
             ↺ Replace
           </label>
         )}
-
-        {/* Click to upload when empty */}
         {!gifUrl && (
           <label className="gif-upload-label">
             <input type="file" accept=".gif,image/gif" onChange={handleFile} style={{ display: "none" }} />
@@ -86,13 +120,10 @@ function GifSlot({ slot, onUpload }: { slot: AnimSlot; onUpload: (id: string, ur
         )}
       </div>
 
-      {/* Labels */}
       <div className="gif-slot-info">
         <span className="gif-slot-name">{slot.label}</span>
         <span className="gif-slot-sub">{slot.sub}</span>
       </div>
-
-      {/* Status indicator */}
       <div className={`gif-slot-status ${gifUrl ? "loaded" : "pending"}`}>
         {gifUrl ? "✓ Loaded" : "Pending"}
       </div>
@@ -109,16 +140,23 @@ export default function WandererPreview() {
     setUploads(prev => ({ ...prev, [id]: url }));
   }
 
-  const loadedCount = Object.keys(uploads).length;
+  const featuredSlot  = ANIM_SLOTS.find(s => s.featured)!;
+  const regularSlots  = ANIM_SLOTS.filter(s => !s.featured);
+
+  const loadedCount = Object.keys(uploads).length + 1;
   const totalCount  = ANIM_SLOTS.length;
 
   const types: Array<AnimSlot["type"] | "all"> = ["all", "base", "evade", "physical", "magical", "buff"];
-  const visible = filter === "all" ? ANIM_SLOTS : ANIM_SLOTS.filter(s => s.type === filter);
+
+  const visibleRegular = filter === "all"
+    ? regularSlots
+    : regularSlots.filter(s => s.type === filter);
+
+  const showFeatured = filter === "all" || filter === "base";
 
   return (
     <div className="wp-root">
       <style>{CSS}</style>
-
       <div className="wp-bg" />
 
       {/* Header */}
@@ -134,15 +172,12 @@ export default function WandererPreview() {
             {loadedCount} / {totalCount} animations loaded
           </div>
           <div className="wp-progress-track">
-            <div
-              className="wp-progress-fill"
-              style={{ width: `${(loadedCount / totalCount) * 100}%` }}
-            />
+            <div className="wp-progress-fill" style={{ width: `${(loadedCount / totalCount) * 100}%` }} />
           </div>
         </div>
 
         <div className="wp-header-note">
-          Click any slot to load a .gif
+          Click any slot to load a .gif · Base Attack is live
         </div>
       </div>
 
@@ -162,12 +197,12 @@ export default function WandererPreview() {
 
       {/* Grid */}
       <div className="wp-grid">
-        {visible.map(slot => (
-          <GifSlot
-            key={slot.id}
-            slot={slot}
-            onUpload={handleUpload}
-          />
+        {/* Full-width featured Base Attack tile */}
+        {showFeatured && <FeaturedSlot slot={featuredSlot} />}
+
+        {/* Regular GIF placeholder slots */}
+        {visibleRegular.map(slot => (
+          <GifSlot key={slot.id} slot={slot} onUpload={handleUpload} />
         ))}
       </div>
     </div>
@@ -217,95 +252,48 @@ const CSS = `
     flex-wrap: wrap;
   }
 
-  .wp-header-identity {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex-shrink: 0;
-  }
+  .wp-header-identity { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
   .wp-class-badge {
-    font-size: 8px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: rgba(68,204,204,0.7);
-    background: rgba(68,204,204,0.1);
-    border: 1px solid rgba(68,204,204,0.25);
-    border-radius: 6px;
-    padding: 2px 8px;
-    width: fit-content;
+    font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: rgba(68,204,204,0.7); background: rgba(68,204,204,0.1);
+    border: 1px solid rgba(68,204,204,0.25); border-radius: 6px;
+    padding: 2px 8px; width: fit-content;
   }
   .wp-unit-name {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: #f0e0a0;
-    letter-spacing: 0.06em;
-    line-height: 1.1;
+    font-family: 'Cinzel Decorative', serif; font-size: 22px;
+    font-weight: 700; color: #f0e0a0; letter-spacing: 0.06em; line-height: 1.1;
   }
   .wp-unit-sub {
-    font-size: 8px;
-    letter-spacing: 0.16em;
-    color: rgba(200,180,140,0.4);
-    text-transform: uppercase;
+    font-size: 8px; letter-spacing: 0.16em;
+    color: rgba(200,180,140,0.4); text-transform: uppercase;
   }
 
-  .wp-progress {
-    flex: 1;
-    min-width: 140px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .wp-progress-label {
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    color: rgba(240,192,64,0.5);
-    text-transform: uppercase;
-  }
-  .wp-progress-track {
-    height: 4px;
-    background: rgba(255,255,255,0.07);
-    border-radius: 4px;
-    overflow: hidden;
-  }
+  .wp-progress { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
+  .wp-progress-label { font-size: 9px; letter-spacing: 0.1em; color: rgba(240,192,64,0.5); text-transform: uppercase; }
+  .wp-progress-track { height: 4px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
   .wp-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #44cccc, #f0c040);
-    border-radius: 4px;
-    transition: width 0.4s ease;
+    border-radius: 4px; transition: width 0.4s ease;
   }
 
-  .wp-header-note {
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    color: rgba(180,160,120,0.35);
-    text-align: right;
-    flex-shrink: 0;
-    font-style: italic;
-  }
+  .wp-header-note { font-size: 8px; letter-spacing: 0.1em; color: rgba(180,160,120,0.35); text-align: right; flex-shrink: 0; font-style: italic; }
 
   /* ── Filter bar ── */
   .wp-filter-bar {
-    position: relative;
-    z-index: 10;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    position: relative; z-index: 10;
+    display: flex; gap: 6px; flex-wrap: wrap;
     padding: 12px 28px;
     background: rgba(4,2,10,0.4);
     border-bottom: 1px solid rgba(240,192,64,0.07);
   }
   .wp-filter-btn {
-    padding: 4px 14px;
-    border-radius: 20px;
+    padding: 4px 14px; border-radius: 20px;
     border: 1px solid rgba(255,255,255,0.12);
     background: rgba(14,8,28,0.7);
     color: rgba(200,170,100,0.5);
-    font-family: 'Cinzel', serif;
-    font-size: 8px;
-    letter-spacing: 0.12em;
-    cursor: pointer;
-    transition: all 0.15s;
+    font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 0.12em;
+    cursor: pointer; transition: all 0.15s;
   }
   .wp-filter-btn:hover {
     border-color: color-mix(in srgb, var(--fc) 40%, transparent);
@@ -320,9 +308,7 @@ const CSS = `
 
   /* ── Grid ── */
   .wp-grid {
-    position: relative;
-    z-index: 10;
-    flex: 1;
+    position: relative; z-index: 10; flex: 1;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
@@ -346,149 +332,118 @@ const CSS = `
     transform: translateY(-2px);
   }
 
+  /* Featured slot spans full width, no hover lift */
+  .gif-slot--featured {
+    grid-column: 1 / -1;
+    transform: none !important;
+    border-color: color-mix(in srgb, var(--c) 30%, rgba(240,192,64,0.15));
+    box-shadow: 0 0 32px color-mix(in srgb, var(--c) 10%, transparent);
+  }
+  .gif-slot--featured:hover {
+    border-color: color-mix(in srgb, var(--c) 55%, transparent);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 32px color-mix(in srgb, var(--c) 18%, transparent);
+    transform: none;
+  }
+
   /* Type pill */
   .gif-slot-pill {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    display: flex; align-items: center; gap: 5px;
     padding: 7px 12px 5px;
   }
-  .gif-slot-pill-icon {
-    font-size: 10px;
-    color: var(--c);
-    opacity: 0.8;
-  }
+  .gif-slot-pill-icon { font-size: 10px; color: var(--c); opacity: 0.8; }
   .gif-slot-pill-label {
-    font-size: 7px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--c);
-    opacity: 0.75;
-    flex: 1;
+    font-size: 7px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--c); opacity: 0.75; flex: 1;
   }
   .gif-slot-ap {
-    font-size: 7px;
-    color: rgba(240,192,64,0.55);
-    letter-spacing: 0.08em;
-    background: rgba(240,192,64,0.08);
-    border: 1px solid rgba(240,192,64,0.15);
-    border-radius: 10px;
-    padding: 1px 6px;
+    font-size: 7px; color: rgba(240,192,64,0.55); letter-spacing: 0.08em;
+    background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.15);
+    border-radius: 10px; padding: 1px 6px;
+  }
+  .gif-slot-live-badge {
+    font-size: 7px; letter-spacing: 0.14em;
+    color: color-mix(in srgb, var(--c) 90%, #fff);
+    background: color-mix(in srgb, var(--c) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+    border-radius: 10px; padding: 1px 7px;
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.7; }
+    50%       { opacity: 1;   }
   }
 
   /* Frame area */
   .gif-frame {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    background:
-      linear-gradient(180deg, rgba(8,4,20,0.8) 0%, rgba(5,3,14,0.95) 100%);
+    position: relative; width: 100%; aspect-ratio: 4 / 3;
+    background: linear-gradient(180deg, rgba(8,4,20,0.8) 0%, rgba(5,3,14,0.95) 100%);
     overflow: hidden;
     border-top: 1px solid color-mix(in srgb, var(--c) 12%, transparent);
     border-bottom: 1px solid color-mix(in srgb, var(--c) 12%, transparent);
     cursor: pointer;
   }
 
+  /* Featured frame: 16:9 for the battle scene */
+  .gif-frame--featured {
+    aspect-ratio: 16 / 9;
+    cursor: default;
+  }
+
+  /* Live iframe — fills the frame exactly */
+  .gif-live-iframe {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: none; background: #040610;
+    display: block;
+  }
+
   .gif-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    image-rendering: pixelated;
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; image-rendering: pixelated;
   }
 
   /* Empty placeholder */
   .gif-placeholder {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    pointer-events: none;
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; pointer-events: none;
   }
   .gif-placeholder-grid {
-    position: absolute;
-    inset: 0;
+    position: absolute; inset: 0;
     background-image:
       linear-gradient(color-mix(in srgb, var(--c) 5%, transparent) 1px, transparent 1px),
       linear-gradient(90deg, color-mix(in srgb, var(--c) 5%, transparent) 1px, transparent 1px);
     background-size: 24px 24px;
   }
   .gif-placeholder-icon {
-    position: relative;
-    font-family: 'Cinzel', serif;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
+    position: relative; font-family: 'Cinzel', serif;
+    font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
     color: color-mix(in srgb, var(--c) 20%, transparent);
   }
   .gif-placeholder-sub {
-    position: relative;
-    font-size: 8px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(200,170,100,0.18);
+    position: relative; font-size: 8px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(200,170,100,0.18);
   }
 
-  /* Upload label (invisible full-cover) */
-  .gif-upload-label {
-    position: absolute;
-    inset: 0;
-    cursor: pointer;
-  }
-
-  /* Swap overlay on hover when loaded */
+  .gif-upload-label { position: absolute; inset: 0; cursor: pointer; }
   .gif-swap-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(4,2,10,0.65);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    color: rgba(240,192,64,0.8);
-    cursor: pointer;
-    backdrop-filter: blur(2px);
-    text-transform: uppercase;
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(4,2,10,0.65); font-size: 10px; letter-spacing: 0.14em;
+    color: rgba(240,192,64,0.8); cursor: pointer;
+    backdrop-filter: blur(2px); text-transform: uppercase;
   }
 
-  /* Info strip */
-  .gif-slot-info {
-    padding: 8px 12px 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .gif-slot-name {
-    font-size: 11px;
-    font-weight: 700;
-    color: #f0e0a0;
-    letter-spacing: 0.06em;
-  }
-  .gif-slot-sub {
-    font-size: 8px;
-    color: rgba(180,160,120,0.45);
-    letter-spacing: 0.04em;
-    line-height: 1.4;
-  }
+  .gif-slot-info { padding: 8px 12px 4px; display: flex; flex-direction: column; gap: 2px; }
+  .gif-slot-name { font-size: 11px; font-weight: 700; color: #f0e0a0; letter-spacing: 0.06em; }
+  .gif-slot-sub  { font-size: 8px; color: rgba(180,160,120,0.45); letter-spacing: 0.04em; line-height: 1.4; }
 
-  /* Status */
   .gif-slot-status {
-    margin: 4px 12px 10px;
-    font-size: 7px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 10px;
-    width: fit-content;
+    margin: 4px 12px 10px; font-size: 7px; letter-spacing: 0.16em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 10px; width: fit-content;
   }
   .gif-slot-status.pending {
-    color: rgba(200,170,100,0.3);
-    background: rgba(200,170,100,0.06);
+    color: rgba(200,170,100,0.3); background: rgba(200,170,100,0.06);
     border: 1px solid rgba(200,170,100,0.1);
   }
   .gif-slot-status.loaded {

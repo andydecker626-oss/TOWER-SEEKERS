@@ -194,12 +194,12 @@ export function SwordAttackDemo() {
       <div className="scene-glow" />
       <section className="hud top-hud">
         <div>
-          <p>Prototype Animation</p>
-          <h1>4v4 Tactical Sword Strike</h1>
+          <p>Wanderer · Fell-Duelist</p>
+          <h1>Base Attack</h1>
         </div>
         <div className="turn-card">
           <span>Turn 03</span>
-          <strong>Astra uses Slash</strong>
+          <strong>Wanderer uses Slash</strong>
         </div>
       </section>
       <BattleGrid />

@@ -2,11 +2,11 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/WandererPreview.tsx": () => import("../components/mockups/WandererPreview.tsx"),
+  "./components/mockups/pvp-battler/SwordAttackDemo.tsx": () => import("../components/mockups/pvp-battler/SwordAttackDemo.tsx"),
   "./components/mockups/main-menu/MainMenuComparison.tsx": () => import("../components/mockups/main-menu/MainMenuComparison.tsx"),
   "./components/mockups/main-menu/VariantA.tsx": () => import("../components/mockups/main-menu/VariantA.tsx"),
   "./components/mockups/main-menu/VariantB.tsx": () => import("../components/mockups/main-menu/VariantB.tsx"),
   "./components/mockups/main-menu/VariantC.tsx": () => import("../components/mockups/main-menu/VariantC.tsx"),
-  "./components/mockups/pvp-battler/SwordAttackDemo.tsx": () => import("../components/mockups/pvp-battler/SwordAttackDemo.tsx"),
   "./components/mockups/pvp-battler-copy-IxMmBxPx/PvpBattlerCopyIxMmBxPx.tsx": () => import("../components/mockups/pvp-battler-copy-IxMmBxPx/PvpBattlerCopyIxMmBxPx.tsx"),
   "./components/mockups/pvp-battler-copy-k549xEOY/PvpBattlerCopyK549xEOY.tsx": () => import("../components/mockups/pvp-battler-copy-k549xEOY/PvpBattlerCopyK549xEOY.tsx"),
   "./components/mockups/wanderer-sprite/WandererSprite.tsx": () => import("../components/mockups/wanderer-sprite/WandererSprite.tsx")
