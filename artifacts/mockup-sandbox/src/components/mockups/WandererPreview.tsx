@@ -1,458 +1,521 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-/* ── Animation slots ─────────────────────────────────────────────────────── */
-interface AnimSlot {
-  id:       string;
-  label:    string;
-  sub:      string;
-  type:     "base" | "evade" | "buff" | "physical" | "magical";
-  ap?:      number;
-  featured?: boolean;
-  liveUrl?: string;
+// Derive image URL relative to the app's base path; guard against missing trailing slash
+const _base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+const SHEET_URL = `${_base}/images/wanderer-sprite.png`;
+
+// Sprite sheet: 1536×1024px, single horizontal row of 12 frames
+// Each frame: 128×1024px  (FRAME_W = 1536/12 = 128, FRAME_H = 1024)
+const SHEET_W = 1536;
+const SHEET_H = 1024;
+const FRAME_W = 128;
+const FRAME_H = 1024;
+const COLS = 12;
+const TOTAL_FRAMES = 12;
+
+// Crop the frame to the art band: character head starts ~row 280, feet at ~row 560.
+// Allow 50px above head for attack disc effects that fly up from body level.
+// CROP_Y: first visible row of art (0-indexed from frame top)
+// CROP_H: height of the art window
+const CROP_Y = 230;                   // ~50px above where the character head begins
+const CROP_H = 380;                   // rows 230–610: captures idle poses + attack disc
+
+// 2 leftmost frames are idle; remaining 10 are attack
+const IDLE_FRAMES = [0, 1];
+const ATTACK_FRAMES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+const IDLE_FPS = 4;
+const ATTACK_FPS = 10;
+
+// Display scale: sized so the unit looks like an in-game game unit
+const DISPLAY_SCALE = 0.65;
+const DISPLAY_W = Math.round(FRAME_W * DISPLAY_SCALE);   // ~83px
+const DISPLAY_H = Math.round(CROP_H * DISPLAY_SCALE);    // ~247px — cropped height
+// Full sheet dimensions at display scale (used for backgroundSize)
+const SHEET_DS_W = Math.round(SHEET_W * DISPLAY_SCALE); // 998px
+const SHEET_DS_H = Math.round(SHEET_H * DISPLAY_SCALE); // 666px
+// Y offset to shift the background up so we see the art band, not blank top
+const CROP_DS_Y = Math.round(CROP_Y * DISPLAY_SCALE);   // ~150px
+
+// Thumbnail strip: 16px wide, proportional to art band
+const THUMB_W = 16;
+const THUMB_SCALE = THUMB_W / FRAME_W;                   // 0.125
+const THUMB_H = Math.round(CROP_H * THUMB_SCALE);        // ~48px
+const THUMB_SHEET_W = Math.round(SHEET_W * THUMB_SCALE); // 192px
+const THUMB_SHEET_H = Math.round(SHEET_H * THUMB_SCALE); // 128px
+const THUMB_CROP_Y = Math.round(CROP_Y * THUMB_SCALE);   // ~29px
+
+export function WandererPreview() {
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [isAttacking, setIsAttacking] = useState(false);
+
+  const frameRef = useRef(0);
+  const attackRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const tick = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    if (attackRef.current) {
+      const nextIdx = frameRef.current + 1;
+      if (nextIdx >= ATTACK_FRAMES.length) {
+        attackRef.current = false;
+        setIsAttacking(false);
+        frameRef.current = 0;
+        setFrameIndex(IDLE_FRAMES[0]);
+        timerRef.current = setTimeout(tick, 1000 / IDLE_FPS);
+      } else {
+        frameRef.current = nextIdx;
+        setFrameIndex(ATTACK_FRAMES[nextIdx]);
+        timerRef.current = setTimeout(tick, 1000 / ATTACK_FPS);
+      }
+    } else {
+      const nextIdx = (frameRef.current + 1) % IDLE_FRAMES.length;
+      frameRef.current = nextIdx;
+      setFrameIndex(IDLE_FRAMES[nextIdx]);
+      timerRef.current = setTimeout(tick, 1000 / IDLE_FPS);
+    }
+  }, []);
+
+  useEffect(() => {
+    frameRef.current = 0;
+    setFrameIndex(IDLE_FRAMES[0]);
+    timerRef.current = setTimeout(tick, 1000 / IDLE_FPS);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [tick]);
+
+  function handleAttack() {
+    if (attackRef.current) return;
+    attackRef.current = true;
+    setIsAttacking(true);
+    frameRef.current = 0;
+    setFrameIndex(ATTACK_FRAMES[0]);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(tick, 1000 / ATTACK_FPS);
+  }
+
+  // Background-position: move horizontally for frame column, and vertically to
+  // skip CROP_Y blank pixels at the top of each 1024px frame.
+  function bgPos(frameIdx: number): string {
+    const bpX = -(frameIdx * DISPLAY_W);
+    const bpY = -CROP_DS_Y;
+    return `${bpX}px ${bpY}px`;
+  }
+
+  function thumbBgPos(frameIdx: number): string {
+    const bpX = -(frameIdx * THUMB_W);
+    const bpY = -THUMB_CROP_Y;
+    return `${bpX}px ${bpY}px`;
+  }
+
+  return (
+    <div style={S.shell}>
+      <style>{css}</style>
+
+      <div style={S.bgGlow} />
+      <div style={S.bgFloor} />
+
+      <div style={S.inner}>
+        <div style={S.header}>
+          <span style={S.badge}>Sprite Preview</span>
+          <h1 style={S.title}>Wanderer</h1>
+          <p style={S.subtitle}>Dark-robed energy mage · Battle stance</p>
+        </div>
+
+        <div style={{ ...S.stage, minHeight: DISPLAY_H + 40 }}>
+          <div style={S.pillarL} />
+          <div style={S.pillarR} />
+          <div style={S.groundGlow} />
+
+          <div style={S.spriteWrap}>
+            <div style={S.shadow} />
+            <div
+              className={isAttacking ? "sprite-attack" : "sprite-idle"}
+              style={{
+                width: DISPLAY_W,
+                height: DISPLAY_H,
+                backgroundImage: `url(${SHEET_URL})`,
+                backgroundSize: `${SHEET_DS_W}px ${SHEET_DS_H}px`,
+                backgroundPosition: bgPos(frameIndex),
+                backgroundRepeat: "no-repeat",
+                imageRendering: "pixelated",
+                overflow: "hidden",
+                position: "relative",
+                zIndex: 2,
+                filter: isAttacking
+                  ? "drop-shadow(0 0 20px rgba(80,160,255,0.9)) drop-shadow(0 0 8px rgba(140,200,255,1))"
+                  : "drop-shadow(0 0 10px rgba(100,140,255,0.4)) drop-shadow(1px 0 0 rgba(0,0,0,0.9)) drop-shadow(-1px 0 0 rgba(0,0,0,0.9))",
+                transition: "filter 0.15s ease",
+              }}
+            />
+            {isAttacking && <div className="energy-ring" style={S.energyRing} />}
+          </div>
+
+          <div style={S.groundLine} />
+        </div>
+
+        <div style={S.controlRow}>
+          <div style={S.statPill}>
+            <span style={S.pillLabel}>Mode</span>
+            <span style={S.pillValue}>{isAttacking ? "⚡ Attack" : "◈ Idle"}</span>
+          </div>
+          <div style={S.btnGroup}>
+            <button style={S.idleBtn} disabled>◈ Idle</button>
+            <button
+              style={{
+                ...S.attackBtn,
+                opacity: isAttacking ? 0.5 : 1,
+                cursor: isAttacking ? "not-allowed" : "pointer",
+              }}
+              onClick={handleAttack}
+              disabled={isAttacking}
+            >
+              ⚡ Attack
+            </button>
+          </div>
+          <div style={S.statPill}>
+            <span style={S.pillLabel}>Frame</span>
+            <span style={S.pillValue}>{frameIndex + 1} / {TOTAL_FRAMES}</span>
+          </div>
+        </div>
+
+        <div style={S.strip}>
+          {Array.from({ length: TOTAL_FRAMES }, (_, i) => {
+            const isIdle = IDLE_FRAMES.includes(i);
+            const isActive = i === frameIndex;
+            return (
+              <div
+                key={i}
+                style={{
+                  ...S.thumb,
+                  width: THUMB_W,
+                  height: THUMB_H,
+                  outline: isActive
+                    ? "2px solid rgba(120,200,255,0.9)"
+                    : isIdle
+                    ? "1px solid rgba(80,160,255,0.35)"
+                    : "1px solid rgba(255,255,255,0.08)",
+                  background: isActive
+                    ? "rgba(80,160,255,0.18)"
+                    : "rgba(255,255,255,0.03)",
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    width: THUMB_W,
+                    height: THUMB_H,
+                    backgroundImage: `url(${SHEET_URL})`,
+                    backgroundSize: `${THUMB_SHEET_W}px ${THUMB_SHEET_H}px`,
+                    backgroundPosition: thumbBgPos(i),
+                    backgroundRepeat: "no-repeat",
+                    imageRendering: "pixelated",
+                    overflow: "hidden",
+                  }}
+                />
+                <span style={S.thumbNum}>{i + 1}</span>
+                {isIdle && <span style={S.idleTag}>idle</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-const ANIM_SLOTS: AnimSlot[] = [
-  {
-    id: "base-attack", label: "Base Attack", sub: "Default melee slash",
-    type: "base", featured: true,
-    liveUrl: "/__mockup/preview/pvp-battler/SwordAttackDemo",
+const S: Record<string, React.CSSProperties> = {
+  shell: {
+    position: "relative",
+    width: "100%",
+    minHeight: "100vh",
+    overflow: "auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    background:
+      "linear-gradient(180deg, #040610 0%, #07091c 40%, #0c0b1e 70%, #060412 100%)",
+    color: "#f0eaf8",
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
-  { id: "evade",          label: "Evade",          sub: "Evasion dodge step",                           type: "evade"                },
-  { id: "feint",          label: "Feint",          sub: "Crit-set stance shift",                        type: "buff",     ap: 1      },
-  { id: "rising-slash",   label: "Rising Slash",   sub: "Upward blade arc",                             type: "physical", ap: 2      },
-  { id: "falling-edge",   label: "Falling Edge",   sub: "Downward combo finisher",                      type: "physical", ap: 2      },
-  { id: "shadow-step",    label: "Shadow Step",    sub: "3-tile teleport + evasion buff",               type: "buff",     ap: 2      },
-  { id: "phantom-strike", label: "Phantom Strike", sub: "Teleport-slash, ignores PhysDef",              type: "physical", ap: 3      },
-  { id: "mirage-veil",    label: "Mirage Veil",    sub: "+40% evasion for 4 turns",                     type: "buff",     ap: 4      },
-  { id: "wind-slash",     label: "Wind Slash",     sub: "Blade of wind — 4-tile range",                 type: "magical",  ap: 2      },
-  { id: "arcane-tempest", label: "Arcane Tempest", sub: "AoE storm of magical blades (Phantom Stance)", type: "magical",  ap: 6      },
-];
-
-const TYPE_META: Record<AnimSlot["type"], { color: string; label: string; icon: string }> = {
-  base:     { color: "#f0c040", label: "Base",     icon: "⚔" },
-  evade:    { color: "#44cccc", label: "Evade",    icon: "💨" },
-  buff:     { color: "#44cccc", label: "Buff",     icon: "✦" },
-  physical: { color: "#ff8844", label: "Physical", icon: "🗡" },
-  magical:  { color: "#aa44ff", label: "Magical",  icon: "✦" },
+  bgGlow: {
+    position: "absolute",
+    left: "50%",
+    top: "45%",
+    transform: "translate(-50%, -50%)",
+    width: 500,
+    height: 320,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(ellipse at 50% 50%, rgba(60,100,255,0.11) 0%, rgba(100,60,200,0.07) 45%, transparent 75%)",
+    filter: "blur(12px)",
+    pointerEvents: "none",
+  },
+  bgFloor: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "35%",
+    background:
+      "linear-gradient(180deg, transparent 0%, rgba(12,8,30,0.75) 55%, rgba(5,3,14,0.98) 100%)",
+    borderTop: "1px solid rgba(100,80,200,0.06)",
+    pointerEvents: "none",
+  },
+  inner: {
+    position: "relative",
+    zIndex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    maxWidth: 720,
+    padding: "20px 20px",
+  },
+  header: {
+    textAlign: "center",
+    lineHeight: 1,
+  },
+  badge: {
+    display: "inline-block",
+    fontSize: 9,
+    fontWeight: 800,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "rgba(130,165,255,0.7)",
+    background: "rgba(80,100,255,0.09)",
+    border: "1px solid rgba(80,120,255,0.18)",
+    borderRadius: 4,
+    padding: "2px 9px",
+    marginBottom: 6,
+  },
+  title: {
+    margin: 0,
+    fontSize: 34,
+    fontWeight: 800,
+    letterSpacing: "-0.03em",
+    fontFamily: "Cinzel, Georgia, serif",
+    color: "#f0eaf8",
+    textShadow: "0 0 36px rgba(100,140,255,0.28), 0 6px 20px rgba(0,0,0,0.5)",
+  },
+  subtitle: {
+    margin: "4px 0 0",
+    fontSize: 10,
+    color: "rgba(190,180,220,0.5)",
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+  },
+  stage: {
+    position: "relative",
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  pillarL: {
+    position: "absolute",
+    left: "10%",
+    top: "5%",
+    bottom: 0,
+    width: 4,
+    background:
+      "linear-gradient(180deg, transparent, rgba(70,50,150,0.2), rgba(70,50,150,0.12))",
+    borderRadius: 2,
+  },
+  pillarR: {
+    position: "absolute",
+    right: "10%",
+    top: "5%",
+    bottom: 0,
+    width: 4,
+    background:
+      "linear-gradient(180deg, transparent, rgba(70,50,150,0.2), rgba(70,50,150,0.12))",
+    borderRadius: 2,
+  },
+  groundGlow: {
+    position: "absolute",
+    bottom: 20,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: 180,
+    height: 24,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(ellipse, rgba(80,120,255,0.18), transparent 70%)",
+    filter: "blur(6px)",
+  },
+  spriteWrap: {
+    position: "relative",
+    zIndex: 2,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  shadow: {
+    position: "absolute",
+    bottom: -4,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: Math.round(DISPLAY_W * 0.8),
+    height: 8,
+    borderRadius: "50%",
+    background: "rgba(0,0,0,0.55)",
+    filter: "blur(5px)",
+    zIndex: 0,
+  },
+  energyRing: {
+    position: "absolute",
+    bottom: 0,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: DISPLAY_W * 2,
+    height: DISPLAY_W * 2,
+    borderRadius: "50%",
+    border: "2px solid rgba(80,160,255,0.45)",
+    zIndex: 0,
+    pointerEvents: "none",
+  },
+  groundLine: {
+    width: 240,
+    height: 1,
+    background:
+      "linear-gradient(90deg, transparent, rgba(90,130,255,0.28), transparent)",
+    marginTop: 6,
+  },
+  controlRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    width: "100%",
+  },
+  statPill: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 10,
+    padding: "6px 16px",
+    minWidth: 72,
+  },
+  pillLabel: {
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: "rgba(190,180,220,0.5)",
+  },
+  pillValue: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "rgba(195,215,255,0.92)",
+  },
+  btnGroup: {
+    display: "flex",
+    gap: 10,
+  },
+  idleBtn: {
+    padding: "8px 20px",
+    borderRadius: 10,
+    border: "1px solid rgba(100,140,255,0.28)",
+    background: "rgba(80,100,255,0.14)",
+    color: "rgba(170,195,255,0.75)",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    cursor: "default",
+    fontFamily: "inherit",
+  },
+  attackBtn: {
+    padding: "8px 20px",
+    borderRadius: 10,
+    border: "1px solid rgba(80,160,255,0.5)",
+    background:
+      "linear-gradient(135deg, rgba(55,120,255,0.38), rgba(100,60,220,0.38))",
+    color: "rgba(175,220,255,0.95)",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    boxShadow:
+      "0 0 18px rgba(80,140,255,0.22), inset 0 1px 0 rgba(255,255,255,0.1)",
+    transition: "opacity 0.15s ease",
+  },
+  strip: {
+    display: "flex",
+    gap: 4,
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    padding: "8px 12px",
+    background: "rgba(0,0,0,0.28)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 10,
+    maxWidth: "100%",
+    scrollbarWidth: "none",
+    alignItems: "center",
+  },
+  thumb: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    borderRadius: 5,
+    flexShrink: 0,
+    overflow: "hidden",
+    position: "relative",
+    transition: "outline 0.1s ease",
+  },
+  thumbNum: {
+    position: "absolute",
+    bottom: 1,
+    left: "50%",
+    transform: "translateX(-50%)",
+    fontSize: 6,
+    color: "rgba(190,180,220,0.4)",
+    fontWeight: 700,
+    lineHeight: 1,
+  },
+  idleTag: {
+    position: "absolute",
+    top: 1,
+    left: "50%",
+    transform: "translateX(-50%)",
+    fontSize: 5,
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    color: "rgba(120,180,255,0.9)",
+    background: "rgba(60,100,255,0.22)",
+    borderRadius: 2,
+    padding: "0 2px",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  },
 };
 
-/* ── Featured live slot (Base Attack) ───────────────────────────────────── */
-function FeaturedSlot({ slot }: { slot: AnimSlot }) {
-  const meta = TYPE_META[slot.type];
-  return (
-    <div
-      className="gif-slot gif-slot--featured"
-      style={{ "--c": meta.color } as React.CSSProperties}
-    >
-      {/* Type pill */}
-      <div className="gif-slot-pill">
-        <span className="gif-slot-pill-icon">{meta.icon}</span>
-        <span className="gif-slot-pill-label">{meta.label}</span>
-        <span className="gif-slot-live-badge">● LIVE</span>
-      </div>
-
-      {/* Embedded live animation */}
-      <div className="gif-frame gif-frame--featured">
-        <iframe
-          src={slot.liveUrl}
-          className="gif-live-iframe"
-          title={slot.label}
-        />
-      </div>
-
-      {/* Info */}
-      <div className="gif-slot-info">
-        <span className="gif-slot-name">{slot.label}</span>
-        <span className="gif-slot-sub">{slot.sub}</span>
-      </div>
-      <div className="gif-slot-status loaded">✓ Live preview</div>
-    </div>
-  );
-}
-
-/* ── GIF Placeholder tile ────────────────────────────────────────────────── */
-function GifSlot({ slot, onUpload }: { slot: AnimSlot; onUpload: (id: string, url: string) => void }) {
-  const [gifUrl, setGifUrl] = useState<string | null>(null);
-  const [hover,  setHover ] = useState(false);
-  const meta = TYPE_META[slot.type];
-
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setGifUrl(url);
-    onUpload(slot.id, url);
+const css = `
+  @keyframes idleBob {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-5px); }
   }
-
-  return (
-    <div
-      className="gif-slot"
-      style={{ "--c": meta.color } as React.CSSProperties}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div className="gif-slot-pill">
-        <span className="gif-slot-pill-icon">{meta.icon}</span>
-        <span className="gif-slot-pill-label">{meta.label}</span>
-        {slot.ap != null && <span className="gif-slot-ap">{slot.ap} AP</span>}
-      </div>
-
-      <div className="gif-frame">
-        {gifUrl ? (
-          <img src={gifUrl} alt={slot.label} className="gif-img" />
-        ) : (
-          <div className="gif-placeholder">
-            <div className="gif-placeholder-grid" />
-            <div className="gif-placeholder-icon">GIF</div>
-            <div className="gif-placeholder-sub">drop or click to load</div>
-          </div>
-        )}
-        {gifUrl && hover && (
-          <label className="gif-swap-overlay">
-            <input type="file" accept=".gif,image/gif" onChange={handleFile} style={{ display: "none" }} />
-            ↺ Replace
-          </label>
-        )}
-        {!gifUrl && (
-          <label className="gif-upload-label">
-            <input type="file" accept=".gif,image/gif" onChange={handleFile} style={{ display: "none" }} />
-          </label>
-        )}
-      </div>
-
-      <div className="gif-slot-info">
-        <span className="gif-slot-name">{slot.label}</span>
-        <span className="gif-slot-sub">{slot.sub}</span>
-      </div>
-      <div className={`gif-slot-status ${gifUrl ? "loaded" : "pending"}`}>
-        {gifUrl ? "✓ Loaded" : "Pending"}
-      </div>
-    </div>
-  );
-}
-
-/* ── Page ────────────────────────────────────────────────────────────────── */
-export default function WandererPreview() {
-  const [uploads, setUploads] = useState<Record<string, string>>({});
-  const [filter, setFilter]   = useState<AnimSlot["type"] | "all">("all");
-
-  function handleUpload(id: string, url: string) {
-    setUploads(prev => ({ ...prev, [id]: url }));
+  @keyframes attackJolt {
+    0%   { transform: translateX(0) scale(1); }
+    20%  { transform: translateX(10px) scale(1.06); }
+    40%  { transform: translateX(-5px) scale(0.97); }
+    100% { transform: translateX(0) scale(1); }
   }
-
-  const featuredSlot  = ANIM_SLOTS.find(s => s.featured)!;
-  const regularSlots  = ANIM_SLOTS.filter(s => !s.featured);
-
-  const loadedCount = Object.keys(uploads).length + 1;
-  const totalCount  = ANIM_SLOTS.length;
-
-  const types: Array<AnimSlot["type"] | "all"> = ["all", "base", "evade", "physical", "magical", "buff"];
-
-  const visibleRegular = filter === "all"
-    ? regularSlots
-    : regularSlots.filter(s => s.type === filter);
-
-  const showFeatured = filter === "all" || filter === "base";
-
-  return (
-    <div className="wp-root">
-      <style>{CSS}</style>
-      <div className="wp-bg" />
-
-      {/* Header */}
-      <div className="wp-header">
-        <div className="wp-header-identity">
-          <div className="wp-class-badge">Fell-Duelist</div>
-          <div className="wp-unit-name">Wanderer</div>
-          <div className="wp-unit-sub">Animation Preview Workbench</div>
-        </div>
-
-        <div className="wp-progress">
-          <div className="wp-progress-label">
-            {loadedCount} / {totalCount} animations loaded
-          </div>
-          <div className="wp-progress-track">
-            <div className="wp-progress-fill" style={{ width: `${(loadedCount / totalCount) * 100}%` }} />
-          </div>
-        </div>
-
-        <div className="wp-header-note">
-          Click any slot to load a .gif · Base Attack is live
-        </div>
-      </div>
-
-      {/* Filter bar */}
-      <div className="wp-filter-bar">
-        {types.map(t => (
-          <button
-            key={t}
-            className={`wp-filter-btn${filter === t ? " active" : ""}`}
-            style={{ "--fc": t === "all" ? "#f0c040" : TYPE_META[t as AnimSlot["type"]]?.color ?? "#f0c040" } as React.CSSProperties}
-            onClick={() => setFilter(t)}
-          >
-            {t === "all" ? "All" : TYPE_META[t as AnimSlot["type"]].label}
-          </button>
-        ))}
-      </div>
-
-      {/* Grid */}
-      <div className="wp-grid">
-        {/* Full-width featured Base Attack tile */}
-        {showFeatured && <FeaturedSlot slot={featuredSlot} />}
-
-        {/* Regular GIF placeholder slots */}
-        {visibleRegular.map(slot => (
-          <GifSlot key={slot.id} slot={slot} onUpload={handleUpload} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── CSS ─────────────────────────────────────────────────────────────────── */
-const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  .wp-root {
-    min-height: 100vh;
-    width: 100%;
-    position: relative;
-    background: #07040f;
-    font-family: 'Cinzel', serif;
-    color: #e8d8b0;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
+  @keyframes energyPulse {
+    0%   { opacity: 0.9; transform: translateX(-50%) scale(0.3); }
+    65%  { opacity: 0.5; transform: translateX(-50%) scale(1.15); }
+    100% { opacity: 0; transform: translateX(-50%) scale(1.6); }
   }
-
-  .wp-bg {
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(30,10,80,0.55) 0%, transparent 65%),
-      linear-gradient(180deg, #07040f 0%, #0a0618 50%, #07040f 100%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* ── Header ── */
-  .wp-header {
-    position: relative;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    padding: 16px 28px;
-    border-bottom: 1px solid rgba(240,192,64,0.14);
-    background: rgba(5,3,12,0.7);
-    backdrop-filter: blur(10px);
-    flex-shrink: 0;
-    flex-wrap: wrap;
-  }
-
-  .wp-header-identity { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
-  .wp-class-badge {
-    font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase;
-    color: rgba(68,204,204,0.7); background: rgba(68,204,204,0.1);
-    border: 1px solid rgba(68,204,204,0.25); border-radius: 6px;
-    padding: 2px 8px; width: fit-content;
-  }
-  .wp-unit-name {
-    font-family: 'Cinzel Decorative', serif; font-size: 22px;
-    font-weight: 700; color: #f0e0a0; letter-spacing: 0.06em; line-height: 1.1;
-  }
-  .wp-unit-sub {
-    font-size: 8px; letter-spacing: 0.16em;
-    color: rgba(200,180,140,0.4); text-transform: uppercase;
-  }
-
-  .wp-progress { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
-  .wp-progress-label { font-size: 9px; letter-spacing: 0.1em; color: rgba(240,192,64,0.5); text-transform: uppercase; }
-  .wp-progress-track { height: 4px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
-  .wp-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #44cccc, #f0c040);
-    border-radius: 4px; transition: width 0.4s ease;
-  }
-
-  .wp-header-note { font-size: 8px; letter-spacing: 0.1em; color: rgba(180,160,120,0.35); text-align: right; flex-shrink: 0; font-style: italic; }
-
-  /* ── Filter bar ── */
-  .wp-filter-bar {
-    position: relative; z-index: 10;
-    display: flex; gap: 6px; flex-wrap: wrap;
-    padding: 12px 28px;
-    background: rgba(4,2,10,0.4);
-    border-bottom: 1px solid rgba(240,192,64,0.07);
-  }
-  .wp-filter-btn {
-    padding: 4px 14px; border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(14,8,28,0.7);
-    color: rgba(200,170,100,0.5);
-    font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 0.12em;
-    cursor: pointer; transition: all 0.15s;
-  }
-  .wp-filter-btn:hover {
-    border-color: color-mix(in srgb, var(--fc) 40%, transparent);
-    color: color-mix(in srgb, var(--fc) 80%, #fff);
-  }
-  .wp-filter-btn.active {
-    background: color-mix(in srgb, var(--fc) 15%, transparent);
-    border-color: color-mix(in srgb, var(--fc) 55%, transparent);
-    color: var(--fc);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--fc) 12%, transparent);
-  }
-
-  /* ── Grid ── */
-  .wp-grid {
-    position: relative; z-index: 10; flex: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
-    padding: 24px 28px;
-    align-content: start;
-  }
-
-  /* ── GIF Slot ── */
-  .gif-slot {
-    background: linear-gradient(180deg, rgba(18,10,38,0.92) 0%, rgba(10,5,22,0.96) 100%);
-    border: 1px solid color-mix(in srgb, var(--c) 18%, rgba(240,192,64,0.1));
-    border-radius: 14px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
-  }
-  .gif-slot:hover {
-    border-color: color-mix(in srgb, var(--c) 45%, transparent);
-    box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 18px color-mix(in srgb, var(--c) 14%, transparent);
-    transform: translateY(-2px);
-  }
-
-  /* Featured slot spans full width, no hover lift */
-  .gif-slot--featured {
-    grid-column: 1 / -1;
-    transform: none !important;
-    border-color: color-mix(in srgb, var(--c) 30%, rgba(240,192,64,0.15));
-    box-shadow: 0 0 32px color-mix(in srgb, var(--c) 10%, transparent);
-  }
-  .gif-slot--featured:hover {
-    border-color: color-mix(in srgb, var(--c) 55%, transparent);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 32px color-mix(in srgb, var(--c) 18%, transparent);
-    transform: none;
-  }
-
-  /* Type pill */
-  .gif-slot-pill {
-    display: flex; align-items: center; gap: 5px;
-    padding: 7px 12px 5px;
-  }
-  .gif-slot-pill-icon { font-size: 10px; color: var(--c); opacity: 0.8; }
-  .gif-slot-pill-label {
-    font-size: 7px; letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--c); opacity: 0.75; flex: 1;
-  }
-  .gif-slot-ap {
-    font-size: 7px; color: rgba(240,192,64,0.55); letter-spacing: 0.08em;
-    background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.15);
-    border-radius: 10px; padding: 1px 6px;
-  }
-  .gif-slot-live-badge {
-    font-size: 7px; letter-spacing: 0.14em;
-    color: color-mix(in srgb, var(--c) 90%, #fff);
-    background: color-mix(in srgb, var(--c) 15%, transparent);
-    border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
-    border-radius: 10px; padding: 1px 7px;
-    animation: livePulse 2s ease-in-out infinite;
-  }
-  @keyframes livePulse {
-    0%, 100% { opacity: 0.7; }
-    50%       { opacity: 1;   }
-  }
-
-  /* Frame area */
-  .gif-frame {
-    position: relative; width: 100%; aspect-ratio: 4 / 3;
-    background: linear-gradient(180deg, rgba(8,4,20,0.8) 0%, rgba(5,3,14,0.95) 100%);
-    overflow: hidden;
-    border-top: 1px solid color-mix(in srgb, var(--c) 12%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--c) 12%, transparent);
-    cursor: pointer;
-  }
-
-  /* Featured frame: 16:9 for the battle scene */
-  .gif-frame--featured {
-    aspect-ratio: 16 / 9;
-    cursor: default;
-  }
-
-  /* Live iframe — fills the frame exactly */
-  .gif-live-iframe {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    border: none; background: #040610;
-    display: block;
-  }
-
-  .gif-img {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: contain; image-rendering: pixelated;
-  }
-
-  /* Empty placeholder */
-  .gif-placeholder {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 6px; pointer-events: none;
-  }
-  .gif-placeholder-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(color-mix(in srgb, var(--c) 5%, transparent) 1px, transparent 1px),
-      linear-gradient(90deg, color-mix(in srgb, var(--c) 5%, transparent) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
-  .gif-placeholder-icon {
-    position: relative; font-family: 'Cinzel', serif;
-    font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
-    color: color-mix(in srgb, var(--c) 20%, transparent);
-  }
-  .gif-placeholder-sub {
-    position: relative; font-size: 8px; letter-spacing: 0.14em;
-    text-transform: uppercase; color: rgba(200,170,100,0.18);
-  }
-
-  .gif-upload-label { position: absolute; inset: 0; cursor: pointer; }
-  .gif-swap-overlay {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(4,2,10,0.65); font-size: 10px; letter-spacing: 0.14em;
-    color: rgba(240,192,64,0.8); cursor: pointer;
-    backdrop-filter: blur(2px); text-transform: uppercase;
-  }
-
-  .gif-slot-info { padding: 8px 12px 4px; display: flex; flex-direction: column; gap: 2px; }
-  .gif-slot-name { font-size: 11px; font-weight: 700; color: #f0e0a0; letter-spacing: 0.06em; }
-  .gif-slot-sub  { font-size: 8px; color: rgba(180,160,120,0.45); letter-spacing: 0.04em; line-height: 1.4; }
-
-  .gif-slot-status {
-    margin: 4px 12px 10px; font-size: 7px; letter-spacing: 0.16em;
-    text-transform: uppercase; padding: 3px 8px; border-radius: 10px; width: fit-content;
-  }
-  .gif-slot-status.pending {
-    color: rgba(200,170,100,0.3); background: rgba(200,170,100,0.06);
-    border: 1px solid rgba(200,170,100,0.1);
-  }
-  .gif-slot-status.loaded {
-    color: color-mix(in srgb, var(--c) 80%, #fff);
-    background: color-mix(in srgb, var(--c) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
-  }
-
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: rgba(10,5,20,0.4); }
-  ::-webkit-scrollbar-thumb { background: rgba(68,204,204,0.2); border-radius: 2px; }
+  .sprite-idle  { animation: idleBob 1.9s ease-in-out infinite; }
+  .sprite-attack { animation: attackJolt 0.25s ease-out; }
+  .energy-ring  { animation: energyPulse 0.75s ease-out forwards !important; }
 `;
