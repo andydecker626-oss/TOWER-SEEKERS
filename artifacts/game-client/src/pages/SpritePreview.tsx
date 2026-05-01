@@ -17,7 +17,7 @@ const UNITS: UnitEntry[] = [
   { id: "lancer",    name: "Lancer",    cls: "Lancer",        icon: "🏇",  color: "#ff9944" },
   {
     id: "wanderer", name: "Wanderer", cls: "Fell-Duelist", icon: "🌪", color: "#44cccc",
-    mockup: "/__mockup/preview/wanderer-sprite/WandererSprite",
+    mockup: "/__mockup/preview/WandererPreview",
   },
   { id: "rogue",     name: "Rogue",     cls: "Fell-Duelist",  icon: "🗡",  color: "#aaaaaa" },
   { id: "archer",    name: "Archer",    cls: "Rune-Archer",   icon: "🏹",  color: "#44cc66" },
