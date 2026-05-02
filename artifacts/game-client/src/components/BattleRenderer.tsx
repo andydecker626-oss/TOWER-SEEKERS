@@ -27,6 +27,22 @@ const ENEMY_D = 0x881111;
 const WEAPON  = 0x888877;
 const GOLD    = 0xd4aa33;
 
+// ── Wanderer sprite-sheet constants ──────────────────────────────────────────
+const WDR_COLS         = 12;
+const WDR_FRAME_W      = 128;
+const WDR_FRAME_H      = 1024;
+const WDR_CROP_Y       = 230;
+const WDR_CROP_H       = 380;
+const WDR_IDLE_FRAMES  = [0, 1];
+const WDR_ATTACK_FRAMES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const WDR_IDLE_FPS     = 4;
+const WDR_ATTACK_FPS   = 10;
+// Sprite display size in world units — matches other units visually
+const WDR_SPR_H        = 0.85;
+const WDR_SPR_W        = WDR_SPR_H * (WDR_FRAME_W / WDR_CROP_H);
+// Three.js UV: origin is bottom-left, so offset_y skips the blank top band
+const WDR_UV_OFFSET_Y  = (WDR_FRAME_H - WDR_CROP_Y - WDR_CROP_H) / WDR_FRAME_H; // ≈ 0.404
+
 // Tile highlight colours
 const HL_MOVE  = 0x44cc55;
 const HL_ATCK  = 0xff4422;
@@ -69,6 +85,18 @@ interface CharInfo {
   group:     THREE.Group;
   armorMat:  THREE.MeshLambertMaterial;
   detailMat: THREE.MeshLambertMaterial;
+}
+
+interface WandererAnim {
+  sprite:       THREE.Sprite;
+  mat:          THREE.SpriteMaterial;
+  tex:          THREE.Texture;
+  isEnemy:      boolean;
+  frameIndex:   number;
+  isAttacking:  boolean;
+  attackSeqIdx: number;
+  lastMs:       number;
+  prevFlash:    string | undefined;
 }
 
 function mk(
@@ -338,6 +366,14 @@ export default function BattleRenderer({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     el.appendChild(renderer.domElement);
+
+    // ── Wanderer sprite texture (loaded once, cloned per unit) ───────────────
+    const _base = (import.meta.env.BASE_URL as string)?.replace(/\/$/, "") ?? "";
+    const wandererBaseTex = new THREE.TextureLoader().load(
+      `${_base}/assets/units/wanderer-sprite.png`,
+    );
+    wandererBaseTex.wrapS = THREE.ClampToEdgeWrapping;
+    wandererBaseTex.wrapT = THREE.ClampToEdgeWrapping;
 
     const scene = new THREE.Scene();
     // Warm amber-orange fog matches the horizon — fills any distant void
@@ -643,17 +679,60 @@ export default function BattleRenderer({
     const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 });
 
     interface UnitRecord {
-      group:     THREE.Group;
-      shadow:    THREE.Mesh;
-      armorMat:  THREE.MeshLambertMaterial;
-      detailMat: THREE.MeshLambertMaterial;
-      isEnemy:   boolean;
+      group:         THREE.Group;
+      shadow:        THREE.Mesh;
+      armorMat:      THREE.MeshLambertMaterial;
+      detailMat:     THREE.MeshLambertMaterial;
+      isEnemy:       boolean;
+      wandererAnim?: WandererAnim;
     }
     const unitMeshes = new Map<string, UnitRecord>();
+
+    // ── Wanderer sprite UV helper ────────────────────────────────────────────
+    function setWandererFrame(wa: WandererAnim, sheetFrame: number) {
+      // Negative repeat.x flips the sprite horizontally for enemy units
+      const repeatX = wa.isEnemy ? -(1 / WDR_COLS) : (1 / WDR_COLS);
+      wa.tex.repeat.set(repeatX, WDR_CROP_H / WDR_FRAME_H);
+      // When flipped (enemy), offset.x must shift by one frame-width so the
+      // visible region lands on the correct frame column
+      const offsetX = wa.isEnemy
+        ? (sheetFrame + 1) / WDR_COLS
+        : sheetFrame / WDR_COLS;
+      wa.tex.offset.set(offsetX, WDR_UV_OFFSET_Y);
+      wa.tex.needsUpdate = true;
+      wa.frameIndex = sheetFrame;
+    }
 
     function applyUnitColors(rec: UnitRecord, instanceId: string) {
       const { selectedId, queued, flashUnits } = live.current;
       const flash = flashUnits[instanceId];
+
+      // ── Wanderer sprite path ──────────────────────────────────────────────
+      if (rec.wandererAnim) {
+        const wa = rec.wandererAnim;
+        // Trigger attack animation when the actor flash fires
+        if (flash === "attack" && wa.prevFlash !== "attack" && !wa.isAttacking) {
+          wa.isAttacking  = true;
+          wa.attackSeqIdx = 0;
+          wa.lastMs       = performance.now();
+          setWandererFrame(wa, WDR_ATTACK_FRAMES[0]);
+        }
+        wa.prevFlash = flash;
+
+        // Apply colour tint to sprite material
+        if (flash === "damage") {
+          wa.mat.color.setRGB(1, 0.45, 0.45);      // red-white flash
+        } else if (flash === "ko") {
+          wa.mat.color.setRGB(0.12, 0.08, 0.12);   // almost black
+        } else if (instanceId === selectedId) {
+          wa.mat.color.setRGB(0.55, 0.88, 1.0);    // blue-white selection
+        } else {
+          wa.mat.color.setRGB(1, 1, 1);             // natural colours
+        }
+        return;
+      }
+
+      // ── 3-D geometry path ────────────────────────────────────────────────
       if (flash === "damage") {
         rec.armorMat.color.setHex(0xffffff);
         rec.detailMat.color.setHex(0xdddddd);
@@ -697,18 +776,56 @@ export default function BattleRenderer({
 
         let rec = unitMeshes.get(unit.instanceId);
         if (!rec) {
-          const built = buildCharacterFor(unit.defId, unit.isEnemy);
-          built.group.traverse(c => {
-            if (c instanceof THREE.Mesh) {
-              c.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
-            }
-          });
-          built.group.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
-
           const shadow = new THREE.Mesh(shadowGeo, shadowMat.clone());
           shadow.rotation.x = -Math.PI / 2;
-          scene.add(built.group); scene.add(shadow);
-          rec = { group: built.group, shadow, armorMat: built.armorMat, detailMat: built.detailMat, isEnemy: unit.isEnemy };
+
+          if (unit.defId === "wanderer") {
+            // ── Wanderer: pixel-art sprite sheet ─────────────────────────────
+            const tex = wandererBaseTex.clone();
+            tex.needsUpdate = true;
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(WDR_SPR_W, WDR_SPR_H, 1);
+            // Centre the sprite so its base aligns with the tile surface
+            sprite.position.set(0, WDR_SPR_H / 2 + 0.05, 0);
+            sprite.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
+
+            const group = new THREE.Group();
+            group.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
+            group.add(sprite);
+
+            const wa: WandererAnim = {
+              sprite, mat, tex,
+              isEnemy:      unit.isEnemy,
+              frameIndex:   WDR_IDLE_FRAMES[0],
+              isAttacking:  false,
+              attackSeqIdx: 0,
+              lastMs:       0,
+              prevFlash:    undefined,
+            };
+            setWandererFrame(wa, WDR_IDLE_FRAMES[0]);
+
+            scene.add(group); scene.add(shadow);
+            rec = {
+              group, shadow,
+              armorMat:  new THREE.MeshLambertMaterial(),
+              detailMat: new THREE.MeshLambertMaterial(),
+              isEnemy:   unit.isEnemy,
+              wandererAnim: wa,
+            };
+          } else {
+            // ── All other units: procedural 3-D geometry ──────────────────────
+            const built = buildCharacterFor(unit.defId, unit.isEnemy);
+            built.group.traverse(c => {
+              if (c instanceof THREE.Mesh) {
+                c.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
+              }
+            });
+            built.group.userData = { type: "unit", instanceId: unit.instanceId, isEnemy: unit.isEnemy };
+            scene.add(built.group); scene.add(shadow);
+            rec = { group: built.group, shadow, armorMat: built.armorMat, detailMat: built.detailMat, isEnemy: unit.isEnemy };
+          }
+
           unitMeshes.set(unit.instanceId, rec);
         }
         rec.group.position.set(wx, PLAT_Y + TILE_H, wz);
@@ -791,6 +908,31 @@ export default function BattleRenderer({
       });
       // Water shimmer
       waterMat.color.setHSL(0.60, 0.68, 0.13 + Math.sin(tick * 0.033) * 0.04);
+
+      // ── Wanderer sprite frame advancement ─────────────────────────────────
+      const nowMs = performance.now();
+      for (const [, rec] of unitMeshes) {
+        const wa = rec.wandererAnim;
+        if (!wa) continue;
+        const fps = wa.isAttacking ? WDR_ATTACK_FPS : WDR_IDLE_FPS;
+        if (nowMs - wa.lastMs < 1000 / fps) continue;
+        wa.lastMs = nowMs;
+        if (wa.isAttacking) {
+          const nextSeqIdx = wa.attackSeqIdx + 1;
+          if (nextSeqIdx >= WDR_ATTACK_FRAMES.length) {
+            wa.isAttacking  = false;
+            wa.attackSeqIdx = 0;
+            setWandererFrame(wa, WDR_IDLE_FRAMES[0]);
+          } else {
+            wa.attackSeqIdx = nextSeqIdx;
+            setWandererFrame(wa, WDR_ATTACK_FRAMES[nextSeqIdx]);
+          }
+        } else {
+          const idlePos = WDR_IDLE_FRAMES.indexOf(wa.frameIndex);
+          const nextIdleIdx = (idlePos >= 0 ? idlePos + 1 : 0) % WDR_IDLE_FRAMES.length;
+          setWandererFrame(wa, WDR_IDLE_FRAMES[nextIdleIdx]);
+        }
+      }
 
       syncUnits();
       syncHighlights();
