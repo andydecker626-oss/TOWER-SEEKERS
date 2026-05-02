@@ -458,13 +458,13 @@ const HUB_CSS = `
     background: rgba(6,4,14,0.35);
   }
   .back-btn {
-    font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase;
-    background: transparent; color: rgba(240,192,64,0.7);
-    border: 1px solid rgba(240,192,64,0.25); border-radius: 6px;
-    padding: 0.45rem 0.9rem; cursor: pointer; transition: all 0.15s;
-    white-space: nowrap;
+    font-family: 'Cinzel', serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    background: rgba(14,8,32,0.96); color: #f0c040;
+    border: 1.5px solid rgba(240,192,64,0.55); border-radius: 8px;
+    padding: 0.68rem 1.4rem; cursor: pointer; transition: all 0.18s;
+    white-space: nowrap; box-shadow: 0 2px 14px rgba(240,192,64,0.15);
   }
-  .back-btn:hover { color: #f0c040; border-color: rgba(240,192,64,0.55); background: rgba(240,192,64,0.07); }
+  .back-btn:hover { color: #fff8d6; border-color: rgba(240,192,64,0.9); background: rgba(240,192,64,0.13); box-shadow: 0 4px 22px rgba(240,192,64,0.28); }
   .hub-title-wrap { flex: 1; }
   .hub-title {
     font-family: 'Cinzel Decorative', serif; font-size: 2rem; font-weight: 700;
@@ -667,7 +667,7 @@ export default function GatheringHub() {
       <div className="hub-backdrop-overlay" />
 
       <header className="hub-header">
-        <button className="back-btn" onClick={() => navigate("/lobby")}>← Lobby</button>
+        <button className="back-btn" onClick={() => navigate("/warroom")}>← War Room</button>
         <div className="hub-title-wrap">
           <h1 className="hub-title">Gathering Hub</h1>
           <p className="hub-subtitle">Party Builder</p>

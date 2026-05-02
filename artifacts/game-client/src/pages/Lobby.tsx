@@ -374,6 +374,32 @@ export default function Lobby() {
           border-color: rgba(240,192,64,0.38);
           background: rgba(240,192,64,0.05);
         }
+        .war-room-btn {
+          font-family: 'Cinzel', serif;
+          font-size: 1.1rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          background: rgba(14,8,32,0.96);
+          color: #f0c040;
+          border: 1.5px solid rgba(240,192,64,0.55);
+          border-radius: 8px;
+          padding: 0.68rem 1.4rem;
+          cursor: pointer;
+          transition: all 0.18s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          white-space: nowrap;
+          box-shadow: 0 2px 14px rgba(240,192,64,0.15);
+        }
+        .war-room-btn:hover {
+          color: #fff8d6;
+          border-color: rgba(240,192,64,0.9);
+          background: rgba(240,192,64,0.13);
+          box-shadow: 0 4px 22px rgba(240,192,64,0.28);
+        }
       `}</style>
 
       <div className="lobby-title-bg" />
@@ -381,6 +407,12 @@ export default function Lobby() {
       <div className="lobby-stars" />
 
       <div className="lobby-content">
+        <div style={{ width: "100%", display: "flex", justifyContent: "flex-start" }}>
+          <button className="war-room-btn" onClick={() => navigate("/warroom")}>
+            ← War Room
+          </button>
+        </div>
+
         <div className="lobby-logo">
           <h1 className="lobby-title">Tower Seekers</h1>
           <p className="lobby-subtitle">Turn-Based PvP Battler</p>

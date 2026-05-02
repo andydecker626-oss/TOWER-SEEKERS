@@ -15,6 +15,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Auth**: Clerk (Replit-managed, `@clerk/react` + `@clerk/express`)
 
 ## Key Commands
 
@@ -37,12 +38,32 @@ The main game is **Tower Seekers**, a 2-player online PvP turn-based grid unit b
 - Full game state machine: waiting → preselection → placement → battle → gameover
 - Damage formula: Pokémon-style at Level 11 (`floor(6.4 * Power * Atk / Def / 50 + 2)`)
 - Turn resolution: simultaneous action submission, speed-order execution
+- Clerk auth middleware via `@clerk/express` — `src/middlewares/clerkProxyMiddleware.ts`
+- Player profile endpoint: `GET /api/player/me` (requires Clerk auth)
 
 **Client** (`artifacts/game-client`):
 - React + Vite, served at `/` (port 18508)
 - State management: `src/context/SocketContext.tsx` (useReducer + Socket.io)
 - Unit data mirrored from server: `src/lib/units.ts`, `src/lib/types.ts`
-- 5 screens: Lobby, PreSelection, Placement, Battle, GameOver
+- Auth: Clerk (`@clerk/react`), `<ClerkProvider>` in `App.tsx`
+- Tailwind v4 (`@tailwindcss/vite` with `optimize: false` for Clerk themes compat)
+
+### App Launch Flow
+
+1. **Intro Sequence** (`src/components/IntroSequence.tsx`) — plays once per tab session:
+   - Altamentum logo splash (fade in 1s → hold 2.5s → fade out 1s) — logo at `public/assets/altamentum-logo.png`
+   - Copyright screen ("© 2026 Seekers Franchise", 2.5s hold)
+   - Session flag in `sessionStorage` prevents replaying on hot reloads
+2. **Title Screen** (`src/pages/TitleScreen.tsx`) — simplified cinematic: castle panorama bg, Tower Seekers logo, two buttons: "Login to Tower Seekers" (opens Clerk SignIn modal) and "Settings". If already signed in → auto-redirect to `/warroom`.
+3. **War Room** (`src/pages/WarRoom.tsx`) — main hub placeholder at `/warroom`. Shows player avatar/username from Clerk, and 4 nav buttons: Quick PvP, Practice vs AI, Gathering Hub, Settings. Protected route (requires auth).
+
+### Route Guard
+
+Any route beyond `/` requires Clerk authentication. Unauthenticated users hitting protected routes are redirected to `/`.
+
+### Database Schema
+
+- `players` table (`lib/db/src/schema/players.ts`): `id`, `clerkUserId`, `username`, `avatarUrl`, `createdAt`, `updatedAt`, `wins`, `losses`
 
 ### Game Flow
 

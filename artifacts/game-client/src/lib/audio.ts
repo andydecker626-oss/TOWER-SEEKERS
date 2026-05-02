@@ -1,34 +1,29 @@
-export type TrackId = "title" | "hub" | "battle";
+export type SynthTrackId = "title" | "hub" | "battle";
+export type TrackId = SynthTrackId | "skyforge";
 
 // ── Frequency constants ──────────────────────────────────────────────────────
-// Bass register
 const A1=55, B1=61.74, C2=65.41, D2=73.42, E2=82.41, F2=87.31, G2=98, A2=110, B2=123.47;
 const C3=130.81, D3=146.83, E3=164.81, F3=174.61, G3=196, A3=220, Bb2=116.54, Bb3=233.08;
 const F1=43.65, Bb1=58.27, E1=41.20;
-// Melody register
 const D4=293.66, E4=329.63, F4=349.23, G4=392, A4=440, Bb4=466.16, B4=493.88;
 const C5=523.25, D5=587.33, E5=659.25, F5=698.46, G5=783.99, A5=880;
 
-type Chord    = [number[], number];        // [freqs, beats]
-type MNote    = [number,   number];        // [freq,  beats]
-type PercChar = "K" | "S" | "H" | "_";    // kick / snare / hihat / rest
+type Chord    = [number[], number];
+type MNote    = [number,   number];
+type PercChar = "K" | "S" | "H" | "_";
 
 interface Track {
   bpm:          number;
   chords:       Chord[];
   melody:       MNote[];
-  melodyType?:  OscillatorType; // default "sine"
-  melodyVol?:   number;         // default 0.09
-  chordCutoff?: number;         // lowpass cutoff Hz, default 900
-  bassLine?:    MNote[];        // staccato bass, square wave
-  perc?:        PercChar[];     // flat 16th-note percussion array
+  melodyType?:  OscillatorType;
+  melodyVol?:   number;
+  chordCutoff?: number;
+  bassLine?:    MNote[];
+  perc?:        PercChar[];
 }
 
-// ── Track definitions ────────────────────────────────────────────────────────
-
-const TRACKS: Record<TrackId, Track> = {
-
-  // ── Title: slow, majestic D minor ──
+const TRACKS: Record<SynthTrackId, Track> = {
   title: {
     bpm: 68,
     chords: [
@@ -44,8 +39,6 @@ const TRACKS: Record<TrackId, Track> = {
       [E5,2],[G5,1],[A5,1],[G5,2],[F5,2],
     ],
   },
-
-  // ── Hub: upbeat, warm C major ──
   hub: {
     bpm: 96,
     chords: [
@@ -61,46 +54,41 @@ const TRACKS: Record<TrackId, Track> = {
       [A4,0.5],[C5,0.5],[F5,1],[E5,0.5],[C5,0.5],[A4,1],
     ],
   },
-
-  // ── Battle: Andalusian cadence, driving percussion ──
-  // D minor descending: Dm → C → Bb → Am  (168 BPM, 8-beat loop)
   battle: {
     bpm: 168,
     chordCutoff: 1600,
     melodyType: "square",
     melodyVol: 0.045,
     chords: [
-      [[D2, A2, D3, F3], 2],    // Dm
-      [[C2, G2, C3, E3], 2],    // C
-      [[Bb1, F2, Bb2, D3], 2],  // Bb
-      [[A1, E2, A2, C3], 2],    // Am (V minor — dark, unresolved)
+      [[D2, A2, D3, F3], 2],
+      [[C2, G2, C3, E3], 2],
+      [[Bb1, F2, Bb2, D3], 2],
+      [[A1, E2, A2, C3], 2],
     ],
-    // Driving 16th-note runs in D natural minor
     melody: [
-      // Over Dm (2 beats)
       [D5,0.25],[F5,0.25],[A5,0.5],[G5,0.25],[F5,0.25],[E5,0.5],
-      // Over C (2 beats)
       [G5,0.25],[E5,0.25],[C5,0.5],[A5,0.25],[G5,0.25],[E5,0.5],
-      // Over Bb (2 beats)
       [F5,0.25],[D5,0.25],[Bb4,0.5],[F5,0.25],[G5,0.25],[F5,0.5],
-      // Over Am (2 beats)
       [E5,0.25],[C5,0.25],[A4,0.5],[E5,0.25],[D5,0.25],[E5,0.5],
     ],
-    // Staccato 8th-note bass ostinato (root + 5th alternation)
     bassLine: [
-      [D3,0.5],[A2,0.5], [D3,0.5],[A2,0.5],  // Dm
-      [C3,0.5],[G2,0.5], [C3,0.5],[G2,0.5],  // C
-      [Bb2,0.5],[F2,0.5],[Bb2,0.5],[F2,0.5], // Bb
-      [A2,0.5],[E2,0.5], [A2,0.5],[E2,0.5],  // Am
+      [D3,0.5],[A2,0.5], [D3,0.5],[A2,0.5],
+      [C3,0.5],[G2,0.5], [C3,0.5],[G2,0.5],
+      [Bb2,0.5],[F2,0.5],[Bb2,0.5],[F2,0.5],
+      [A2,0.5],[E2,0.5], [A2,0.5],[E2,0.5],
     ],
-    // 8 beats × 4 sixteenth notes = 32 slots
-    // Pattern: 4-on-the-floor kick, snare on 2 & 4, 8th-note hi-hats
-    //     1    e    +    a      2    e    +    a      3    e    +    a      4    e    +    a
     perc: [
-      "K", "_", "H", "_",   "S", "_", "H", "_",   "K", "_", "H", "_",   "S", "_", "H", "_",  // bar 1
-      "K", "_", "H", "_",   "S", "_", "H", "_",   "K", "K", "H", "_",   "S", "H", "K", "H",  // bar 2 (fill)
+      "K", "_", "H", "_",   "S", "_", "H", "_",   "K", "_", "H", "_",   "S", "_", "H", "_",
+      "K", "_", "H", "_",   "S", "_", "H", "_",   "K", "K", "H", "_",   "S", "H", "K", "H",
     ],
   },
+};
+
+// File-backed tracks (MP3 served from /assets/)
+const FILE_TRACK_GAIN = 0.25; // MP3 tracks play at 25% of master volume (75% quieter)
+
+const FILE_TRACKS: Partial<Record<TrackId, string>> = {
+  skyforge: "/assets/skyforge-siege.mp3",
 };
 
 // ── AudioManager ─────────────────────────────────────────────────────────────
@@ -112,10 +100,9 @@ class AudioManager {
   private bufSrcs:      AudioBufferSourceNode[] = [];
   private loopTimer:    ReturnType<typeof setTimeout> | null = null;
   private currentTrack: TrackId | null = null;
+  private audioEl:      HTMLAudioElement | null = null;
   private _volume = 0.33;
   private _muted  = false;
-
-  // ── Context ──────────────────────────────────────────────────────────────
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -127,20 +114,20 @@ class AudioManager {
     return this.ctx;
   }
 
-  // ── Public API ───────────────────────────────────────────────────────────
-
   get volume() { return this._volume; }
   get muted()  { return this._muted; }
 
   setVolume(v: number) {
     this._volume = Math.max(0, Math.min(1, v));
     if (this.masterGain && !this._muted) this.masterGain.gain.value = this._volume;
+    if (this.audioEl && !this._muted) this.audioEl.volume = this._volume * FILE_TRACK_GAIN;
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_volume", String(this._volume));
   }
 
   setMuted(m: boolean) {
     this._muted = m;
     if (this.masterGain) this.masterGain.gain.value = m ? 0 : this._volume;
+    if (this.audioEl) this.audioEl.volume = m ? 0 : this._volume * FILE_TRACK_GAIN;
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_muted", String(m));
   }
 
@@ -151,26 +138,56 @@ class AudioManager {
     this._volume = isNaN(v) ? 0.33 : v;
     this._muted  = m;
     if (this.masterGain) this.masterGain.gain.value = this._muted ? 0 : this._volume;
+    if (this.audioEl) this.audioEl.volume = this._muted ? 0 : this._volume * FILE_TRACK_GAIN;
   }
 
   play(trackId: TrackId) {
     if (trackId === this.currentTrack) return;
-    this._stop();
+    this._stopSynth();
+    // If switching away from a file track, pause it
+    if (this.audioEl && !FILE_TRACKS[trackId]) {
+      this.audioEl.pause();
+      this.audioEl.currentTime = 0;
+    }
     this.currentTrack = trackId;
+
+    const fileSrc = FILE_TRACKS[trackId];
+    if (fileSrc) {
+      this._playFile(fileSrc);
+      return;
+    }
+
     const ctx = this.getCtx();
-    const resume = () => this._schedule(ctx, trackId, ctx.currentTime);
+    const resume = () => this._schedule(ctx, trackId as SynthTrackId, ctx.currentTime);
     if (ctx.state === "suspended") ctx.resume().then(resume);
     else resume();
   }
 
   stop() {
-    this._stop();
+    this._stopSynth();
+    if (this.audioEl) {
+      this.audioEl.pause();
+      this.audioEl.currentTime = 0;
+    }
     this.currentTrack = null;
   }
 
-  // ── Internal: stop all nodes ──────────────────────────────────────────────
+  private _playFile(src: string) {
+    if (!this.audioEl) {
+      this.audioEl = new Audio();
+      this.audioEl.loop = true;
+    }
+    // Only reload if src changed
+    const currentSrc = this.audioEl.getAttribute("src") ?? "";
+    if (!currentSrc.endsWith(src) && this.audioEl.src !== src) {
+      this.audioEl.src = src;
+      this.audioEl.load();
+    }
+    this.audioEl.volume = this._muted ? 0 : this._volume * FILE_TRACK_GAIN;
+    this.audioEl.play().catch(() => {});
+  }
 
-  private _stop() {
+  private _stopSynth() {
     if (this.loopTimer) { clearTimeout(this.loopTimer); this.loopTimer = null; }
     this.oscs.forEach(o => { try { o.stop(0); } catch {} });
     this.bufSrcs.forEach(b => { try { b.stop(0); } catch {} });
@@ -178,16 +195,13 @@ class AudioManager {
     this.bufSrcs = [];
   }
 
-  // ── Internal: schedule one loop ──────────────────────────────────────────
-
-  private _schedule(ctx: AudioContext, trackId: TrackId, startTime: number) {
+  private _schedule(ctx: AudioContext, trackId: SynthTrackId, startTime: number) {
     if (this.currentTrack !== trackId) return;
     const track = TRACKS[trackId];
     const beat  = 60 / track.bpm;
     let t  = startTime;
     let mt = startTime;
 
-    // 1. Chord pads (sawtooth → lowpass → gain envelope)
     const cutoff = track.chordCutoff ?? 900;
     for (const [freqs, beats] of track.chords) {
       const dur = beats * beat;
@@ -195,7 +209,6 @@ class AudioManager {
       t += dur;
     }
 
-    // 2. Melody lead
     const melType = track.melodyType ?? "sine";
     const melVol  = track.melodyVol  ?? 0.09;
     for (const [freq, beats] of track.melody) {
@@ -204,7 +217,6 @@ class AudioManager {
       mt += dur;
     }
 
-    // 3. Bass ostinato (square wave, staccato)
     if (track.bassLine) {
       let bt = startTime;
       for (const [freq, beats] of track.bassLine) {
@@ -214,7 +226,6 @@ class AudioManager {
       }
     }
 
-    // 4. Percussion
     if (track.perc) {
       const sixteenth = beat / 4;
       track.perc.forEach((p, i) => {
@@ -225,7 +236,6 @@ class AudioManager {
       });
     }
 
-    // Schedule next loop just before this one ends
     const loopMs = (t - startTime) * 1000 - 80;
     this.loopTimer = setTimeout(() => {
       this.oscs    = [];
@@ -233,8 +243,6 @@ class AudioManager {
       if (this.currentTrack === trackId) this._schedule(ctx, trackId, ctx.currentTime);
     }, Math.max(200, loopMs));
   }
-
-  // ── Chord pad ────────────────────────────────────────────────────────────
 
   private _chord(ctx: AudioContext, freqs: number[], start: number, dur: number, cutoff: number) {
     const filter = ctx.createBiquadFilter();
@@ -260,8 +268,6 @@ class AudioManager {
     }
   }
 
-  // ── Melody lead ──────────────────────────────────────────────────────────
-
   private _note(ctx: AudioContext, freq: number, start: number, dur: number, type: OscillatorType, vol: number) {
     const gn = ctx.createGain();
     gn.gain.setValueAtTime(0, start);
@@ -278,10 +284,8 @@ class AudioManager {
     this.oscs.push(o);
   }
 
-  // ── Staccato bass ────────────────────────────────────────────────────────
-
   private _bass(ctx: AudioContext, freq: number, start: number, dur: number) {
-    const staccDur = dur * 0.65; // staccato: cut note short
+    const staccDur = dur * 0.65;
     const gn = ctx.createGain();
     gn.gain.setValueAtTime(0, start);
     gn.gain.linearRampToValueAtTime(0.07, start + 0.012);
@@ -297,8 +301,6 @@ class AudioManager {
     this.oscs.push(o);
   }
 
-  // ── Percussion ───────────────────────────────────────────────────────────
-
   private _noise(ctx: AudioContext, durationSec: number): AudioBufferSourceNode {
     const len = Math.ceil(ctx.sampleRate * durationSec);
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -312,7 +314,6 @@ class AudioManager {
 
   private _kick(ctx: AudioContext, start: number) {
     const dur = 0.18;
-    // Pitched sine: 80 Hz → 28 Hz punch
     const gn = ctx.createGain();
     gn.gain.setValueAtTime(0.55, start);
     gn.gain.exponentialRampToValueAtTime(0.001, start + dur);
@@ -326,7 +327,6 @@ class AudioManager {
     o.start(start); o.stop(start + dur);
     this.oscs.push(o);
 
-    // Click transient
     const clickGn = ctx.createGain();
     clickGn.gain.setValueAtTime(0.3, start);
     clickGn.gain.exponentialRampToValueAtTime(0.001, start + 0.02);
@@ -342,7 +342,6 @@ class AudioManager {
 
   private _snare(ctx: AudioContext, start: number) {
     const dur = 0.14;
-    // Noise body
     const noise = this._noise(ctx, dur);
     const filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
@@ -358,7 +357,6 @@ class AudioManager {
     filter.connect(gn);
     noise.start(start); noise.stop(start + dur);
 
-    // Crack tone
     const crackGn = ctx.createGain();
     crackGn.gain.setValueAtTime(0.12, start);
     crackGn.gain.exponentialRampToValueAtTime(0.001, start + 0.06);
