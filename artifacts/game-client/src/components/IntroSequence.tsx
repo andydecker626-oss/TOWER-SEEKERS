@@ -2,6 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const INTRO_KEY = "ts_intro_v2";
 
+/* ── Module-level audio singleton ────────────────────────────────────────── *
+ * Lives outside React so it survives IntroSequence unmounting and keeps     *
+ * playing seamlessly into TitleScreen / WarRoom.                            */
+const titleMusic = new Audio("/assets/skyforge-siege.mp3");
+titleMusic.loop = true;
+
 export function shouldShowIntro(): boolean {
   return !sessionStorage.getItem(INTRO_KEY);
 }
@@ -15,7 +21,6 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
   const [videoBlocked,  setVideoBlocked ] = useState(false);
 
   const videoRef       = useRef<HTMLVideoElement>(null);
-  const audioRef       = useRef<HTMLAudioElement>(null);
   const transitioning  = useRef(false);
 
   /* ── Cross-fade helper: screen goes black, content swaps, comes back ─── */
@@ -31,35 +36,23 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, durationMs);
   }, []);
 
-  /* ── Ramp audio volume from 0 → target ───────────────────────────────── */
-  function rampAudio(target: number, stepSize = 0.04, intervalMs = 80) {
-    const aud = audioRef.current;
-    if (!aud) return;
-    aud.volume = 0;
-    aud.play().catch(() => {});
+  /* ── Ramp titleMusic from 0 → target (survives unmount) ─────────────── */
+  function rampAudio(target: number, stepSize = 0.025, intervalMs = 80) {
+    titleMusic.volume = 0;
+    titleMusic.play().catch(() => {});
     let v = 0;
     const id = setInterval(() => {
       v = Math.min(target, v + stepSize);
-      if (audioRef.current) audioRef.current.volume = v;
+      titleMusic.volume = v;
       if (v >= target) clearInterval(id);
     }, intervalMs);
-  }
-
-  function rampAudioDown(onDone?: () => void) {
-    const aud = audioRef.current;
-    if (!aud) { onDone?.(); return; }
-    let v = aud.volume;
-    const id = setInterval(() => {
-      v = Math.max(0, v - 0.07);
-      if (audioRef.current) audioRef.current.volume = v;
-      if (v <= 0) { clearInterval(id); aud.pause(); onDone?.(); }
-    }, 55);
   }
 
   /* ── 1. Video phase: try to autoplay on mount ─────────────────────────── */
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid || phase !== "video") return;
+    vid.volume = 0.2;
     vid.play().catch(() => setVideoBlocked(true));
   // only run once
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,7 +68,7 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     const t = setTimeout(() => {
       crossFade(() => {
         setPhase("title");
-        rampAudio(0.8);
+        rampAudio(0.16);
       }, 600);
     }, 3500);
     return () => clearTimeout(t);
@@ -86,7 +79,6 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
   const handleEnter = useCallback(() => {
     if (phase !== "title" || transitioning.current) return;
     sessionStorage.setItem(INTRO_KEY, "1");
-    rampAudioDown();
     crossFade(() => onComplete(), 600);
   }, [phase, crossFade, onComplete]);
 
@@ -101,9 +93,6 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
   return (
     <div style={{ ...S.root, opacity: screenOpacity }}>
       <style>{CSS}</style>
-
-      {/* Persistent audio element */}
-      <audio ref={audioRef} src="/assets/skyforge-siege.mp3" loop preload="auto" />
 
       {/* ── PHASE 1: Altaris logo video ─────────────────────────────── */}
       {phase === "video" && (
