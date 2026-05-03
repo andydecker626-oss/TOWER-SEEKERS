@@ -172,6 +172,20 @@ class AudioManager {
     this.currentTrack = null;
   }
 
+  /**
+   * Set the raw HTMLAudioElement volume directly, bypassing the master-volume
+   * × FILE_TRACK_GAIN scaling.  Used by IntroSequence for its fade-in ramp so
+   * the Settings slider value is not disturbed.
+   */
+  setFileVolume(vol: number) {
+    if (this.audioEl) this.audioEl.volume = Math.max(0, Math.min(1, vol));
+  }
+
+  /** True if a file-backed track is currently loaded and not paused. */
+  get isFilePlaying(): boolean {
+    return !!(this.audioEl && !this.audioEl.paused);
+  }
+
   private _playFile(src: string) {
     if (!this.audioEl) {
       this.audioEl = new Audio();

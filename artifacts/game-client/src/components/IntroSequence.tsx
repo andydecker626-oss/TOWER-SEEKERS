@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { audioManager } from "@/lib/audio";
 
 const INTRO_KEY = "ts_intro_v2";
-
-/* ── Module-level audio singleton ────────────────────────────────────────── *
- * Lives outside React so it survives IntroSequence unmounting and keeps     *
- * playing seamlessly into TitleScreen / WarRoom.                            */
-const titleMusic = new Audio("/assets/skyforge-siege.mp3");
-titleMusic.loop = true;
 
 export function shouldShowIntro(): boolean {
   return !sessionStorage.getItem(INTRO_KEY);
@@ -36,14 +31,14 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, durationMs);
   }, []);
 
-  /* ── Ramp titleMusic from 0 → target (survives unmount) ─────────────── */
+  /* ── Ramp skyforge via audioManager (shared singleton, survives unmount) */
   function rampAudio(target: number, stepSize = 0.025, intervalMs = 80) {
-    titleMusic.volume = 0;
-    titleMusic.play().catch(() => {});
+    audioManager.play("skyforge");
+    audioManager.setFileVolume(0);
     let v = 0;
     const id = setInterval(() => {
       v = Math.min(target, v + stepSize);
-      titleMusic.volume = v;
+      audioManager.setFileVolume(v);
       if (v >= target) clearInterval(id);
     }, intervalMs);
   }
