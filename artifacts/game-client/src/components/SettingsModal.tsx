@@ -1,4 +1,7 @@
+import { useNavigate } from "react-router-dom";
 import { useSettings } from "@/context/SettingsContext";
+import { useSocket } from "@/context/SocketContext";
+import { audioManager } from "@/lib/audio";
 
 const MODAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&display=swap');
@@ -121,9 +124,12 @@ const MODAL_CSS = `
   .sm-seg-btn.active { background: rgba(240,192,64,0.18); border-color: rgba(240,192,64,0.5); color: #f0c040; }
 
   .sm-footer {
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex; flex-direction: column; gap: 0.75rem;
     margin-top: 1.6rem; padding-top: 1rem;
     border-top: 1px solid rgba(240,192,64,0.1);
+  }
+  .sm-footer-row {
+    display: flex; justify-content: space-between; align-items: center;
   }
   .sm-reset-btn {
     font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
@@ -138,6 +144,21 @@ const MODAL_CSS = `
     padding: 0.5rem 1.5rem; cursor: pointer; transition: filter 0.15s;
   }
   .sm-done-btn:hover { filter: brightness(1.12); }
+  .sm-mainmenu-btn {
+    width: 100%;
+    font-family: 'Cinzel', serif; font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(200,100,100,0.25);
+    border-radius: 7px; color: rgba(220,140,140,0.55);
+    padding: 0.5rem 1rem; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .sm-mainmenu-btn:hover {
+    background: rgba(200,60,60,0.1);
+    border-color: rgba(220,80,80,0.45);
+    color: rgba(240,160,160,0.85);
+  }
 `;
 
 function VolumeSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -162,6 +183,8 @@ interface Props {
 }
 
 export default function SettingsModal({ onClose }: Props) {
+  const navigate = useNavigate();
+  const { reset } = useSocket();
   const {
     settings,
     setVolume, setMusicVolume, setSfxVolume,
@@ -258,8 +281,16 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           <div className="sm-footer">
-            <button className="sm-reset-btn" onClick={resetDefaults}>Reset Defaults</button>
-            <button className="sm-done-btn" onClick={onClose}>Done</button>
+            <div className="sm-footer-row">
+              <button className="sm-reset-btn" onClick={resetDefaults}>Reset Defaults</button>
+              <button className="sm-done-btn" onClick={onClose}>Done</button>
+            </div>
+            <button
+              className="sm-mainmenu-btn"
+              onClick={() => { reset(); audioManager.stop(); navigate("/warroom"); onClose(); }}
+            >
+              ← Return to Main Menu
+            </button>
           </div>
         </div>
       </div>

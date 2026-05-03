@@ -115,6 +115,8 @@ class AudioManager {
   private _sfxVolume   = 1.0;
   private _muted       = false;
 
+  private _sfxEnabled = true;
+
   // ── Battle playlist ───────────────────────────────────────────────────────
   private _inBattlePlaylist  = false;
   private _battlePlaylist:  { src: string; title: string }[] = [];
@@ -223,16 +225,45 @@ class AudioManager {
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_muted", String(m));
   }
 
+  setSfxEnabled(e: boolean) {
+    this._sfxEnabled = e;
+    if (typeof localStorage !== "undefined") localStorage.setItem("ts_sfx_enabled", String(e));
+  }
+
+  /** Short JRPG-style menu blip. Respects master mute and SFX settings. */
+  playClick() {
+    if (this._muted || !this._sfxEnabled || this._sfxVolume <= 0) return;
+    const ctx = this.getCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    const vol = this._volume * this._sfxVolume * 0.28;
+    if (vol <= 0) return;
+
+    const gn = ctx.createGain();
+    gn.gain.setValueAtTime(vol, ctx.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.055);
+    gn.connect(ctx.destination);
+
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(1100, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(640, ctx.currentTime + 0.045);
+    o.connect(gn);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.06);
+  }
+
   loadSettings() {
     if (typeof localStorage === "undefined") return;
-    const v  = parseFloat(localStorage.getItem("ts_volume")    ?? "0.33");
-    const mv = parseFloat(localStorage.getItem("ts_music_vol") ?? "1.0");
-    const sv = parseFloat(localStorage.getItem("ts_sfx_vol")   ?? "1.0");
-    const m  = localStorage.getItem("ts_muted") === "true";
+    const v   = parseFloat(localStorage.getItem("ts_volume")    ?? "0.33");
+    const mv  = parseFloat(localStorage.getItem("ts_music_vol") ?? "1.0");
+    const sv  = parseFloat(localStorage.getItem("ts_sfx_vol")   ?? "1.0");
+    const m   = localStorage.getItem("ts_muted") === "true";
+    const sfxE = localStorage.getItem("ts_sfx_enabled") !== "false";
     this._volume      = isNaN(v)  ? 0.33 : v;
     this._musicVolume = isNaN(mv) ? 1.0  : mv;
     this._sfxVolume   = isNaN(sv) ? 1.0  : sv;
     this._muted       = m;
+    this._sfxEnabled  = sfxE;
     if (this.masterGain) this.masterGain.gain.value = this._muted ? 0 : this._volume;
     if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
   }

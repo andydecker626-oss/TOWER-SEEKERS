@@ -17,6 +17,7 @@ import WarRoom from "@/pages/WarRoom";
 import SpritePreview from "@/pages/SpritePreview";
 import ArenaDemo from "@/pages/ArenaDemo";
 import IntroSequence, { shouldShowIntro } from "@/components/IntroSequence";
+import { audioManager } from "@/lib/audio";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,18 @@ const PHASE_ROUTES: Record<Phase, string> = {
   battle: "/battle",
   gameover: "/gameover",
 };
+
+function GlobalClickSound() {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("button, [role='button']")) audioManager.playClick();
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, []);
+  return null;
+}
 
 function PhaseNavigator() {
   const { state } = useSocket();
@@ -116,6 +129,7 @@ function AppRoutes() {
     <SettingsProvider>
       <SocketProvider>
         <ClerkQueryClientCacheInvalidator />
+        <GlobalClickSound />
         <PhaseNavigator />
         <OpponentReconnectingBanner />
         <Routes>

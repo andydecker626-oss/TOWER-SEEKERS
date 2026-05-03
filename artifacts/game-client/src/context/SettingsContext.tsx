@@ -87,7 +87,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     update({ muted: m });
   }, [update]);
 
-  const setSfxEnabled = useCallback((e: boolean) => update({ sfxEnabled: e }), [update]);
+  const setSfxEnabled = useCallback((e: boolean) => {
+    audioManager.setSfxEnabled(e);
+    update({ sfxEnabled: e });
+  }, [update]);
   const setAiDifficulty = useCallback((d: AiDifficulty) => update({ aiDifficulty: d }), [update]);
   const setShowDamageNumbers = useCallback((s: boolean) => update({ showDamageNumbers: s }), [update]);
   const setAnimationSpeed = useCallback((s: Settings["animationSpeed"]) => update({ animationSpeed: s }), [update]);
@@ -96,6 +99,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     audioManager.setMusicVolume(DEFAULT.musicVolume);
     audioManager.setSfxVolume(DEFAULT.sfxVolume);
     audioManager.setMuted(DEFAULT.muted);
+    audioManager.setSfxEnabled(DEFAULT.sfxEnabled);
     update(DEFAULT);
   }, [update]);
 
