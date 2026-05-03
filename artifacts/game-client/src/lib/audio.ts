@@ -92,6 +92,14 @@ const FILE_TRACKS: Partial<Record<TrackId, string>> = {
   hub: "/assets/hearthstone-tavern.mp3",
 };
 
+// Battle playlist — random rotation during all battle phases
+export const BATTLE_PLAYLIST: { src: string; title: string }[] = [
+  { src: "/assets/battle/crystal-fang-rock.mp3", title: "Crystal Fang (Rock)" },
+  { src: "/assets/battle/war-tent-oath.mp3",     title: "War Tent Oath"       },
+  { src: "/assets/battle/banner-at-dawn.mp3",    title: "Banner at Dawn"      },
+  { src: "/assets/battle/crystal-fang.mp3",       title: "Crystal Fang"        },
+];
+
 // ── AudioManager ─────────────────────────────────────────────────────────────
 
 class AudioManager {
@@ -107,6 +115,13 @@ class AudioManager {
   private _sfxVolume   = 1.0;
   private _muted       = false;
 
+  // ── Battle playlist ───────────────────────────────────────────────────────
+  private _inBattlePlaylist  = false;
+  private _battlePlaylist:  { src: string; title: string }[] = [];
+  private _battleIdx         = 0;
+  private _onTrackChangeCb:  ((title: string) => void) | null = null;
+  private _battleEndedHandler: (() => void) | null = null;
+
   private getCtx(): AudioContext {
     if (!this.ctx) {
       this.ctx = new AudioContext();
@@ -121,6 +136,63 @@ class AudioManager {
   get musicVolume() { return this._musicVolume; }
   get sfxVolume()   { return this._sfxVolume; }
   get muted()       { return this._muted; }
+  get isBattlePlaylistActive(): boolean { return this._inBattlePlaylist; }
+  get currentBattleTitle(): string {
+    return this._battlePlaylist[this._battleIdx]?.title ?? "";
+  }
+
+  onTrackChange(cb: ((title: string) => void) | null) {
+    this._onTrackChangeCb = cb;
+  }
+
+  playBattlePlaylist() {
+    if (this._inBattlePlaylist && this.audioEl && !this.audioEl.paused) return;
+    this._stopSynth();
+    this.currentTrack = null;
+    this._inBattlePlaylist = true;
+    // Fisher-Yates shuffle
+    const list = [...BATTLE_PLAYLIST];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    this._battlePlaylist = list;
+    this._battleIdx = 0;
+    if (!this.audioEl) this.audioEl = new Audio();
+    this._removeBattleEndedHandler();
+    this.audioEl.loop = false;
+    this._battleEndedHandler = () => {
+      if (!this._inBattlePlaylist) return;
+      this._battleIdx = (this._battleIdx + 1) % this._battlePlaylist.length;
+      this._loadBattleTrack(this._battleIdx);
+    };
+    this.audioEl.addEventListener("ended", this._battleEndedHandler);
+    this._loadBattleTrack(0);
+  }
+
+  nextBattleTrack() {
+    if (!this._inBattlePlaylist || !this._battlePlaylist.length) return;
+    this._battleIdx = (this._battleIdx + 1) % this._battlePlaylist.length;
+    this._loadBattleTrack(this._battleIdx);
+  }
+
+  private _removeBattleEndedHandler() {
+    if (this._battleEndedHandler && this.audioEl) {
+      this.audioEl.removeEventListener("ended", this._battleEndedHandler);
+      this._battleEndedHandler = null;
+    }
+  }
+
+  private _loadBattleTrack(idx: number) {
+    const track = this._battlePlaylist[idx];
+    if (!track || !this.audioEl) return;
+    this.audioEl.src = track.src;
+    this.audioEl.load();
+    this.audioEl.loop = false;
+    this.audioEl.volume = this._effectiveMusicVol();
+    this.audioEl.play().catch(() => {});
+    if (this._onTrackChangeCb) this._onTrackChangeCb(track.title);
+  }
 
   private _effectiveMusicVol() {
     return this._muted ? 0 : this._volume * this._musicVolume * FILE_TRACK_GAIN;
@@ -166,7 +238,13 @@ class AudioManager {
   }
 
   play(trackId: TrackId) {
-    if (trackId === this.currentTrack) return;
+    if (trackId === this.currentTrack && !this._inBattlePlaylist) return;
+    // Stop battle playlist if switching to a named track
+    if (this._inBattlePlaylist) {
+      this._inBattlePlaylist = false;
+      this._removeBattleEndedHandler();
+      if (this.audioEl) { this.audioEl.pause(); this.audioEl.currentTime = 0; this.audioEl.loop = true; }
+    }
     this._stopSynth();
     // If switching away from a file track, pause it
     if (this.audioEl && !FILE_TRACKS[trackId]) {
@@ -188,6 +266,8 @@ class AudioManager {
   }
 
   stop() {
+    this._inBattlePlaylist = false;
+    this._removeBattleEndedHandler();
     this._stopSynth();
     if (this.audioEl) {
       this.audioEl.pause();
@@ -211,10 +291,11 @@ class AudioManager {
   }
 
   private _playFile(src: string) {
+    this._removeBattleEndedHandler();
     if (!this.audioEl) {
       this.audioEl = new Audio();
-      this.audioEl.loop = true;
     }
+    this.audioEl.loop = true;
     // Only reload if src changed
     const currentSrc = this.audioEl.getAttribute("src") ?? "";
     if (!currentSrc.endsWith(src) && this.audioEl.src !== src) {

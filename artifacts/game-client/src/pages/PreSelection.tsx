@@ -4,6 +4,7 @@ import { useSocket } from "@/context/SocketContext";
 import { useParties } from "@/hooks/useParties";
 import { ALL_UNITS } from "@/lib/units";
 import type { UnitDef } from "@/lib/types";
+import { audioManager } from "@/lib/audio";
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   physAtk: { label: "Physical", color: "#f0c040" },
@@ -107,6 +108,9 @@ export default function PreSelection() {
   const navigate = useNavigate();
   const [picks, setPicks] = useState<string[]>([]);
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
+
+  // Start battle playlist when team planning begins (persists through all battle phases)
+  useEffect(() => { audioManager.playBattlePlaylist(); }, []);
 
   useEffect(() => {
     if (state.submittedPickIds && state.submittedPickIds.length > 0) {

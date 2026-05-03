@@ -33,6 +33,7 @@ export default function Battle() {
   const { state, submitActions, clearPendingEvents, confirmGameOver } = useSocket();
   const { settings, setMuted } = useSettings();
   const [showSettings, setShowSettings] = useState(false);
+  const [songToast, setSongToast] = useState<string | null>(null);
 
   const [myUnits, setMyUnits] = useState<GridUnit[]>(state.myUnits);
   const [enemyUnits, setEnemyUnits] = useState<GridUnit[]>(state.enemyUnits);
@@ -46,11 +47,19 @@ export default function Battle() {
   const [flashUnits, setFlashUnits] = useState<Record<string, string>>({});
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Start battle music
+  // Battle playlist — start if not already running (e.g. direct reconnect to /battle)
   useEffect(() => {
-    audioManager.play("battle");
-    return () => audioManager.stop();
+    if (!audioManager.isBattlePlaylistActive) audioManager.playBattlePlaylist();
+    audioManager.onTrackChange((title) => setSongToast(title));
+    return () => { audioManager.onTrackChange(null); };
   }, []);
+
+  // Auto-dismiss song title toast after 3 s
+  useEffect(() => {
+    if (!songToast) return;
+    const t = setTimeout(() => setSongToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [songToast]);
 
   // Always-current unit state for animation closures (avoids stale state desync)
   const latestUnitsRef = useRef<{ my: GridUnit[]; enemy: GridUnit[] }>({ my: state.myUnits, enemy: state.enemyUnits });
@@ -359,6 +368,16 @@ export default function Battle() {
             )}
           </button>
           <button
+            className="b-nextsong-btn"
+            onClick={() => audioManager.nextBattleTrack()}
+            title="Next song"
+            aria-label="Next song"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="4" x2="19" y2="20"/>
+            </svg>
+          </button>
+          <button
             className="b-settings-btn"
             onClick={() => setShowSettings(true)}
             title="Settings"
@@ -527,6 +546,13 @@ export default function Battle() {
       </div>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+      {songToast && (
+        <div className="b-song-toast" key={songToast}>
+          <span className="b-song-toast-note">♪</span>
+          <span className="b-song-toast-title">{songToast}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -614,6 +640,22 @@ function battleCSS() {
       border-color: rgba(240,192,64,0.35);
       background: rgba(240,192,64,0.1);
     }
+    .b-nextsong-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px;
+      background: rgba(240,192,64,0.08);
+      border: 1px solid rgba(240,192,64,0.28);
+      border-radius: 6px;
+      color: rgba(200,170,100,0.75);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      padding: 0;
+    }
+    .b-nextsong-btn:hover {
+      background: rgba(240,192,64,0.18);
+      border-color: rgba(240,192,64,0.55);
+      color: #f0c040;
+    }
     .b-settings-btn {
       display: flex; align-items: center; justify-content: center;
       width: 28px; height: 28px;
@@ -629,6 +671,38 @@ function battleCSS() {
       background: rgba(240,192,64,0.18);
       border-color: rgba(240,192,64,0.55);
       color: #f0c040;
+    }
+
+    /* Song title toast */
+    .b-song-toast {
+      position: fixed;
+      top: clamp(52px, 6.5vh, 68px);
+      left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 0.45rem;
+      background: rgba(6,4,16,0.9);
+      border: 1px solid rgba(240,192,64,0.28);
+      border-radius: 20px;
+      padding: 0.35rem 1rem;
+      z-index: 300;
+      pointer-events: none;
+      animation: bToastIn 0.28s ease-out, bToastOut 0.35s ease-in 2.65s forwards;
+    }
+    @keyframes bToastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes bToastOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+    .b-song-toast-note {
+      color: #f0c040; font-size: 0.8rem;
+    }
+    .b-song-toast-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem; font-weight: 600;
+      color: rgba(240,210,140,0.92); letter-spacing: 0.08em;
+      white-space: nowrap;
     }
 
     /* Stage — Three.js fills this container */
