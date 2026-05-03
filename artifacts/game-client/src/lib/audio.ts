@@ -89,6 +89,7 @@ const FILE_TRACK_GAIN = 0.25; // MP3 tracks play at 25% of master volume (75% qu
 
 const FILE_TRACKS: Partial<Record<TrackId, string>> = {
   skyforge: "/assets/skyforge-siege.mp3",
+  hub: "/assets/hearthstone-tavern.mp3",
 };
 
 // ── AudioManager ─────────────────────────────────────────────────────────────
