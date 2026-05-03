@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser, useClerk, SignIn } from "@clerk/react";
 import { audioManager } from "@/lib/audio";
 import { useSettings } from "@/context/SettingsContext";
-
-type SplashPhase = "altaris" | "copyright" | null;
 
 export default function TitleScreen() {
   const navigate = useNavigate();
@@ -12,45 +10,12 @@ export default function TitleScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [splashActive, setSplashActive] = useState(false);
-  const [splashPhase, setSplashPhase] = useState<SplashPhase>(null);
-  const [splashOpacity, setSplashOpacity] = useState(0);
-  const splashMounted = useRef(true);
   const {
     settings, setVolume, setMuted, setSfxEnabled,
     setAiDifficulty, setShowDamageNumbers, setAnimationSpeed, resetDefaults,
   } = useSettings();
 
-  useEffect(() => {
-    splashMounted.current = true;
-    return () => { splashMounted.current = false; };
-  }, []);
-
-  async function enterWarRoom() {
-    const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-    setSplashActive(true);
-    // Altaris splash
-    setSplashPhase("altaris");
-    setSplashOpacity(0);
-    await delay(50);
-    if (!splashMounted.current) return;
-    setSplashOpacity(1);
-    await delay(3500);
-    if (!splashMounted.current) return;
-    setSplashOpacity(0);
-    await delay(1100);
-    if (!splashMounted.current) return;
-    // Copyright splash
-    setSplashPhase("copyright");
-    setSplashOpacity(0);
-    await delay(50);
-    if (!splashMounted.current) return;
-    setSplashOpacity(1);
-    await delay(3500);
-    if (!splashMounted.current) return;
-    setSplashOpacity(0);
-    await delay(1100);
-    if (!splashMounted.current) return;
+  function enterWarRoom() {
     navigate("/warroom");
   }
 
@@ -190,40 +155,6 @@ export default function TitleScreen() {
         </div>
       )}
 
-      {/* Post-login splash overlay — outer stays solid black, only inner content fades */}
-      {splashActive && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "#000",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <div style={{ opacity: splashOpacity, transition: "opacity 1s ease", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {splashPhase === "altaris" && (
-              <img
-                src="/assets/altaris-logo.png"
-                alt="Altaris"
-                style={{ width: "90vw", maxWidth: "960px", maxHeight: "60vh", objectFit: "contain" }}
-              />
-            )}
-            {splashPhase === "copyright" && (
-              <p style={{
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                fontSize: "clamp(27px, 3.5vw, 35px)",
-                color: "rgba(255,255,255,0.7)",
-                letterSpacing: "0.06em",
-                textAlign: "center",
-                margin: 0,
-              }}>
-                &copy; 2026 Seekers Franchise
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
