@@ -4,6 +4,8 @@ import { ALL_UNITS, getUnitDef } from "@/lib/units";
 import { useParties, type Party, type UnitLoadout } from "@/hooks/useParties";
 import type { UnitDef, SkillDef, PassiveDef } from "@/lib/types";
 import { audioManager } from "@/lib/audio";
+import { useSettings } from "@/context/SettingsContext";
+import SettingsModal from "@/components/SettingsModal";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap');`;
 
@@ -465,6 +467,21 @@ const HUB_CSS = `
     white-space: nowrap; box-shadow: 0 2px 14px rgba(240,192,64,0.15);
   }
   .back-btn:hover { color: #fff8d6; border-color: rgba(240,192,64,0.9); background: rgba(240,192,64,0.13); box-shadow: 0 4px 22px rgba(240,192,64,0.28); }
+  .hub-settings-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px;
+    background: rgba(240,192,64,0.08);
+    border: 1.5px solid rgba(240,192,64,0.3);
+    border-radius: 8px; cursor: pointer;
+    color: rgba(200,170,100,0.75); font-size: 1.25rem; line-height: 1;
+    transition: all 0.18s; flex-shrink: 0;
+  }
+  .hub-settings-btn:hover {
+    background: rgba(240,192,64,0.16);
+    border-color: rgba(240,192,64,0.6);
+    color: #f0c040;
+    box-shadow: 0 2px 14px rgba(240,192,64,0.18);
+  }
   .hub-title-wrap { flex: 1; }
   .hub-title {
     font-family: 'Cinzel Decorative', serif; font-size: 2rem; font-weight: 700;
@@ -630,6 +647,7 @@ export default function GatheringHub() {
   const navigate = useNavigate();
   const { parties, saveParty, deleteParty } = useParties();
   const [modalOpen, setModalOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editParty, setEditParty] = useState<Party | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<UnitDef | null>(null);
@@ -672,6 +690,12 @@ export default function GatheringHub() {
           <h1 className="hub-title">Gathering Hub</h1>
           <p className="hub-subtitle">Party Builder</p>
         </div>
+        <button
+          className="hub-settings-btn"
+          onClick={() => setShowSettings(true)}
+          title="Settings"
+          aria-label="Open settings"
+        >⚙</button>
         <button className="btn-gold" onClick={openNew}>+ New Party</button>
       </header>
 
@@ -721,6 +745,8 @@ export default function GatheringHub() {
       {selectedUnit && (
         <UnitDetailPanel unit={selectedUnit} onClose={() => setSelectedUnit(null)} />
       )}
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

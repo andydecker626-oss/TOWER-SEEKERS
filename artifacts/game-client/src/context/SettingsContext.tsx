@@ -5,6 +5,8 @@ export type AiDifficulty = "easy" | "normal" | "hard";
 
 interface Settings {
   volume: number;
+  musicVolume: number;
+  sfxVolume: number;
   muted: boolean;
   sfxEnabled: boolean;
   aiDifficulty: AiDifficulty;
@@ -15,6 +17,8 @@ interface Settings {
 interface SettingsCtx {
   settings: Settings;
   setVolume: (v: number) => void;
+  setMusicVolume: (v: number) => void;
+  setSfxVolume: (v: number) => void;
   setMuted: (m: boolean) => void;
   setSfxEnabled: (e: boolean) => void;
   setAiDifficulty: (d: AiDifficulty) => void;
@@ -25,6 +29,8 @@ interface SettingsCtx {
 
 const DEFAULT: Settings = {
   volume: 0.33,
+  musicVolume: 1.0,
+  sfxVolume: 1.0,
   muted: false,
   sfxEnabled: true,
   aiDifficulty: "normal",
@@ -66,6 +72,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     update({ volume: v });
   }, [update]);
 
+  const setMusicVolume = useCallback((v: number) => {
+    audioManager.setMusicVolume(v);
+    update({ musicVolume: v });
+  }, [update]);
+
+  const setSfxVolume = useCallback((v: number) => {
+    audioManager.setSfxVolume(v);
+    update({ sfxVolume: v });
+  }, [update]);
+
   const setMuted = useCallback((m: boolean) => {
     audioManager.setMuted(m);
     update({ muted: m });
@@ -77,12 +93,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setAnimationSpeed = useCallback((s: Settings["animationSpeed"]) => update({ animationSpeed: s }), [update]);
   const resetDefaults = useCallback(() => {
     audioManager.setVolume(DEFAULT.volume);
+    audioManager.setMusicVolume(DEFAULT.musicVolume);
+    audioManager.setSfxVolume(DEFAULT.sfxVolume);
     audioManager.setMuted(DEFAULT.muted);
     update(DEFAULT);
   }, [update]);
 
   return (
-    <Ctx.Provider value={{ settings, setVolume, setMuted, setSfxEnabled, setAiDifficulty, setShowDamageNumbers, setAnimationSpeed, resetDefaults }}>
+    <Ctx.Provider value={{ settings, setVolume, setMusicVolume, setSfxVolume, setMuted, setSfxEnabled, setAiDifficulty, setShowDamageNumbers, setAnimationSpeed, resetDefaults }}>
       {children}
     </Ctx.Provider>
   );

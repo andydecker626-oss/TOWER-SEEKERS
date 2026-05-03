@@ -5,6 +5,7 @@ import { getUnitDef } from "@/lib/units";
 import type { GridUnit, PlayerAction, TurnEvent, SkillDef } from "@/lib/types";
 import { audioManager } from "@/lib/audio";
 import BattleRenderer from "@/components/BattleRenderer";
+import SettingsModal from "@/components/SettingsModal";
 
 type SelectMode = "none" | "move" | "attack" | "skill";
 
@@ -31,6 +32,7 @@ interface QueuedAction {
 export default function Battle() {
   const { state, submitActions, clearPendingEvents, confirmGameOver } = useSocket();
   const { settings, setMuted } = useSettings();
+  const [showSettings, setShowSettings] = useState(false);
 
   const [myUnits, setMyUnits] = useState<GridUnit[]>(state.myUnits);
   const [enemyUnits, setEnemyUnits] = useState<GridUnit[]>(state.enemyUnits);
@@ -356,6 +358,12 @@ export default function Battle() {
               </svg>
             )}
           </button>
+          <button
+            className="b-settings-btn"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+            aria-label="Open settings"
+          >⚙</button>
           <div className="b-side-label b-side-opp">OPP</div>
         </div>
       </div>
@@ -517,6 +525,8 @@ export default function Battle() {
           </>
         )}
       </div>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
@@ -603,6 +613,22 @@ function battleCSS() {
       color: rgba(240,192,64,0.65);
       border-color: rgba(240,192,64,0.35);
       background: rgba(240,192,64,0.1);
+    }
+    .b-settings-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px;
+      background: rgba(240,192,64,0.08);
+      border: 1px solid rgba(240,192,64,0.28);
+      border-radius: 6px;
+      color: rgba(200,170,100,0.75);
+      cursor: pointer; font-size: 1rem; line-height: 1;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      padding: 0;
+    }
+    .b-settings-btn:hover {
+      background: rgba(240,192,64,0.18);
+      border-color: rgba(240,192,64,0.55);
+      color: #f0c040;
     }
 
     /* Stage — Three.js fills this container */

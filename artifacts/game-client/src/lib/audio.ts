@@ -101,8 +101,10 @@ class AudioManager {
   private loopTimer:    ReturnType<typeof setTimeout> | null = null;
   private currentTrack: TrackId | null = null;
   private audioEl:      HTMLAudioElement | null = null;
-  private _volume = 0.33;
-  private _muted  = false;
+  private _volume      = 0.33;
+  private _musicVolume = 1.0;
+  private _sfxVolume   = 1.0;
+  private _muted       = false;
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -114,31 +116,52 @@ class AudioManager {
     return this.ctx;
   }
 
-  get volume() { return this._volume; }
-  get muted()  { return this._muted; }
+  get volume()      { return this._volume; }
+  get musicVolume() { return this._musicVolume; }
+  get sfxVolume()   { return this._sfxVolume; }
+  get muted()       { return this._muted; }
+
+  private _effectiveMusicVol() {
+    return this._muted ? 0 : this._volume * this._musicVolume * FILE_TRACK_GAIN;
+  }
 
   setVolume(v: number) {
     this._volume = Math.max(0, Math.min(1, v));
     if (this.masterGain && !this._muted) this.masterGain.gain.value = this._volume;
-    if (this.audioEl && !this._muted) this.audioEl.volume = this._volume * FILE_TRACK_GAIN;
+    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_volume", String(this._volume));
+  }
+
+  setMusicVolume(v: number) {
+    this._musicVolume = Math.max(0, Math.min(1, v));
+    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
+    if (typeof localStorage !== "undefined") localStorage.setItem("ts_music_vol", String(this._musicVolume));
+  }
+
+  setSfxVolume(v: number) {
+    this._sfxVolume = Math.max(0, Math.min(1, v));
+    if (typeof localStorage !== "undefined") localStorage.setItem("ts_sfx_vol", String(this._sfxVolume));
   }
 
   setMuted(m: boolean) {
     this._muted = m;
     if (this.masterGain) this.masterGain.gain.value = m ? 0 : this._volume;
-    if (this.audioEl) this.audioEl.volume = m ? 0 : this._volume * FILE_TRACK_GAIN;
+    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_muted", String(m));
   }
 
   loadSettings() {
     if (typeof localStorage === "undefined") return;
-    const v = parseFloat(localStorage.getItem("ts_volume") ?? "0.33");
-    const m = localStorage.getItem("ts_muted") === "true";
-    this._volume = isNaN(v) ? 0.33 : v;
-    this._muted  = m;
+    const v  = parseFloat(localStorage.getItem("ts_volume")    ?? "0.33");
+    const mv = parseFloat(localStorage.getItem("ts_music_vol") ?? "1.0");
+    const sv = parseFloat(localStorage.getItem("ts_sfx_vol")   ?? "1.0");
+    const m  = localStorage.getItem("ts_muted") === "true";
+    this._volume      = isNaN(v)  ? 0.33 : v;
+    this._musicVolume = isNaN(mv) ? 1.0  : mv;
+    this._sfxVolume   = isNaN(sv) ? 1.0  : sv;
+    this._muted       = m;
     if (this.masterGain) this.masterGain.gain.value = this._muted ? 0 : this._volume;
-    if (this.audioEl) this.audioEl.volume = this._muted ? 0 : this._volume * FILE_TRACK_GAIN;
+    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
   }
 
   play(trackId: TrackId) {
@@ -197,7 +220,7 @@ class AudioManager {
       this.audioEl.src = src;
       this.audioEl.load();
     }
-    this.audioEl.volume = this._muted ? 0 : this._volume * FILE_TRACK_GAIN;
+    this.audioEl.volume = this._effectiveMusicVol();
     this.audioEl.play().catch(() => {});
   }
 
