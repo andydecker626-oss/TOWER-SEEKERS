@@ -3,16 +3,26 @@ import { useNavigate } from "react-router-dom";
 import { useUser, useClerk } from "@clerk/react";
 import { audioManager } from "@/lib/audio";
 import { useSettings } from "@/context/SettingsContext";
+import { useSocket } from "@/context/SocketContext";
+import SettingsModal from "@/components/SettingsModal";
+
+const PHASE_ROUTES: Record<string, string> = {
+  preselection: "/preselect",
+  battleselect: "/battleselect",
+  placement: "/place",
+  battle: "/battle",
+  gameover: "/gameover",
+  waiting: "/lobby",
+};
 
 export default function WarRoom() {
   const navigate = useNavigate();
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
-  const {
-    settings, setVolume, setMuted, setSfxEnabled,
-    setAiDifficulty, setShowDamageNumbers, setAnimationSpeed, resetDefaults,
-  } = useSettings();
+  const { state, reset } = useSocket();
   const [showSettings, setShowSettings] = useState(false);
+
+  const hasActiveGame = state.phase !== "lobby";
 
   // Resume skyforge music when returning to war room (e.g. from battle/hub)
   useEffect(() => {
@@ -81,6 +91,28 @@ export default function WarRoom() {
             Welcome back, <span className="war-welcome-name">{displayName}</span>
           </div>
 
+          {hasActiveGame && (
+            <div className="war-active-banner">
+              <div className="war-active-left">
+                <span className="war-active-dot" />
+                <div>
+                  <div className="war-active-title">Game in progress</div>
+                  <div className="war-active-sub">You have an unfinished battle</div>
+                </div>
+              </div>
+              <div className="war-active-btns">
+                <button
+                  className="war-active-btn war-active-resume"
+                  onClick={() => navigate(PHASE_ROUTES[state.phase] ?? "/lobby")}
+                >Resume</button>
+                <button
+                  className="war-active-btn war-active-abandon"
+                  onClick={reset}
+                >Abandon</button>
+              </div>
+            </div>
+          )}
+
           <div className="war-menu">
             <button className="war-menu-btn war-btn-pvp" onClick={() => navigate("/lobby")}>
               <span className="war-btn-icon">⚔</span>
@@ -112,68 +144,7 @@ export default function WarRoom() {
         </div>
       </div>
 
-      {showSettings && (
-        <div className="ts-modal-overlay" onClick={() => setShowSettings(false)}>
-          <div className="ts-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ts-modal-title">Settings</div>
-
-            <div className="ts-section-label">Audio</div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Music</label>
-              <button className={`ts-toggle${settings.muted ? " off" : " on"}`} onClick={() => setMuted(!settings.muted)}>
-                {settings.muted ? "Off" : "On"}
-              </button>
-            </div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Volume</label>
-              <input type="range" min={0} max={1} step={0.01} value={settings.volume} className="ts-slider"
-                onChange={(e) => setVolume(parseFloat(e.target.value))} />
-              <span className="ts-val">{Math.round(settings.volume * 100)}%</span>
-            </div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Sound FX</label>
-              <button className={`ts-toggle${settings.sfxEnabled ? " on" : " off"}`} onClick={() => setSfxEnabled(!settings.sfxEnabled)}>
-                {settings.sfxEnabled ? "On" : "Off"}
-              </button>
-            </div>
-
-            <div className="ts-section-label">AI Opponent</div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Difficulty</label>
-              <div className="ts-radio-group">
-                {(["easy", "normal", "hard"] as const).map((d) => (
-                  <button key={d} className={`ts-radio${settings.aiDifficulty === d ? " active" : ""}`} onClick={() => setAiDifficulty(d)}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="ts-section-label">Battle</div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Damage Numbers</label>
-              <button className={`ts-toggle${settings.showDamageNumbers ? " on" : " off"}`} onClick={() => setShowDamageNumbers(!settings.showDamageNumbers)}>
-                {settings.showDamageNumbers ? "On" : "Off"}
-              </button>
-            </div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Animation Speed</label>
-              <div className="ts-radio-group">
-                {(["slow", "normal", "fast"] as const).map((s) => (
-                  <button key={s} className={`ts-radio${settings.animationSpeed === s ? " active" : ""}`} onClick={() => setAnimationSpeed(s)}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="ts-modal-footer">
-              <button className="ts-btn-sm" onClick={resetDefaults}>Reset Defaults</button>
-              <button className="ts-btn-sm ts-btn-sm-primary" onClick={() => setShowSettings(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
@@ -381,6 +352,51 @@ const CSS = `
     border-color: rgba(120,80,200,0.22);
   }
   .war-btn-settings::before { background: linear-gradient(90deg, transparent, rgba(120,80,200,0.4), transparent); }
+
+  /* Active game banner */
+  .war-active-banner {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    background: rgba(200,120,20,0.12);
+    border: 1px solid rgba(240,160,40,0.35);
+    border-radius: 12px;
+    padding: clamp(10px,1.5vh,14px) clamp(14px,2vw,18px);
+    animation: bannerIn 0.25s ease-out;
+  }
+  @keyframes bannerIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .war-active-left { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+  .war-active-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: #f0a030;
+    box-shadow: 0 0 8px rgba(240,160,40,0.7);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.65;transform:scale(0.85)} }
+  .war-active-title {
+    font-family: 'Cinzel', serif; font-size: clamp(11px,1.1vw,13px);
+    font-weight: 700; color: rgba(240,180,80,0.92); letter-spacing: 0.06em;
+  }
+  .war-active-sub {
+    font-family: 'Cinzel', serif; font-size: clamp(9px,0.82vw,10px);
+    color: rgba(200,160,80,0.5); letter-spacing: 0.04em; margin-top: 2px;
+  }
+  .war-active-btns { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  .war-active-btn {
+    font-family: 'Cinzel', serif; font-size: clamp(9px,0.85vw,11px);
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    border-radius: 7px; padding: 0.38rem 0.9rem; cursor: pointer; transition: all 0.15s;
+  }
+  .war-active-resume {
+    background: rgba(240,160,40,0.18); border: 1px solid rgba(240,160,40,0.45);
+    color: rgba(240,180,80,0.9);
+  }
+  .war-active-resume:hover { background: rgba(240,160,40,0.28); border-color: rgba(240,160,40,0.7); color: #f0c040; }
+  .war-active-abandon {
+    background: rgba(180,40,40,0.1); border: 1px solid rgba(200,60,60,0.28);
+    color: rgba(220,120,120,0.7);
+  }
+  .war-active-abandon:hover { background: rgba(200,50,50,0.18); border-color: rgba(220,80,80,0.5); color: #f87171; }
 
   .war-btn-icon {
     font-size: clamp(18px,2.2vw,26px);

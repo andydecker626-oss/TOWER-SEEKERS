@@ -42,10 +42,8 @@ function PhaseNavigator() {
   const location = useLocation();
 
   useEffect(() => {
-    const safePaths = ["/", "/warroom", "/arena-demo", "/sprites"];
+    const safePaths = ["/", "/warroom", "/hub", "/arena-demo", "/sprites"];
     if (safePaths.includes(location.pathname)) return;
-    const isHubPhase = state.phase === "lobby" || state.phase === "waiting";
-    if (location.pathname === "/hub" && isHubPhase) return;
     const target = PHASE_ROUTES[state.phase] ?? "/lobby";
     if (location.pathname !== target) {
       navigate(target, { replace: true });
