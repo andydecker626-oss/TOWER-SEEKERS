@@ -130,7 +130,7 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
 
             <div style={S.crDivider} />
 
-            <p style={S.crMain}>© 2025 Altaris Entertainment, Inc. All Rights Reserved.</p>
+            <p style={S.crMain}>© 2026 Altaris Entertainment, Inc. All Rights Reserved.</p>
             <p style={S.crLine}>Tower Seekers™ is a trademark of Altaris Entertainment, Inc.</p>
             <p style={S.crLine}>
               All characters, names, places, and events depicted herein are fictitious.<br />
