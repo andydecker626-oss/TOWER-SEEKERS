@@ -145,8 +145,9 @@ export default function PreSelection() {
       <style>{CSS}</style>
       <div className="presel-bg" />
 
+      <button className="back-btn" onClick={() => { reset(); navigate("/warroom"); }}>← War Room</button>
+
       <div className="presel-header">
-        <button className="back-btn" onClick={() => { reset(); navigate("/warroom"); }}>← War Room</button>
         <h2 className="presel-title">Choose Your Champions</h2>
         <div className="presel-subtitle">Select 6 from the full roster to bring into battle</div>
       </div>
@@ -263,17 +264,18 @@ const CSS = `
     position: relative; z-index: 1;
   }
   .back-btn {
-    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-    background: rgba(14,8,32,0.96); border: 1.5px solid rgba(240,192,64,0.55);
+    position: fixed; top: 1rem; left: 1rem; z-index: 50;
+    background: rgba(14,8,32,0.92); border: 1.5px solid rgba(240,192,64,0.45);
     color: #f0c040; font-family: 'Cinzel', serif; font-weight: 700;
-    font-size: 1.1rem; letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 0.68rem 1.4rem; border-radius: 8px; cursor: pointer;
+    font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.45rem 0.9rem; border-radius: 8px; cursor: pointer;
     transition: all 0.2s; white-space: nowrap;
-    box-shadow: 0 2px 14px rgba(240,192,64,0.15);
+    box-shadow: 0 2px 14px rgba(240,192,64,0.12);
+    backdrop-filter: blur(6px);
   }
   .back-btn:hover {
     background: rgba(240,192,64,0.13); color: #fff8d6;
-    border-color: rgba(240,192,64,0.9); box-shadow: 0 4px 22px rgba(240,192,64,0.28);
+    border-color: rgba(240,192,64,0.85); box-shadow: 0 4px 20px rgba(240,192,64,0.25);
   }
   .presel-title {
     font-family: 'Cinzel Decorative', serif;
