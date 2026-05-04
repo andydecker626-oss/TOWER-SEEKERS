@@ -4,7 +4,7 @@ import { audioManager } from "@/lib/audio";
 const INTRO_KEY = "ts_intro_v2";
 
 export function shouldShowIntro(): boolean {
-  return !sessionStorage.getItem(INTRO_KEY);
+  return !localStorage.getItem(INTRO_KEY);
 }
 
 /* ── Phase machine ───────────────────────────────────────────────────────── */
@@ -73,7 +73,7 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
   /* ── 3. Title: any key or click → complete ───────────────────────────── */
   const handleEnter = useCallback(() => {
     if (phase !== "title" || transitioning.current) return;
-    sessionStorage.setItem(INTRO_KEY, "1");
+    localStorage.setItem(INTRO_KEY, "1");
     crossFade(() => onComplete(), 600);
   }, [phase, crossFade, onComplete]);
 
