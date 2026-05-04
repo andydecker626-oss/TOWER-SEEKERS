@@ -348,6 +348,12 @@ uri = "file://artifacts/game-client/public/assets/arenas/arena-forest-sheet.png"
 type = "image"
 title = "ancient forest glade arena concept sheet"
 
+[[generated]]
+id = "lqQnpqyOdNVBUtCvykbYm"
+uri = "file://attached_assets/wanderer-sprite-refined.png"
+type = "image"
+title = "wanderer refined pixel sprite"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
