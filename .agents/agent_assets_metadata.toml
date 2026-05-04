@@ -354,6 +354,42 @@ uri = "file://attached_assets/wanderer-sprite-refined.png"
 type = "image"
 title = "wanderer refined pixel sprite"
 
+[[generated]]
+id = "VqPnbbghqCibZko9hprNb"
+uri = "file://attached_assets/wdr-anim-f05-hitpause.png"
+type = "image"
+title = "wanderer hit pause frame"
+
+[[generated]]
+id = "QTqNaqVeU2PmTW7Tk0ImF"
+uri = "file://attached_assets/wdr-anim-f01-idle.png"
+type = "image"
+title = "wanderer idle frame"
+
+[[generated]]
+id = "-KgPmIoks6W30cwpTgcwq"
+uri = "file://attached_assets/wdr-anim-f02-anticipation.png"
+type = "image"
+title = "wanderer anticipation frame"
+
+[[generated]]
+id = "pfQd57Cx7-uEA1hYyBaTL"
+uri = "file://attached_assets/wdr-anim-f03-dash.png"
+type = "image"
+title = "wanderer dash frame"
+
+[[generated]]
+id = "iYqbLCzdhJbRCUSZmPDjR"
+uri = "file://attached_assets/wdr-anim-f04-slash.png"
+type = "image"
+title = "wanderer slash strike frame"
+
+[[generated]]
+id = "-aewUUnO8T6_wavH6EgZj"
+uri = "file://attached_assets/wdr-anim-f06-recover.png"
+type = "image"
+title = "wanderer recovery frame"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"

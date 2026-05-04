@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-const FRAME_W = 96;
-const FRAME_H = 96;
+const FRAME_W = 192;
+const FRAME_H = 192;
 const TOTAL_FRAMES = 12;
 
 // Phase totals per spec (20 FPS base = 600ms) + intentional ~50ms hit-pause extra = ~650ms total:
@@ -111,7 +111,7 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
         style={{
           width: w,
           height: h,
-          backgroundImage: "url('/assets/units/wanderer-draw-slash-sheet.png')",
+          backgroundImage: "url('/assets/units/wanderer-slash-sheet-v2.png')",
           backgroundRepeat: "no-repeat",
           backgroundSize: `${FRAME_W * TOTAL_FRAMES * scale}px ${h}px`,
           backgroundPosition: `${bgX * scale}px 0px`,
@@ -125,7 +125,7 @@ export default function WandererSlashAnim({ mode = "loop", onComplete, scale = 2
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: "url('/assets/units/wanderer-draw-slash-sheet.png')",
+            backgroundImage: "url('/assets/units/wanderer-slash-sheet-v2.png')",
             backgroundRepeat: "no-repeat",
             backgroundSize: `${FRAME_W * TOTAL_FRAMES * scale}px ${h}px`,
             backgroundPosition: `${(DASH_BLUR_FRAME - 1) * -FRAME_W * scale}px 0px`,

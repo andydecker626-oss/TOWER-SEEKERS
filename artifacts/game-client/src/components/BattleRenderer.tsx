@@ -370,7 +370,7 @@ export default function BattleRenderer({
     // ── Wanderer sprite texture (loaded once, cloned per unit) ───────────────
     const _base = (import.meta.env.BASE_URL as string)?.replace(/\/$/, "") ?? "";
     const wandererBaseTex = new THREE.TextureLoader().load(
-      `${_base}/assets/units/wanderer-sprite.png`,
+      `${_base}/assets/units/wanderer-sprite-v2.png`,
     );
     wandererBaseTex.wrapS = THREE.ClampToEdgeWrapping;
     wandererBaseTex.wrapT = THREE.ClampToEdgeWrapping;
