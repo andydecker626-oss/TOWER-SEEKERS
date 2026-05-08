@@ -230,6 +230,88 @@ class AudioManager {
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_sfx_enabled", String(e));
   }
 
+  /**
+   * Sword slash SFX — synthesized blade whoosh + metallic impact.
+   * Two layers: (1) band-pass noise sweep for the air-cut, (2) triangle
+   * pitch-drop + noise transient for the blade connecting.
+   */
+  playSwordSlash() {
+    if (this._muted || !this._sfxEnabled || this._sfxVolume <= 0) return;
+    const ctx = this.getCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    const vol = this._volume * this._sfxVolume;
+    if (vol <= 0) return;
+    const now = ctx.currentTime;
+
+    // ── Layer 1: whoosh (bandpass-filtered noise, 0.22s) ─────────────────────
+    const whooshDur = 0.22;
+    const whooshLen = Math.ceil(ctx.sampleRate * whooshDur);
+    const whooshBuf = ctx.createBuffer(1, whooshLen, ctx.sampleRate);
+    const wd = whooshBuf.getChannelData(0);
+    for (let i = 0; i < whooshLen; i++) {
+      const env = Math.pow(1 - i / whooshLen, 1.8);
+      wd[i] = (Math.random() * 2 - 1) * env;
+    }
+    const whooshSrc = ctx.createBufferSource();
+    whooshSrc.buffer = whooshBuf;
+
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = "bandpass";
+    bpf.frequency.setValueAtTime(1400, now);
+    bpf.frequency.exponentialRampToValueAtTime(3800, now + whooshDur);
+    bpf.Q.value = 1.2;
+
+    const whooshGain = ctx.createGain();
+    whooshGain.gain.setValueAtTime(vol * 0.55, now);
+    whooshGain.gain.exponentialRampToValueAtTime(0.0001, now + whooshDur);
+
+    whooshSrc.connect(bpf);
+    bpf.connect(whooshGain);
+    whooshGain.connect(ctx.destination);
+    whooshSrc.start(now);
+    whooshSrc.stop(now + whooshDur);
+
+    // ── Layer 2: impact (pitch-drop triangle + noise punch, 0.14s) ───────────
+    const impactAt = now + 0.04;
+
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(680, impactAt);
+    osc.frequency.exponentialRampToValueAtTime(90, impactAt + 0.10);
+
+    const impactGain = ctx.createGain();
+    impactGain.gain.setValueAtTime(vol * 0.38, impactAt);
+    impactGain.gain.exponentialRampToValueAtTime(0.0001, impactAt + 0.13);
+
+    osc.connect(impactGain);
+    impactGain.connect(ctx.destination);
+    osc.start(impactAt);
+    osc.stop(impactAt + 0.14);
+
+    // ── Layer 3: metallic shimmer (high-pass noise tail, 0.18s) ──────────────
+    const shimDur = 0.18;
+    const shimLen = Math.ceil(ctx.sampleRate * shimDur);
+    const shimBuf = ctx.createBuffer(1, shimLen, ctx.sampleRate);
+    const sd = shimBuf.getChannelData(0);
+    for (let i = 0; i < shimLen; i++) sd[i] = Math.random() * 2 - 1;
+    const shimSrc = ctx.createBufferSource();
+    shimSrc.buffer = shimBuf;
+
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = "highpass";
+    hpf.frequency.value = 7200;
+
+    const shimGain = ctx.createGain();
+    shimGain.gain.setValueAtTime(vol * 0.18, impactAt);
+    shimGain.gain.exponentialRampToValueAtTime(0.0001, impactAt + shimDur);
+
+    shimSrc.connect(hpf);
+    hpf.connect(shimGain);
+    shimGain.connect(ctx.destination);
+    shimSrc.start(impactAt);
+    shimSrc.stop(impactAt + shimDur);
+  }
+
   /** Short JRPG-style menu blip. Respects master mute and SFX settings. */
   playClick() {
     if (this._muted || !this._sfxEnabled || this._sfxVolume <= 0) return;

@@ -15,6 +15,7 @@ export class FESpriteAnimator {
 
   private isEnemy: boolean;
   private onDone?: () => void;
+  private onFrameChangeCb: ((file: string) => void) | null = null;
 
   constructor(basePath: string, isEnemy = false) {
     this.basePath = basePath.replace(/\/$/, "");
@@ -54,6 +55,11 @@ export class FESpriteAnimator {
       this.applyFlip(this.mat.map);
       this.mat.map.needsUpdate = true;
     }
+  }
+
+  /** Register a callback fired every time the displayed frame changes. Pass null to clear. */
+  onFrameChange(cb: ((file: string) => void) | null) {
+    this.onFrameChangeCb = cb;
   }
 
   playClip(clip: FrameEntry[], loop = false, onDone?: () => void) {
@@ -116,6 +122,7 @@ export class FESpriteAnimator {
       tex.needsUpdate = true;
       this.mat.map = tex;
       this.mat.needsUpdate = true;
+      this.onFrameChangeCb?.(file);
     }
   }
 

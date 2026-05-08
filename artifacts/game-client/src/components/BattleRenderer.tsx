@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { GridUnit } from "@/lib/types";
 import { FESpriteAnimator } from "@/lib/FESpriteAnimator";
-import { idleClip, attackClip, ALL_MYRMIDON_FILES } from "@/lib/myrmidonAnim";
+import { idleClip, attackClip, ALL_MYRMIDON_FILES, MYRMIDON_HIT_FRAME } from "@/lib/myrmidonAnim";
+import { audioManager } from "@/lib/audio";
 
 type SelectMode = "none" | "move" | "attack" | "skill";
 
@@ -672,7 +673,11 @@ export default function BattleRenderer({
         const mat = fa.sprite.material as THREE.SpriteMaterial;
         // Trigger attack animation when the actor flash fires
         if (flash === "attack" && rec.prevFlash !== "attack") {
+          fa.onFrameChange((file) => {
+            if (file === MYRMIDON_HIT_FRAME) audioManager.playSwordSlash();
+          });
           fa.playClip(attackClip, false, () => {
+            fa.onFrameChange(null);
             fa.playClip(idleClip, true);
           });
         }

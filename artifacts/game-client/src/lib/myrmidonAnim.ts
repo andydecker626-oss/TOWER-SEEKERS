@@ -55,6 +55,9 @@ export const attackClip: FrameEntry[] = [
   t("Sword_038",  3),
 ];
 
+/** Frame at which the blade makes contact — fire SFX here. */
+export const MYRMIDON_HIT_FRAME = "Sword_010";
+
 export const ALL_MYRMIDON_FILES: string[] = Array.from(
   new Set([
     ...idleClip.map((f) => f.file),

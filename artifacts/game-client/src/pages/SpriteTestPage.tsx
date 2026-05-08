@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 import { FESpriteAnimator } from "@/lib/FESpriteAnimator";
-import { idleClip, attackClip, ALL_MYRMIDON_FILES } from "@/lib/myrmidonAnim";
+import { idleClip, attackClip, ALL_MYRMIDON_FILES, MYRMIDON_HIT_FRAME } from "@/lib/myrmidonAnim";
+import { audioManager } from "@/lib/audio";
 
 // ── Arena constants (mirrors BattleRenderer) ─────────────────────────────────
 const CELL    = 1.0;
@@ -236,7 +237,7 @@ export default function SpriteTestPage() {
     const tileList = () => [...enemyTiles.current.values()].map(r => r.mesh);
 
     function getPointerTile(e: PointerEvent) {
-      const rect = el.getBoundingClientRect();
+      const rect = el!.getBoundingClientRect();
       pointer.current.set(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
         -((e.clientY - rect.top) / rect.height) * 2 + 1,
@@ -260,9 +261,9 @@ export default function SpriteTestPage() {
       if (newKey) {
         const rec = enemyTiles.current.get(newKey);
         if (rec && moveState.current.phase === "idle") rec.mat.color.setHex(C_ENEMY_HOV);
-        el.style.cursor = "pointer";
+        el!.style.cursor = "pointer";
       } else {
-        el.style.cursor = "";
+        el!.style.cursor = "";
       }
       hoveredRef.current = newKey;
     }
@@ -339,9 +340,13 @@ export default function SpriteTestPage() {
             // Arrived — play attack
             const rec = enemyTiles.current.get(ms.tileKey);
             if (rec) rec.mat.color.setHex(C_ENEMY_ATK);
-            moveState.current = { ...ms, phase: "attacking" };
+                moveState.current = { ...ms, phase: "attacking" };
             setStatus(`Attacking col ${ms.tileKey.split("-")[0]! as unknown as number + 1}…`);
+            animator.onFrameChange((file) => {
+              if (file === MYRMIDON_HIT_FRAME) audioManager.playSwordSlash();
+            });
             animator.playClip(attackClip, false, () => {
+              animator.onFrameChange(null);
               // Attack done — return home
               const rec2 = enemyTiles.current.get(ms.tileKey);
               if (rec2) rec2.mat.color.setHex(rec2.base);
