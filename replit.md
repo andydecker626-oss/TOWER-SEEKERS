@@ -84,6 +84,17 @@ Any route beyond `/` requires Clerk authentication. Unauthenticated users hittin
 
 Warlock, Paladin, Knight, Cleric, Mage, Rogue, Archer, Berserker, Lancer, Wanderer, Shaman, Bard
 
+### Myrmidon FE Sprite (Wanderer unit)
+
+The Wanderer unit in battle uses real Fire Emblem frames from FE-Repo (Leo_Link's Alt Myrmidon-Reskin, Sword set) instead of a sprite sheet.
+
+- **Frames**: `artifacts/game-client/public/assets/units/myrmidon/Sword_000.png` – `Sword_038.png` (39 PNGs, committed)
+- **Download script**: `pnpm --filter @workspace/scripts run download-myrmidon`
+- **Animation data**: `artifacts/game-client/src/lib/myrmidonAnim.ts` — idle (Sword_000 looping) and attack (Mode 1, 39 frames with tick-based timing from Sword.txt, ~15fps)
+- **Animator class**: `artifacts/game-client/src/lib/FESpriteAnimator.ts` — unit-agnostic, pre-loads textures by file name, supports horizontal flip for enemy units
+- **Test page**: `/sprite-test` — 3D scene with idle/attack/flip controls for visual validation
+- **Live battle**: `BattleRenderer.tsx` uses `FESpriteAnimator` for any unit with `defId === "wanderer"`
+
 ### CSS Sprite Classes
 
 `blade-knight`, `rune-archer`, `cleric`, `guardian`, `lancer`, `hex-mage`, `invoker`, `fell-duelist`

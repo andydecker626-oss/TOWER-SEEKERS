@@ -437,3 +437,15 @@ id = "-hBpBNLfOsDAgOmRKzW1W"
 uri = "file://artifacts/game-client/public/assets/arenas/arena-forest-sheet.png"
 type = "image"
 title = "Ancient Forest Glade — 5 Perspectives"
+
+[[outputs]]
+id = "yJFRR4q4Tt0T0Oo4ADFpH"
+uri = "file://artifacts/game-client/public/assets/units/myrmidon/lunge_strip.png"
+type = "image"
+title = "Lunge frames 011–020 (left to right)"
+
+[[outputs]]
+id = "icMk1ueBKfXUB_LM8vatn"
+uri = "file://artifacts/game-client/public/assets/units/myrmidon/windup_strip.png"
+type = "image"
+title = "Wind-up frames 004–010 (left to right)"

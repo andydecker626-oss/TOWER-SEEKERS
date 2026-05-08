@@ -16,6 +16,7 @@ import TitleScreen from "@/pages/TitleScreen";
 import WarRoom from "@/pages/WarRoom";
 import SpritePreview from "@/pages/SpritePreview";
 import ArenaDemo from "@/pages/ArenaDemo";
+import SpriteTestPage from "@/pages/SpriteTestPage";
 import IntroSequence, { shouldShowIntro } from "@/components/IntroSequence";
 import { audioManager } from "@/lib/audio";
 
@@ -55,7 +56,7 @@ function PhaseNavigator() {
   const location = useLocation();
 
   useEffect(() => {
-    const safePaths = ["/", "/warroom", "/hub", "/arena-demo", "/sprites"];
+    const safePaths = ["/", "/warroom", "/hub", "/arena-demo", "/sprites", "/sprite-test"];
     if (safePaths.includes(location.pathname)) return;
     const target = PHASE_ROUTES[state.phase] ?? "/lobby";
     if (location.pathname !== target) {
@@ -144,6 +145,7 @@ function AppRoutes() {
           <Route path="/battle" element={<RequireAuth><Battle /></RequireAuth>} />
           <Route path="/gameover" element={<RequireAuth><GameOver /></RequireAuth>} />
           <Route path="/arena-demo" element={<RequireAuth><ArenaDemo /></RequireAuth>} />
+          <Route path="/sprite-test" element={<SpriteTestPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SocketProvider>
@@ -153,7 +155,8 @@ function AppRoutes() {
 
 function App() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const [introComplete, setIntroComplete] = useState(!shouldShowIntro());
+  const skipIntro = !shouldShowIntro() || window.location.pathname.endsWith("/sprite-test");
+  const [introComplete, setIntroComplete] = useState(skipIntro);
 
   if (!clerkPubKey) {
     return (
