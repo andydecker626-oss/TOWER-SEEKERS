@@ -16,10 +16,16 @@ export class FESpriteAnimator {
   private isEnemy: boolean;
   private onDone?: () => void;
   private onFrameChangeCb: ((file: string) => void) | null = null;
+  private textureFilter: THREE.MagnificationTextureFilter;
 
-  constructor(basePath: string, isEnemy = false) {
+  constructor(
+    basePath: string,
+    isEnemy = false,
+    textureFilter: THREE.MagnificationTextureFilter = THREE.NearestFilter,
+  ) {
     this.basePath = basePath.replace(/\/$/, "");
     this.isEnemy = isEnemy;
+    this.textureFilter = textureFilter;
     this.mat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false });
     this.sprite = new THREE.Sprite(this.mat);
   }
@@ -34,8 +40,8 @@ export class FESpriteAnimator {
           (tex) => {
             tex.wrapS = THREE.ClampToEdgeWrapping;
             tex.wrapT = THREE.ClampToEdgeWrapping;
-            tex.magFilter = THREE.NearestFilter;
-            tex.minFilter = THREE.NearestFilter;
+            tex.magFilter = this.textureFilter;
+            tex.minFilter = this.textureFilter as THREE.MinificationTextureFilter;
             this.textures.set(file, tex);
             resolve();
           },
