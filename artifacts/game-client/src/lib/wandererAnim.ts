@@ -20,7 +20,7 @@ export const attackClip: FrameEntry[] = [
   t("wanderer_atk_006",  1),   // smear — blade arrives
   t("wanderer_atk_007",  8),   // impact hold (longest — SFX fires here)
   t("wanderer_atk_008",  3),   // follow-through / recoil
-  t("wanderer_atk_009",  5),   // return / settle
+  t("wanderer_atk_009",  4),   // return / settle
 ];
 
 /** Frame at which the blade makes contact — fire SFX here. */
