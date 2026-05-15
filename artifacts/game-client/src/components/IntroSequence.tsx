@@ -335,13 +335,22 @@ const CSS = `
     bottom: 20px;
     right: 26px;
     font-family: 'Cinzel', Georgia, serif;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.2);
+    color: rgba(240,192,64,0.75);
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(240,192,64,0.35);
+    border-radius: 6px;
+    padding: 6px 14px;
     cursor: pointer;
     user-select: none;
-    transition: color 0.2s;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    backdrop-filter: blur(4px);
   }
-  .intro-skip:hover { color: rgba(255,255,255,0.55); }
+  .intro-skip:hover {
+    color: #f0c840;
+    border-color: rgba(240,192,64,0.7);
+    background: rgba(0,0,0,0.75);
+  }
 `;
