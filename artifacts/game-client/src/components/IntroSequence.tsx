@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { audioManager } from "@/lib/audio";
-
-const INTRO_KEY = "ts_intro_v2";
-
-export function shouldShowIntro(): boolean {
-  return !localStorage.getItem(INTRO_KEY);
-}
+import { markIntroSeen } from "@/lib/introState";
 
 /* ── Phase machine ───────────────────────────────────────────────────────── */
 type Phase = "video" | "copyright" | "title";
@@ -13,7 +8,7 @@ type Phase = "video" | "copyright" | "title";
 export default function IntroSequence({ onComplete }: { onComplete: () => void }) {
   const [phase,        setPhase       ] = useState<Phase>("video");
   const [screenOpacity, setScreenOpacity] = useState(1);
-  const [videoBlocked,  setVideoBlocked ] = useState(false);
+  const [videoBlocked,  setVideoBlocked ] = useState(true);
 
   const videoRef       = useRef<HTMLVideoElement>(null);
   const transitioning  = useRef(false);
@@ -43,19 +38,19 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, intervalMs);
   }
 
-  /* ── 1. Video phase: try to autoplay on mount ─────────────────────────── */
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (!vid || phase !== "video") return;
-    vid.volume = 0.2;
-    vid.play().catch(() => setVideoBlocked(true));
-  // only run once
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const advanceFromVideo = useCallback(() => {
     crossFade(() => setPhase("copyright"));
   }, [crossFade]);
+
+  /* ── 1. Video phase: always require a click — no autoplay ─────────────── */
+  const handleVideoStart = useCallback(() => {
+    const vid = videoRef.current;
+    if (!vid) { advanceFromVideo(); return; }
+    vid.volume = 0.2;
+    vid.play()
+      .then(() => setVideoBlocked(false))
+      .catch(() => advanceFromVideo());
+  }, [advanceFromVideo]);
 
   /* ── 2. Copyright: auto-advance after 3.5 s ──────────────────────────── */
   useEffect(() => {
@@ -73,7 +68,7 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
   /* ── 3. Title: any key or click → complete ───────────────────────────── */
   const handleEnter = useCallback(() => {
     if (phase !== "title" || transitioning.current) return;
-    localStorage.setItem(INTRO_KEY, "1");
+    markIntroSeen();
     crossFade(() => onComplete(), 600);
   }, [phase, crossFade, onComplete]);
 
@@ -100,11 +95,9 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
             onEnded={advanceFromVideo}
           />
 
-          {/* Blocked-by-browser fallback */}
+          {/* Always show until video starts playing */}
           {videoBlocked && (
-            <div style={S.blockedOverlay} onClick={() => {
-              videoRef.current?.play().then(() => setVideoBlocked(false)).catch(() => {});
-            }}>
+            <div style={S.blockedOverlay} onClick={handleVideoStart}>
               <div style={S.blockedBox}>
                 <div style={S.playIcon}>▶</div>
                 <div style={S.playLabel}>Click to Begin</div>

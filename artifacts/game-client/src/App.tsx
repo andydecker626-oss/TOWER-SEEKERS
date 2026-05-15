@@ -17,7 +17,8 @@ import WarRoom from "@/pages/WarRoom";
 import SpritePreview from "@/pages/SpritePreview";
 import ArenaDemo from "@/pages/ArenaDemo";
 import SpriteTestPage from "@/pages/SpriteTestPage";
-import IntroSequence, { shouldShowIntro } from "@/components/IntroSequence";
+import IntroSequence from "@/components/IntroSequence";
+import { shouldShowIntro } from "@/lib/introState";
 import { audioManager } from "@/lib/audio";
 
 const queryClient = new QueryClient();
