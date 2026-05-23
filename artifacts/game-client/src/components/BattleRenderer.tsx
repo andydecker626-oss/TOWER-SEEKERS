@@ -350,8 +350,7 @@ export default function BattleRenderer({
     const MYR_ASSET_BASE = `${_base}/assets/units/myrmidon`;
 
     const scene = new THREE.Scene();
-    // Warm amber-orange fog matches the horizon — fills any distant void
-    scene.fog = new THREE.Fog(0xb06020, 50, 140);
+    scene.background = new THREE.Color(0x0a0815);
 
     // ── Camera ──────────────────────────────────────────────────────────────
     const camera  = new THREE.PerspectiveCamera(44, el.clientWidth / el.clientHeight, 0.1, 300);
@@ -360,42 +359,11 @@ export default function BattleRenderer({
     camera.position.copy(camPos);
     camera.lookAt(camLook);
 
-    // ── Sky dome (vertex-coloured gradient: warm horizon → deep purple zenith) ─
-    {
-      const skyGeo = new THREE.SphereGeometry(200, 32, 18);
-      const pos = skyGeo.attributes.position as THREE.BufferAttribute;
-      const cols = new Float32Array(pos.count * 3);
-      for (let i = 0; i < pos.count; i++) {
-        const y = pos.getY(i);
-        const t = Math.max(-1, Math.min(1, y / 200)); // -1 south pole → 1 north pole
-        // horizon (t≈0): warm amber rgb(0.69, 0.37, 0.12)
-        // zenith (t=1):  deep purple rgb(0.04, 0.02, 0.18)
-        // nadir (t=-1):  very dark ground rgb(0.06, 0.04, 0.02)
-        const hr = 0.69, hg = 0.37, hb = 0.12;
-        const zr = 0.04, zg = 0.02, zb = 0.18;
-        const gr = 0.06, gg = 0.04, gb = 0.02;
-        if (t >= 0) {
-          cols[i * 3 + 0] = hr + t * (zr - hr);
-          cols[i * 3 + 1] = hg + t * (zg - hg);
-          cols[i * 3 + 2] = hb + t * (zb - hb);
-        } else {
-          const ft = -t;
-          cols[i * 3 + 0] = hr + ft * (gr - hr);
-          cols[i * 3 + 1] = hg + ft * (gg - hg);
-          cols[i * 3 + 2] = hb + ft * (gb - hb);
-        }
-      }
-      skyGeo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
-      scene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
-    }
-
     // ── Lights ──────────────────────────────────────────────────────────────
-    // Hemisphere: warm orange sky fill + dark green ground fill
-    scene.add(new THREE.HemisphereLight(0xffa040, 0x203808, 0.7));
-    scene.add(new THREE.AmbientLight(0xfff0d0, 0.3));
+    scene.add(new THREE.AmbientLight(0x8088a0, 0.45));
 
-    const sun = new THREE.DirectionalLight(0xffb060, 1.2);
-    sun.position.set(CX - 10, 18, TOTAL_D + 12);
+    const sun = new THREE.DirectionalLight(0xfff4e0, 1.1);
+    sun.position.set(CX - 8, 16, CZ + 10);
     sun.target.position.set(CX, 0, CZ);
     sun.castShadow = true;
     sun.shadow.mapSize.setScalar(1024);
@@ -403,83 +371,9 @@ export default function BattleRenderer({
     sc.left = -20; sc.right = 20; sc.top = 14; sc.bottom = -14;
     scene.add(sun); scene.add(sun.target);
 
-    // Torch warm fill lights (on corner towers)
-    const torchLights: THREE.PointLight[] = [];
-    const flameMeshes: THREE.Mesh[]       = [];
-
-    function addTorchAt(x: number, y: number, z: number, intensity = 2.8, range = 10) {
-      const pl = new THREE.PointLight(0xff8822, intensity, range);
-      pl.position.set(x, y, z);
-      pl.userData.base = intensity;
-      scene.add(pl);
-      torchLights.push(pl);
-
-      const sconce = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.045, 0.07, 0.30, 7),
-        new THREE.MeshLambertMaterial({ color: 0x1c1508 }),
-      );
-      sconce.position.set(x, y - 0.15, z);
-      scene.add(sconce);
-
-      const flame = new THREE.Mesh(
-        new THREE.ConeGeometry(0.09, 0.26, 7),
-        new THREE.MeshBasicMaterial({ color: 0xff8822, transparent: true, opacity: 0.9 }),
-      );
-      flame.position.set(x, y + 0.12, z);
-      scene.add(flame);
-      flameMeshes.push(flame);
-    }
-
-    // ── Natural grass ground ─────────────────────────────────────────────────
-    const grassMat = new THREE.MeshLambertMaterial({ color: 0x1e3010 });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), grassMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.set(CX, -0.01, CZ);
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // Dirt patches (slightly lighter ground variation)
-    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x3a2a14 });
-    const DIRT_PATCHES: [number, number, number, number][] = [
-      [-8, -5, 14, 10], [12, -3, 12, 8], [2, 8, 16, 6], [-5, 3, 8, 7],
-    ];
-    DIRT_PATCHES.forEach(([px, pz, pw, pd]) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, pd), dirtMat);
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(px + CX, 0.003, pz + CZ);
-      scene.add(m);
-    });
-
-    // Gentle terrain hills (very wide, very flat cylinders)
-    const hillMat = new THREE.MeshLambertMaterial({ color: 0x172509 });
-    const HILLS: [number, number, number, number][] = [
-      // [x, z, radius, height]
-      [-20, -15, 28, 2.5], [22, -12, 24, 2.0], [-18, 12, 20, 1.8],
-      [26,  10,  22, 2.2], [5, -30, 30, 3.5],
-    ];
-    HILLS.forEach(([hx, hz, hr, hh]) => {
-      const hill = new THREE.Mesh(new THREE.CylinderGeometry(hr, hr + 8, hh, 14), hillMat);
-      hill.position.set(hx + CX, hh / 2 - hh - 0.5, hz + CZ);
-      scene.add(hill);
-    });
-
-    // Scattered rocks / boulders
-    const rockMat = new THREE.MeshLambertMaterial({ color: 0x5a5040 });
-    const ROCKS: [number, number, number][] = [
-      [-6, -3, 0.4], [14, 2, 0.6], [-7, 5, 0.35], [12, -2, 0.5],
-      [3, -7, 0.55], [8, 7, 0.45], [-4, 6, 0.3],
-    ];
-    ROCKS.forEach(([rx, rz, rr]) => {
-      const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(rr, 0), rockMat);
-      rock.scale.y = 0.65;
-      rock.position.set(rx + CX, rr * 0.3, rz + CZ);
-      rock.castShadow = true;
-      scene.add(rock);
-    });
-
     // ── Battle platform (stone dias) ─────────────────────────────────────────
-    const platMat = new THREE.MeshLambertMaterial({ color: 0x5a5040 });
-    const platTop = new THREE.MeshLambertMaterial({ color: 0x6a5e4a });
+    const platMat = new THREE.MeshLambertMaterial({ color: 0x3a3a42 });
+    const platTop = new THREE.MeshLambertMaterial({ color: 0x424248 });
     // Main platform slab
     const plat = new THREE.Mesh(new THREE.BoxGeometry(TOTAL_W + 1.6, PLAT_Y, TOTAL_D + 1.6), platMat);
     plat.position.set(CX, PLAT_Y / 2 - 0.01, CZ);
@@ -534,119 +428,6 @@ export default function BattleRenderer({
       m.position.set(mx, PLAT_Y + 0.002, TOTAL_D / 2);
       scene.add(m);
     });
-
-    // Water channel
-    const waterMat = new THREE.MeshLambertMaterial({ color: 0x1a3860 });
-    const water = new THREE.Mesh(new THREE.BoxGeometry(GAP, TILE_H * 0.5, TOTAL_D + 0.2), waterMat);
-    water.position.set(WATER_X + GAP / 2, PLAT_Y + TILE_H * 0.25, TOTAL_D / 2);
-    scene.add(water);
-
-    // ── Corner towers ─────────────────────────────────────────────────────────
-    const towerBodyMat = new THREE.MeshLambertMaterial({ color: 0x50473c });
-    const towerCapMat  = new THREE.MeshLambertMaterial({ color: 0x706050 });
-    const TOWER_H = 3.8;
-    const TOWER_W = 1.0;
-
-    const TOWER_POS: [number, number, number][] = [
-      [ALLY_X  - TOWER_W - 0.8, -TOWER_W - 0.8, 1],   // back-left  (ally)
-      [TOTAL_W + TOWER_W + 0.8, -TOWER_W - 0.8,-1],   // back-right (enemy)
-      [ALLY_X  - TOWER_W - 0.8,  TOTAL_D + TOWER_W + 0.8, 1], // front-left (ally)
-      [TOTAL_W + TOWER_W + 0.8,  TOTAL_D + TOWER_W + 0.8,-1], // front-right (enemy)
-    ];
-
-    TOWER_POS.forEach(([tx, tz, side]) => {
-      const isAlly = side === 1;
-      // Shaft
-      const body = new THREE.Mesh(new THREE.BoxGeometry(TOWER_W, TOWER_H, TOWER_W), towerBodyMat);
-      body.position.set(tx, TOWER_H / 2, tz);
-      body.castShadow = true; body.receiveShadow = true;
-      scene.add(body);
-      // Roof deck
-      const deck = new THREE.Mesh(new THREE.BoxGeometry(TOWER_W + 0.18, 0.14, TOWER_W + 0.18), towerCapMat);
-      deck.position.set(tx, TOWER_H + 0.07, tz);
-      scene.add(deck);
-      // Battlements
-      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz]) => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 0.22), towerBodyMat);
-        m.position.set(tx + sx * 0.35, TOWER_H + 0.23, tz + sz * 0.35);
-        scene.add(m);
-      });
-      // Tower torch
-      addTorchAt(tx, TOWER_H + 0.35, tz, 3.2, 12);
-      // Banner
-      const bannerColor = isAlly ? ALLY_D : ENEMY_D;
-      const bannerFX = isAlly ? 0.58 : -0.58;
-      const bannerMat = new THREE.MeshLambertMaterial({ color: bannerColor, emissive: bannerColor, emissiveIntensity: 0.08 });
-      const banner = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.5, 0.24), bannerMat);
-      banner.position.set(tx + bannerFX, TOWER_H - 0.62, tz);
-      scene.add(banner);
-      const trim = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.27), new THREE.MeshBasicMaterial({ color: GOLD }));
-      trim.position.set(tx + bannerFX, TOWER_H - 0.12, tz);
-      scene.add(trim);
-    });
-
-    // ── Dense forest flanks ───────────────────────────────────────────────────
-    const trunkMat  = new THREE.MeshLambertMaterial({ color: 0x3a1c08 });
-    const leavesMat = new THREE.MeshLambertMaterial({ color: 0x0e2208 });
-    const leavesMatB = new THREE.MeshLambertMaterial({ color: 0x091c06 });
-    const TREES: [number, number, number][] = [
-      // Left (pushed further out so Ally View camera stays clear)
-      [-11.0,-2,3.6], [-12.0,0.5,4.4], [-11.3,2.5,3.9], [-11.7,4.5,4.7],
-      [-11.0,6.5,3.3], [-12.5,-0.5,5.2], [-10.3,1.5,3.1], [-13.0,3.5,4.0],
-      // Right
-      [16.0,-2,3.6], [17.0,0.5,4.4], [16.3,2.5,3.9], [16.7,4.5,4.7],
-      [16.0,6.5,3.3], [17.5,-0.5,5.2], [15.3,1.5,3.1], [18.0,3.5,4.0],
-      // Back row
-      [-3,-10,3.2], [0.5,-11,3.8], [3,-9.5,3.0], [5.5,-11.5,3.5],
-      [8,-10,3.2], [10.5,-11,3.8], [12,-9.5,3.0], [13.5,-11,2.8],
-      // Front row
-      [-3,9,3.0], [1,10,3.5], [4,9.5,2.9], [7,10.5,3.3], [10,9,3.1], [13,9.5,3.4],
-    ];
-    TREES.forEach(([tx, tz, th], i) => {
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.20, th, 7), trunkMat);
-      trunk.position.set(tx + CX, th / 2, tz + CZ);
-      trunk.castShadow = true;
-      scene.add(trunk);
-      const lMat = i % 2 === 0 ? leavesMat : leavesMatB;
-      const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.05, 2.2, 7), lMat);
-      canopy.position.set(tx + CX, th + 0.9, tz + CZ);
-      canopy.castShadow = true;
-      scene.add(canopy);
-      // Second canopy tier for tall trees
-      if (th > 3.8) {
-        const upper = new THREE.Mesh(new THREE.ConeGeometry(0.72, 1.6, 7), lMat);
-        upper.position.set(tx + CX, th + 2.1, tz + CZ);
-        scene.add(upper);
-      }
-    });
-
-    // ── Background mountains ──────────────────────────────────────────────────
-    const mountainMat = new THREE.MeshLambertMaterial({ color: 0x0d0a16 });
-    const PEAKS: [number, number, number, number][] = [
-      [-22,-45,16,7.5], [-10,-48,20,9], [2,-44,15,6.5], [11,-49,18,8],
-      [21,-45,16,7], [29,-47,14,6], [-15,-55,26,11], [8,-57,24,10.5],
-      // sides
-      [-32,-4,14,6], [-34,6,16,7], [40,-4,14,6], [42,7,16,7],
-    ];
-    PEAKS.forEach(([px, pz, ph, pr]) => {
-      const peak = new THREE.Mesh(new THREE.ConeGeometry(pr, ph, 9), mountainMat);
-      peak.position.set(px + CX, ph / 2 - 1, pz + CZ);
-      scene.add(peak);
-    });
-
-    // ── Rear archway ─────────────────────────────────────────────────────────
-    const archMat = new THREE.MeshLambertMaterial({ color: 0x2e2618 });
-    const ARCH_Z  = -8.0;
-    const ARCH_H  = 5.0;
-    [CX - 2.8, CX + 2.8].forEach(px => {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(0.65, ARCH_H, 0.65), archMat);
-      p.position.set(px, ARCH_H / 2, ARCH_Z + CZ);
-      p.castShadow = true;
-      scene.add(p);
-    });
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.60, 0.65), archMat);
-    lintel.position.set(CX, ARCH_H + 0.30, ARCH_Z + CZ);
-    scene.add(lintel);
 
     // ── Unit management ───────────────────────────────────────────────────────
     const shadowGeo = new THREE.CircleGeometry(0.25, 12);
@@ -853,20 +634,6 @@ export default function BattleRenderer({
       camLook.lerp(preset.look, 0.045);
       camera.position.copy(camPos);
       camera.lookAt(camLook);
-
-      // Torch flicker
-      torchLights.forEach((pl, i) => {
-        pl.intensity = (pl.userData.base as number)
-          + Math.sin(tick * 0.12 + i * 1.37) * 0.9
-          + Math.sin(tick * 0.31 + i * 0.73) * 0.35;
-      });
-      flameMeshes.forEach((f, i) => {
-        const s = 0.88 + Math.sin(tick * 0.2 + i * 1.3) * 0.14 + Math.sin(tick * 0.45 + i * 0.7) * 0.07;
-        f.scale.set(s, s, s);
-        (f.material as THREE.MeshBasicMaterial).opacity = 0.72 + Math.sin(tick * 0.18 + i) * 0.22;
-      });
-      // Water shimmer
-      waterMat.color.setHSL(0.60, 0.68, 0.13 + Math.sin(tick * 0.033) * 0.04);
 
       // ── FE sprite animator tick ────────────────────────────────────────────
       const nowMs = performance.now();
