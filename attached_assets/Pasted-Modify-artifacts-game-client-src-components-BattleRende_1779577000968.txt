@@ -1,0 +1,69 @@
+Modify artifacts/game-client/src/components/BattleRenderer.tsx in place. 
+Do not rewrite the file. Do not touch game logic, networking, unit rendering, 
+or character builders (mk, baseHumanoid, buildKnight, buildPaladin, 
+buildBerserker, buildLancer, buildWanderer, buildRogue, buildArcher, 
+buildMage, buildCleric, buildWarlock, buildDefaultUnit, buildCharacterFor). 
+Do not touch Battle.tsx or any socket/state code.
+
+GOAL: Strip the scene to a deliberately minimal "black box theater" baseline 
+so painterly 2D sprites read as the focal point. Remove environmental 
+clutter and the warm sunset palette.
+
+REMOVE entirely (delete the code blocks):
+1. The sky dome block (the SphereGeometry + vertex-colored gradient block 
+   under "── Sky dome ──").
+2. scene.fog (the THREE.Fog line near scene creation).
+3. The HemisphereLight (0xffa040 ground/sky fill).
+4. The addTorchAt function, all calls to it, the torchLights array, the 
+   flameMeshes array, and any animation loop code that pulses torch 
+   intensity or flame meshes.
+5. The natural grass ground (the 400x400 PlaneGeometry with grassMat).
+6. All DIRT_PATCHES and the dirtMat code.
+7. All HILLS and hillMat code.
+8. All decorative rocks (any rock/boulder mesh creation).
+9. The water mesh.
+10. The corner towers, tower decks, and banner meshes (everything under 
+    "── Corner towers ──").
+
+KEEP exactly as-is:
+- Camera setup, PRESETS, cycleCamera
+- Grid layout constants (CELL, ROWS, COLS, CX, CZ, TOTAL_W, TOTAL_D, 
+  PLAT_Y, TILE_H)
+- Battle platform (stone dias) - the plat and platFace meshes
+- Battle floor tiles (makeTiles function and its calls, mortarMat)
+- All unit rendering, sprite billboards, FE Myrmidon animation
+- The shadow circle decals under units (shadowGeo, shadowMat)
+
+REPLACE with this minimal setup:
+1. Set scene.background to a solid dark color: 
+   scene.background = new THREE.Color(0x0a0815);
+   (Skip the gradient for now - solid is cleaner as a baseline.)
+
+2. Lighting - exactly two lights, no more:
+   - One DirectionalLight, neutral warm-white #fff4e0, intensity 1.1, 
+     positioned at (CX - 8, 16, CZ + 10), target (CX, 0, CZ), 
+     castShadow = true with the existing shadow camera bounds 
+     (sc.left=-20, right=20, top=14, bottom=-14).
+   - One AmbientLight, slightly cool #8088a0, intensity 0.45.
+   Remove the existing AmbientLight (0xfff0d0) and replace with the 
+   cool one above.
+
+3. Change the directional light color from 0xffb060 to 0xfff4e0 (kill 
+   the orange tint).
+
+4. The battle platform stone material can stay, but if there's any 
+   warm orange tint in its color, neutralize it toward grey-stone 
+   (#3a3a42 ish). Don't change geometry.
+
+ACCEPTANCE CRITERIA:
+- Battle scene loads without errors.
+- Units still appear at correct positions on the grid.
+- Unit sprites still face camera and animate.
+- Shadow circles still appear under units.
+- The 4x8 battle floor tiles are still visible.
+- Background is solid near-black-purple.
+- No orange/amber tint anywhere.
+- Scene feels empty around the platform - that is intentional.
+
+Do not add new props, new lighting, new effects, or new textures. 
+Empty surroundings are the goal of this pass.
