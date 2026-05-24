@@ -14,6 +14,9 @@ import GameOver from "@/pages/GameOver";
 import GatheringHub from "@/pages/GatheringHub";
 import TitleScreen from "@/pages/TitleScreen";
 import WarRoom from "@/pages/WarRoom";
+import TowersPage from "@/pages/TowersPage";
+import TownPage from "@/pages/TownPage";
+import ShopPage from "@/pages/ShopPage";
 import SpritePreview from "@/pages/SpritePreview";
 import ArenaDemo from "@/pages/ArenaDemo";
 import SpriteTestPage from "@/pages/SpriteTestPage";
@@ -58,7 +61,7 @@ function PhaseNavigator() {
   const location = useLocation();
 
   useEffect(() => {
-    const safePaths = ["/", "/warroom", "/hub", "/arena-demo", "/sprites", "/sprite-test"];
+    const safePaths = ["/", "/warroom", "/hub", "/towers", "/town", "/shop", "/arena-demo", "/sprites", "/sprite-test"];
     if (safePaths.includes(location.pathname)) return;
     const target = PHASE_ROUTES[state.phase] ?? "/lobby";
     if (location.pathname !== target) {
@@ -139,6 +142,9 @@ function AppRoutes() {
         <Routes>
           <Route path="/" element={<TitleScreen />} />
           <Route path="/warroom" element={<RequireAuth><WarRoom /></RequireAuth>} />
+          <Route path="/towers" element={<RequireAuth><TowersPage /></RequireAuth>} />
+          <Route path="/town" element={<RequireAuth><TownPage /></RequireAuth>} />
+          <Route path="/shop" element={<RequireAuth><ShopPage /></RequireAuth>} />
           <Route path="/lobby" element={<RequireAuth><Lobby /></RequireAuth>} />
           <Route path="/hub" element={<RequireAuth><GatheringHub /></RequireAuth>} />
           <Route path="/sprites" element={<RequireAuth><SpritePreview /></RequireAuth>} />

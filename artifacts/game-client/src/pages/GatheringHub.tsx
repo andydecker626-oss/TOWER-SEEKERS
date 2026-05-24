@@ -1,11 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { ALL_UNITS, getUnitDef } from "@/lib/units";
 import { useParties, type Party, type UnitLoadout } from "@/hooks/useParties";
 import type { UnitDef, SkillDef, PassiveDef } from "@/lib/types";
-import { audioManager } from "@/lib/audio";
-import { useSettings } from "@/context/SettingsContext";
-import SettingsModal from "@/components/SettingsModal";
+import MenuShell from "@/components/MenuShell";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap');`;
 
@@ -644,19 +641,11 @@ const HUB_CSS = `
 `;
 
 export default function GatheringHub() {
-  const navigate = useNavigate();
   const { parties, saveParty, deleteParty } = useParties();
   const [modalOpen, setModalOpen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [editParty, setEditParty] = useState<Party | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<UnitDef | null>(null);
-
-  // Play hub music while in this screen
-  useEffect(() => {
-    audioManager.play("hub");
-    return () => {};
-  }, []);
 
   function openNew() { setEditParty(undefined); setModalOpen(true); }
   function openEdit(party: Party) { setEditParty(party); setModalOpen(true); }
@@ -678,32 +667,15 @@ export default function GatheringHub() {
   }
 
   return (
-    <div className="hub-root">
+    <MenuShell active="units">
       <style>{FONTS + HUB_CSS}</style>
 
-      <div className="hub-backdrop" />
-      <div className="hub-backdrop-overlay" />
-
-      <header className="hub-header">
-        <button className="back-btn" onClick={() => navigate("/warroom")}>← War Room</button>
-        <div className="hub-title-wrap">
-          <h1 className="hub-title">Gathering Hub</h1>
-          <p className="hub-subtitle">Party Builder</p>
-        </div>
-        <button
-          className="hub-settings-btn"
-          onClick={() => setShowSettings(true)}
-          title="Settings"
-          aria-label="Open settings"
-        >⚙</button>
-        <button className="btn-gold" onClick={openNew}>+ New Party</button>
-      </header>
-
-      <main className="hub-body">
+      <div className="hub-body">
         <div className="hub-section-bar">
           <span className="section-label">
             {parties.length === 0 ? "No parties yet" : `${parties.length} ${parties.length === 1 ? "Party" : "Parties"} Saved`}
           </span>
+          <button className="btn-gold" onClick={openNew}>+ New Party</button>
         </div>
 
         {parties.length === 0 ? (
@@ -723,7 +695,7 @@ export default function GatheringHub() {
           </div>
         )}
 
-        <div className="hub-section-bar">
+        <div className="hub-section-bar" style={{ marginTop: "1.5rem" }}>
           <span className="section-label">Unit Roster — click to inspect</span>
         </div>
         <div className="roster-grid">
@@ -735,7 +707,7 @@ export default function GatheringHub() {
             </div>
           ))}
         </div>
-      </main>
+      </div>
 
       {modalOpen && (
         <PartyModal initial={editParty} onSave={handleSave}
@@ -745,8 +717,6 @@ export default function GatheringHub() {
       {selectedUnit && (
         <UnitDetailPanel unit={selectedUnit} onClose={() => setSelectedUnit(null)} />
       )}
-
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-    </div>
+    </MenuShell>
   );
 }
