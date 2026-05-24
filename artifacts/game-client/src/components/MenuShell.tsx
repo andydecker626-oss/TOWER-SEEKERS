@@ -18,9 +18,10 @@ const TABS: { id: ActiveTab; label: string; icon: string; path: string }[] = [
 interface Props {
   active: ActiveTab;
   children: React.ReactNode;
+  bgSrc?: string;
 }
 
-export default function MenuShell({ active, children }: Props) {
+export default function MenuShell({ active, children, bgSrc }: Props) {
   const navigate = useNavigate();
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -42,8 +43,16 @@ export default function MenuShell({ active, children }: Props) {
     <div className="ms-root">
       <style>{CSS}</style>
 
-      <div className="ms-bg" />
-      <div className="ms-overlay" />
+      <div
+        className="ms-bg"
+        style={bgSrc ? { backgroundImage: `url('${bgSrc}')`, filter: "none" } : undefined}
+      />
+      <div
+        className="ms-overlay"
+        style={bgSrc ? {
+          background: "linear-gradient(180deg, rgba(7,4,15,0.55) 0%, rgba(7,4,15,0.70) 50%, rgba(7,4,15,0.85) 100%)"
+        } : undefined}
+      />
 
       {/* ── Top HUD ─────────────────────────────────────────────── */}
       <div className="ms-topbar">

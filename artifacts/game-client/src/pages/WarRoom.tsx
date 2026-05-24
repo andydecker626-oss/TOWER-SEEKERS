@@ -53,7 +53,7 @@ export default function WarRoom() {
   }
 
   return (
-    <MenuShell active="home">
+    <MenuShell active="home" bgSrc="/assets/hub-bg.png">
       <style>{CSS}</style>
       <div className="wr-body">
 
