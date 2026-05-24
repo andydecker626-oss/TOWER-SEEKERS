@@ -100,6 +100,13 @@ export const BATTLE_PLAYLIST: { src: string; title: string }[] = [
   { src: "/assets/battle/crystal-fang.mp3",       title: "Crystal Fang"        },
 ];
 
+// Complete ordered list of all file-backed tracks — used by nextTrack() when not in battle playlist
+export const ALL_FILE_TRACKS: { src: string; title: string }[] = [
+  { src: "/assets/skyforge-siege.mp3",            title: "Skyforge Siege"      },
+  { src: "/assets/hearthstone-tavern.mp3",         title: "Hearthstone Tavern"  },
+  ...BATTLE_PLAYLIST,
+];
+
 // ── AudioManager ─────────────────────────────────────────────────────────────
 
 class AudioManager {
@@ -178,6 +185,32 @@ class AudioManager {
     this._loadBattleTrack(this._battleIdx);
   }
 
+  /**
+   * Advance to the next track regardless of context.
+   * During battle playlist: rotates within the shuffled battle queue.
+   * Otherwise: cycles forward through ALL_FILE_TRACKS (ambient + battle).
+   */
+  nextTrack() {
+    if (this._inBattlePlaylist) {
+      this.nextBattleTrack();
+      return;
+    }
+    const currentSrc = this.audioEl?.src ?? "";
+    const idx = ALL_FILE_TRACKS.findIndex(t => currentSrc.endsWith(t.src));
+    const nextIdx = (idx + 1) % ALL_FILE_TRACKS.length;
+    const next = ALL_FILE_TRACKS[nextIdx];
+    this._stopSynth();
+    this._removeBattleEndedHandler();
+    this.currentTrack = null;
+    if (!this.audioEl) this.audioEl = new Audio();
+    this.audioEl.loop = true;
+    this.audioEl.src = next.src;
+    this.audioEl.load();
+    this.audioEl.volume = this._effectiveMusicVol();
+    this.audioEl.play().catch(() => {});
+    if (this._onTrackChangeCb) this._onTrackChangeCb(next.title);
+  }
+
   private _removeBattleEndedHandler() {
     if (this._battleEndedHandler && this.audioEl) {
       this.audioEl.removeEventListener("ended", this._battleEndedHandler);
@@ -236,7 +269,7 @@ class AudioManager {
    * pitch-drop + noise transient for the blade connecting.
    */
   playSwordSlash() {
-    if (this._muted || !this._sfxEnabled || this._sfxVolume <= 0) return;
+    if (!this._sfxEnabled || this._sfxVolume <= 0) return;
     const ctx = this.getCtx();
     if (ctx.state === "suspended") ctx.resume();
     const vol = this._volume * this._sfxVolume;
@@ -312,9 +345,9 @@ class AudioManager {
     shimSrc.stop(impactAt + shimDur);
   }
 
-  /** Short JRPG-style menu blip. Respects master mute and SFX settings. */
+  /** Short JRPG-style menu blip. Respects SFX settings; music mute does not affect it. */
   playClick() {
-    if (this._muted || !this._sfxEnabled || this._sfxVolume <= 0) return;
+    if (!this._sfxEnabled || this._sfxVolume <= 0) return;
     const ctx = this.getCtx();
     if (ctx.state === "suspended") ctx.resume();
     const vol = this._volume * this._sfxVolume * 0.28;

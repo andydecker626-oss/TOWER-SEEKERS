@@ -18,6 +18,7 @@ import SpritePreview from "@/pages/SpritePreview";
 import ArenaDemo from "@/pages/ArenaDemo";
 import SpriteTestPage from "@/pages/SpriteTestPage";
 import IntroSequence from "@/components/IntroSequence";
+import MusicControls from "@/components/MusicControls";
 import { shouldShowIntro } from "@/lib/introState";
 import { audioManager } from "@/lib/audio";
 
@@ -134,6 +135,7 @@ function AppRoutes() {
         <GlobalClickSound />
         <PhaseNavigator />
         <OpponentReconnectingBanner />
+        <MusicControls />
         <Routes>
           <Route path="/" element={<TitleScreen />} />
           <Route path="/warroom" element={<RequireAuth><WarRoom /></RequireAuth>} />
