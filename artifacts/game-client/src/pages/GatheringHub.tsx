@@ -667,7 +667,7 @@ export default function GatheringHub() {
   }
 
   return (
-    <MenuShell active="units">
+    <MenuShell active="units" bgSrc="/assets/units-bg.png">
       <style>{FONTS + HUB_CSS}</style>
 
       <div className="hub-body">
