@@ -9,7 +9,7 @@ const TOWERS = [
 
 export default function TowersPage() {
   return (
-    <MenuShell active="towers">
+    <MenuShell active="towers" bgSrc="/assets/towers-bg.png">
       <style>{CSS}</style>
       <div className="tp-body">
         <div className="tp-head">
