@@ -3,15 +3,13 @@ import { audioManager } from "@/lib/audio";
 import { markIntroSeen } from "@/lib/introState";
 
 /* ── Phase machine ───────────────────────────────────────────────────────── */
-type Phase = "video" | "copyright" | "title";
+type Phase = "studio" | "title";
 
 export default function IntroSequence({ onComplete }: { onComplete: () => void }) {
-  const [phase,        setPhase       ] = useState<Phase>("video");
+  const [phase,         setPhase        ] = useState<Phase>("studio");
   const [screenOpacity, setScreenOpacity] = useState(1);
-  const [videoBlocked,  setVideoBlocked ] = useState(true);
 
-  const videoRef       = useRef<HTMLVideoElement>(null);
-  const transitioning  = useRef(false);
+  const transitioning = useRef(false);
 
   /* ── Cross-fade helper: screen goes black, content swaps, comes back ─── */
   const crossFade = useCallback((cb: () => void, durationMs = 500) => {
@@ -21,14 +19,13 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     setTimeout(() => {
       cb();
       setScreenOpacity(1);
-      // release lock after fade-in finishes
       setTimeout(() => { transitioning.current = false; }, durationMs);
     }, durationMs);
   }, []);
 
-  /* ── Ramp skyforge via audioManager (shared singleton, survives unmount) */
+  /* ── Ramp Hearthstone Tavern track via audioManager ─────────────────── */
   function rampAudio(target: number, stepSize = 0.025, intervalMs = 80) {
-    audioManager.play("skyforge");
+    audioManager.play("hub");
     audioManager.setFileVolume(0);
     let v = 0;
     const id = setInterval(() => {
@@ -38,34 +35,15 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, intervalMs);
   }
 
-  const advanceFromVideo = useCallback(() => {
-    crossFade(() => setPhase("copyright"));
+  /* ── 1. Studio splash: animation ends → crossfade to title + music ───── */
+  const handleStudioEnd = useCallback(() => {
+    crossFade(() => {
+      setPhase("title");
+      rampAudio(0.16);
+    }, 500);
   }, [crossFade]);
 
-  /* ── 1. Video phase: always require a click — no autoplay ─────────────── */
-  const handleVideoStart = useCallback(() => {
-    const vid = videoRef.current;
-    if (!vid) { advanceFromVideo(); return; }
-    vid.volume = 0.2;
-    vid.play()
-      .then(() => setVideoBlocked(false))
-      .catch(() => advanceFromVideo());
-  }, [advanceFromVideo]);
-
-  /* ── 2. Copyright: auto-advance after 3.5 s ──────────────────────────── */
-  useEffect(() => {
-    if (phase !== "copyright") return;
-    const t = setTimeout(() => {
-      crossFade(() => {
-        setPhase("title");
-        rampAudio(0.16);
-      }, 600);
-    }, 3500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, crossFade]);
-
-  /* ── 3. Title: any key or click → complete ───────────────────────────── */
+  /* ── 2. Title: any key or click → complete ───────────────────────────── */
   const handleEnter = useCallback(() => {
     if (phase !== "title" || transitioning.current) return;
     markIntroSeen();
@@ -84,61 +62,29 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     <div style={{ ...S.root, opacity: screenOpacity }}>
       <style>{CSS}</style>
 
-      {/* ── PHASE 1: Altaris logo video ─────────────────────────────── */}
-      {phase === "video" && (
+      {/* ── PHASE 1: ALTA Studios splash ─────────────────────────────── */}
+      {phase === "studio" && (
         <div style={S.fill}>
-          <video
-            ref={videoRef}
-            src="/assets/altaris-intro.mp4"
-            playsInline
-            style={S.video}
-            onEnded={advanceFromVideo}
-          />
-
-          {/* Always show until video starts playing */}
-          {videoBlocked && (
-            <div style={S.blockedOverlay} onClick={handleVideoStart}>
-              <div style={S.blockedBox}>
-                <div style={S.playIcon}>▶</div>
-                <div style={S.playLabel}>Click to Begin</div>
-              </div>
-            </div>
-          )}
-
-          {/* Skip hint */}
-          <div className="intro-skip" onClick={advanceFromVideo}>SKIP ›</div>
-        </div>
-      )}
-
-      {/* ── PHASE 2: Copyright ──────────────────────────────────────── */}
-      {phase === "copyright" && (
-        <div style={S.copyrightRoot}>
-          <div style={S.copyrightInner}>
-            <img src="/assets/altaris-logo.png" alt="Altaris" style={S.crLogo} />
-
-            <div style={S.crDivider} />
-
-            <p style={S.crMain}>© 2026 Altaris Entertainment, Inc. All Rights Reserved.</p>
-            <p style={S.crLine}>Tower Seekers™ is a trademark of Altaris Entertainment, Inc.</p>
-            <p style={S.crLine}>
-              All characters, names, places, and events depicted herein are fictitious.<br />
-              Any resemblance to actual persons, living or dead, is purely coincidental.
-            </p>
-
-            <div style={{ ...S.crDivider, marginTop: 24 }} />
-
-            <p style={{ ...S.crLine, opacity: 0.28, marginTop: 10 }}>
-              This software product includes audio and visual content subject to copyright protection.
-            </p>
+          <div
+            className="studio-wordmark"
+            onAnimationEnd={handleStudioEnd}
+          >
+            ALTA Studios
           </div>
         </div>
       )}
 
-      {/* ── PHASE 3: Title splash ────────────────────────────────────── */}
+      {/* ── PHASE 2: Title splash ────────────────────────────────────── */}
       {phase === "title" && (
         <div style={S.titleRoot} onClick={handleEnter}>
-          <img src="/assets/title-splash.png" alt="Tower Seekers" style={S.splashImg} />
+          <img src="/assets/seekers-panorama.png" alt="Tower Seekers" style={S.splashImg} />
           <div style={S.vignette} />
+          <div style={S.titleCenter}>
+            <div style={S.titleWordmark}>TOWER SEEKERS</div>
+            <div style={S.titleTagline}>
+              Thanks for helping us playtest! You&rsquo;re officially one of the first.
+            </div>
+          </div>
           <div style={S.titleBottom}>
             <div className="intro-blink" style={S.pressText}>
               PRESS ANY KEY TO ENTER
@@ -170,99 +116,6 @@ const S = {
     background:      "#000",
   } as React.CSSProperties,
 
-  video: {
-    width:       "100%",
-    height:      "100%",
-    objectFit:   "contain",
-    background:  "#000",
-    display:     "block",
-  } as React.CSSProperties,
-
-  blockedOverlay: {
-    position:        "absolute",
-    inset:            0,
-    background:      "rgba(0,0,0,0.72)",
-    display:         "flex",
-    alignItems:      "center",
-    justifyContent:  "center",
-    cursor:          "pointer",
-  } as React.CSSProperties,
-
-  blockedBox: {
-    display:        "flex",
-    flexDirection:  "column",
-    alignItems:     "center",
-    gap:             14,
-  } as React.CSSProperties,
-
-  playIcon: {
-    fontFamily: "sans-serif",
-    fontSize:    52,
-    color:       "rgba(240,192,64,0.85)",
-    lineHeight:   1,
-  } as React.CSSProperties,
-
-  playLabel: {
-    fontFamily:    "'Cinzel', Georgia, serif",
-    fontSize:       13,
-    letterSpacing: "0.24em",
-    textTransform: "uppercase",
-    color:         "rgba(240,192,64,0.65)",
-  } as React.CSSProperties,
-
-  /* Copyright ── */
-  copyrightRoot: {
-    position:        "absolute",
-    inset:            0,
-    display:         "flex",
-    alignItems:      "center",
-    justifyContent:  "center",
-    background:      "#000",
-  } as React.CSSProperties,
-
-  copyrightInner: {
-    display:        "flex",
-    flexDirection:  "column",
-    alignItems:     "center",
-    gap:             8,
-    maxWidth:        540,
-    padding:        "0 32px",
-    textAlign:      "center",
-  } as React.CSSProperties,
-
-  crLogo: {
-    height:       56,
-    objectFit:    "contain",
-    opacity:       0.7,
-    marginBottom: 12,
-    filter:       "brightness(0.85) saturate(0.5)",
-  } as React.CSSProperties,
-
-  crDivider: {
-    width:      220,
-    height:       1,
-    background: "linear-gradient(90deg, transparent, rgba(240,192,64,0.2), transparent)",
-    margin:     "4px 0",
-  } as React.CSSProperties,
-
-  crMain: {
-    fontFamily:    "'Cinzel', Georgia, serif",
-    fontSize:       12,
-    letterSpacing: "0.07em",
-    color:         "rgba(220,200,160,0.65)",
-    margin:         0,
-    lineHeight:     1.7,
-  } as React.CSSProperties,
-
-  crLine: {
-    fontFamily:    "'Cinzel', Georgia, serif",
-    fontSize:       10,
-    letterSpacing: "0.05em",
-    color:         "rgba(180,160,120,0.38)",
-    margin:         0,
-    lineHeight:     1.75,
-  } as React.CSSProperties,
-
   /* Title splash ── */
   titleRoot: {
     position:   "absolute",
@@ -277,16 +130,47 @@ const S = {
     width:          "100%",
     height:         "100%",
     objectFit:      "cover",
-    objectPosition: "center",
+    objectPosition: "center center",
     display:        "block",
+  } as React.CSSProperties,
+
+  titleCenter: {
+    position:       "absolute",
+    inset:           0,
+    display:        "flex",
+    flexDirection:  "column",
+    alignItems:     "center",
+    justifyContent: "flex-start",
+    gap:             14,
+    paddingTop:      "13vh",
+  } as React.CSSProperties,
+
+  titleWordmark: {
+    fontFamily:    "'Cinzel Decorative', 'Cinzel', Georgia, serif",
+    fontWeight:     700,
+    fontSize:      "clamp(28px, 5.5vw, 72px)",
+    letterSpacing: "0.18em",
+    color:         "#fff",
+    textShadow:    "0 2px 40px rgba(0,0,0,0.95), 0 0 80px rgba(0,0,0,0.7)",
+    lineHeight:     1,
+  } as React.CSSProperties,
+
+  titleTagline: {
+    fontFamily:    "'Cinzel', Georgia, serif",
+    fontWeight:     400,
+    fontSize:      "clamp(9px, 1.05vw, 13px)",
+    letterSpacing: "0.1em",
+    color:         "rgba(255,248,220,0.78)",
+    textShadow:    "0 1px 12px rgba(0,0,0,0.95)",
+    textAlign:     "center",
   } as React.CSSProperties,
 
   vignette: {
     position:       "absolute",
     inset:           0,
     background:
-      "radial-gradient(ellipse 80% 60% at 50% 50%, transparent 35%, rgba(0,0,0,0.45) 100%), " +
-      "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 20%, transparent 60%, rgba(0,0,0,0.8) 100%)",
+      "radial-gradient(ellipse 80% 60% at 50% 50%, transparent 35%, rgba(0,0,0,0.35) 100%), " +
+      "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, transparent 20%, transparent 55%, rgba(0,0,0,0.75) 100%)",
     pointerEvents:  "none",
   } as React.CSSProperties,
 
@@ -313,7 +197,26 @@ const S = {
 
 /* ── Keyframe CSS ────────────────────────────────────────────────────────── */
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cinzel+Decorative:wght@700&family=Orbitron:wght@300;400&display=swap');
+
+  /* ALTA Studios wordmark: 0.8s fade-in, 4s hold, 0.8s fade-out = 5.6s */
+  .studio-wordmark {
+    font-family: 'Orbitron', 'Futura', sans-serif;
+    font-weight: 300;
+    font-size: clamp(22px, 4vw, 52px);
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0;
+    animation: studioFade 5.6s ease forwards;
+  }
+
+  @keyframes studioFade {
+    0%     { opacity: 0; }
+    14.3%  { opacity: 1; }
+    85.7%  { opacity: 1; }
+    100%   { opacity: 0; }
+  }
 
   .intro-blink {
     animation: introBlink 1.4s ease-in-out infinite;
@@ -321,29 +224,5 @@ const CSS = `
   @keyframes introBlink {
     0%, 100% { opacity: 0.95; }
     50%       { opacity: 0.08; }
-  }
-
-  .intro-skip {
-    position: absolute;
-    bottom: 20px;
-    right: 26px;
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: rgba(240,192,64,0.75);
-    background: rgba(0,0,0,0.55);
-    border: 1px solid rgba(240,192,64,0.35);
-    border-radius: 6px;
-    padding: 6px 14px;
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.2s, border-color 0.2s, background 0.2s;
-    backdrop-filter: blur(4px);
-  }
-  .intro-skip:hover {
-    color: #f0c840;
-    border-color: rgba(240,192,64,0.7);
-    background: rgba(0,0,0,0.75);
   }
 `;

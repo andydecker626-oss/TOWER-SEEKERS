@@ -21,7 +21,7 @@ export default function TitleScreen() {
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80);
-    const tryPlay = () => audioManager.play("skyforge");
+    const tryPlay = () => audioManager.play("hub");
     tryPlay();
     document.addEventListener("click", tryPlay, { once: true });
     document.addEventListener("keydown", tryPlay as EventListener, { once: true });
@@ -45,7 +45,7 @@ export default function TitleScreen() {
       <div className="ts-tower ts-tower-l" />
       <div className="ts-tower ts-tower-r" />
 
-      <div className="ts-corner-credit">Altaris &mdash; e. 2026</div>
+      <div className="ts-corner-credit">Alta Studios</div>
 
       <button
         className="ts-sound-toggle"
@@ -60,15 +60,16 @@ export default function TitleScreen() {
         <div className="ts-logo-block">
           <span className="ts-logo-text">TOWER SEEKERS</span>
         </div>
+        <div className="ts-tagline">Climb the Four. Claim the Sky.</div>
 
         <div className="ts-menu">
           {isLoaded && isSignedIn ? (
             <button className="ts-menu-btn ts-btn-login" onClick={enterWarRoom}>
-              Enter the War Room
+              Continue
             </button>
           ) : (
             <button className="ts-menu-btn ts-btn-login" onClick={() => setShowLogin(true)}>
-              Login to Tower Seekers
+              Begin Your Journey
             </button>
           )}
           <button className="ts-menu-btn ts-btn-settings" onClick={() => setShowSettings(true)}>
@@ -160,7 +161,7 @@ export default function TitleScreen() {
 }
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700;900&family=Orbitron:wght@300&display=swap');
 
   .ts-root {
     min-height: 100vh;
@@ -177,7 +178,7 @@ const CSS = `
   .ts-bg {
     position: absolute;
     inset: 0;
-    background-image: url('/assets/title-bg.png');
+    background-image: url('/assets/title-menu-bg.png');
     background-size: cover;
     background-position: center 40%;
     filter: brightness(0.72);
@@ -218,10 +219,12 @@ const CSS = `
     bottom: clamp(10px,1.8vh,18px);
     right: clamp(14px,2.5vw,24px);
     z-index: 10;
-    font-family: 'Cinzel', serif;
-    font-size: clamp(32px,3vw,40px);
-    letter-spacing: 0.14em;
-    color: rgba(200,170,100,0.45);
+    font-family: 'Orbitron', 'Cinzel', serif;
+    font-size: clamp(9px,0.9vw,12px);
+    font-weight: 300;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
     pointer-events: none;
     user-select: none;
   }
@@ -276,13 +279,28 @@ const CSS = `
   }
   .ts-logo-text {
     font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(28px,5.5vw,72px);
+    font-size: clamp(32px, 6.2vw, 84px);
     font-weight: 900;
-    color: #f0c040;
-    letter-spacing: 0.14em;
-    -webkit-text-stroke: 1.5px rgba(255,255,255,0.75);
-    text-shadow: 0 0 50px rgba(240,192,64,0.4), 0 2px 12px rgba(0,0,0,0.95);
+    color: #f5d97a;
+    letter-spacing: 0.18em;
+    text-shadow:
+      0 1px 0 rgba(120, 80, 20, 0.9),
+      0 2px 0 rgba(80, 50, 10, 0.85),
+      0 4px 14px rgba(0, 0, 0, 0.95),
+      0 0 40px rgba(240, 192, 64, 0.35),
+      0 0 80px rgba(240, 192, 64, 0.15);
     white-space: nowrap;
+  }
+
+  .ts-tagline {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(11px, 1.2vw, 15px);
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: rgba(240, 215, 150, 0.78);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+    margin-top: -8px;
+    text-align: center;
   }
 
 
@@ -308,20 +326,52 @@ const CSS = `
     transition: all 0.2s;
     text-transform: uppercase;
     border: 1px solid transparent;
+    position: relative;
+  }
+  .ts-menu-btn::before,
+  .ts-menu-btn::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 1px solid rgba(240, 192, 64, 0);
+    transition: border-color 0.2s, width 0.2s, height 0.2s;
+    pointer-events: none;
+  }
+  .ts-menu-btn::before {
+    top: 4px; left: 4px;
+    border-right: none; border-bottom: none;
+  }
+  .ts-menu-btn::after {
+    bottom: 4px; right: 4px;
+    border-left: none; border-top: none;
+  }
+  .ts-menu-btn:hover::before,
+  .ts-menu-btn:hover::after {
+    border-color: rgba(255, 220, 120, 0.75);
+    width: 14px;
+    height: 14px;
   }
 
   .ts-btn-login {
-    background: linear-gradient(135deg, #b8860b, #d4a017, #c8920e);
-    border-color: rgba(255,220,100,0.6);
-    color: #0a0608;
-    box-shadow: 0 4px 20px rgba(180,130,0,0.45), inset 0 1px 0 rgba(255,240,160,0.3);
+    background: linear-gradient(180deg, rgba(60, 38, 14, 0.92), rgba(36, 22, 8, 0.94));
+    border: 1px solid rgba(240, 192, 64, 0.55);
+    color: #f5d97a;
+    box-shadow:
+      0 2px 14px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 220, 120, 0.18),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   }
   .ts-btn-login:hover {
-    background: linear-gradient(135deg, #c8960d, #e8b820, #d4a017);
-    border-color: rgba(255,230,120,0.85);
-    box-shadow: 0 6px 28px rgba(200,150,0,0.55), inset 0 1px 0 rgba(255,245,180,0.35);
-    color: #050304;
-    transform: translateY(-2px);
+    background: linear-gradient(180deg, rgba(80, 52, 20, 0.96), rgba(50, 32, 12, 0.96));
+    border-color: rgba(255, 220, 120, 0.85);
+    color: #fde7a3;
+    box-shadow:
+      0 4px 20px rgba(240, 192, 64, 0.25),
+      inset 0 1px 0 rgba(255, 230, 140, 0.25),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
   }
   .ts-btn-login:active { transform: translateY(0); }
 

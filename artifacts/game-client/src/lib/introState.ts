@@ -1,9 +1,9 @@
-const INTRO_KEY = "ts_intro_v2";
+const INTRO_KEY = "ts_intro_seen";
 
 export function shouldShowIntro(): boolean {
-  return !localStorage.getItem(INTRO_KEY);
+  return !sessionStorage.getItem(INTRO_KEY);
 }
 
 export function markIntroSeen(): void {
-  localStorage.setItem(INTRO_KEY, "1");
+  sessionStorage.setItem(INTRO_KEY, "1");
 }
