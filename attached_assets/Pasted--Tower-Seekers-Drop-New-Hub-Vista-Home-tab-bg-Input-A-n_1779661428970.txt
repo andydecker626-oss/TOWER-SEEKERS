@@ -1,0 +1,73 @@
+# Tower Seekers — Drop New Hub Vista (Home tab bg)
+## Input
+A new painted hub vista image is attached/uploaded with this prompt: a golden-hour town plaza scene — eye-level, warm light, central monument, surrounding buildings hinting at battle arena / town gate / market / barracks.
+## What to do
+### Step 1 — Save the image
+Save the attached PNG at this exact path (overwrite if present):
+`artifacts/game-client/public/assets/hub-bg.png`
+### Step 2 — Update `src/pages/WarRoom.tsx`
+Replace the existing `.war-bg` and `.war-overlay` styles so the new image is **visible** (not blurred to oblivion). Current state has `filter: blur(3px) brightness(0.28)` on the bg + a near-opaque overlay — this destroys the image. We want a darkened-but-readable painting instead.
+Find this CSS:
+ .war-bg {
+ position: absolute;
+ inset: 0;
+ background-image: url('/assets/title-bg.png');
+ background-size: cover;
+ background-position: center 40%;
+ filter: blur(3px) brightness(0.28);
+ z-index: 0;
+ }
+ .war-overlay {
+ position: absolute;
+ inset: 0;
+ background: rgba(4,2,10,0.72);
+ z-index: 1;
+ pointer-events: none;
+ }
+Replace with:
+ .war-bg {
+ position: absolute;
+ inset: 0;
+ background-image: url('/assets/hub-bg.png');
+ background-size: cover;
+ background-position: center center;
+ z-index: 0;
+ }
+ .war-overlay {
+ position: absolute;
+ inset: 0;
+ background: linear-gradient(
+ 180deg,
+ rgba(7,4,15,0.55) 0%,
+ rgba(7,4,15,0.70) 50%,
+ rgba(7,4,15,0.85) 100%
+ );
+ z-index: 1;
+ pointer-events: none;
+ }
+Key changes:
+- Background image points to `/assets/hub-bg.png` (the new image).
+- **No blur, no brightness filter** — the painting is meant to be seen.
+- Overlay is a **vertical gradient** (lighter at top, darker at bottom) instead of a flat 0.72 wash — gives UI legibility at the bottom where buttons live, while letting the sky/midground breathe.
+### Step 3 — Verify text/button contrast over the new bg
+After applying, check that:
+- "TOWER SEEKERS" title text + "Welcome back" greeting stay legible against the brighter top of the painting.
+- The 3 menu buttons (Battle / Gathering Hub / Settings) stay legible in the lower half.
+If any text feels low-contrast on the brighter areas, **only** bump the top gradient stop from `rgba(7,4,15,0.55)` to `rgba(7,4,15,0.65)`. Do NOT add blur back. Do NOT increase the bottom stop.
+## Strict rules
+- DO NOT alter or regenerate `/assets/title-bg.png` — it's the title screen, separate asset.
+- DO NOT apply `backdrop-filter: blur(…)` to `.war-bg` or `.war-overlay`. The image must be visible.
+- DO NOT change any other page (TitleScreen, GatheringHub, Lobby, Battle, etc.).
+- DO NOT add new dependencies.
+- DO NOT remove the existing topbar, menu cards, welcome text, or any other WarRoom content in this prompt. (Larger restructure happens in a separate prompt — hub-shell-v1.md.)
+- DO NOT touch routes, audio, or socket logic.
+## Acceptance criteria
+After applying:
+- `/warroom` shows the new town plaza painting clearly visible (sharp, no blur).
+- A subtle vertical darkening gradient sits over it — lighter at top, darker at bottom.
+- All existing WarRoom UI elements (topbar, title block, welcome, 3 menu cards, settings modal trigger) work and remain readable.
+- No console errors.
+- The file `artifacts/game-client/public/assets/hub-bg.png` exists and matches the uploaded image.
+- The file `artifacts/game-client/public/assets/title-bg.png` is untouched.
+## Forward compatibility note (for context, not action)
+This image is also the canonical source for the future MenuShell's Home tab background (see hub-shell-v1.md). Once that bigger prompt lands and MenuShell wraps every menu page, the WarRoom-specific CSS in this prompt will be replaced by the shell's vista-stack — but `hub-bg.png` at this exact path is what MenuShell expects, so this prompt sets the asset up correctly for both states.
