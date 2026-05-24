@@ -92,20 +92,60 @@ const FILE_TRACKS: Partial<Record<TrackId, string>> = {
   hub: "/assets/hearthstone-tavern.mp3",
 };
 
-// Battle playlist — random rotation during all battle phases
-export const BATTLE_PLAYLIST: { src: string; title: string }[] = [
-  { src: "/assets/battle/crystal-fang-rock.mp3", title: "Crystal Fang (Rock)" },
-  { src: "/assets/battle/war-tent-oath.mp3",     title: "War Tent Oath"       },
-  { src: "/assets/battle/banner-at-dawn.mp3",    title: "Banner at Dawn"      },
-  { src: "/assets/battle/crystal-fang.mp3",       title: "Crystal Fang"        },
+export type TrackCategory = "ambient" | "battle";
+
+export interface FileTrack {
+  src: string;
+  title: string;
+  category: TrackCategory;
+  duration: string; // formatted as "m:ss"
+}
+
+// All available battle tracks (source of truth for the Music Library)
+export const ALL_BATTLE_TRACKS: FileTrack[] = [
+  { src: "/assets/battle/crystal-fang-rock.mp3", title: "Crystal Fang (Rock)",  category: "battle", duration: "8:00" },
+  { src: "/assets/battle/war-tent-oath.mp3",     title: "War Tent Oath",         category: "battle", duration: "5:10" },
+  { src: "/assets/battle/banner-at-dawn.mp3",    title: "Banner at Dawn",        category: "battle", duration: "3:44" },
+  { src: "/assets/battle/crystal-fang.mp3",      title: "Crystal Fang",          category: "battle", duration: "8:00" },
+  { src: "/assets/battle/heroic-age.mp3",        title: "Heroic Age",            category: "battle", duration: "1:37" },
+  { src: "/assets/battle/dawn-over-aster-vale.mp3", title: "Dawn Over Aster Vale", category: "battle", duration: "4:43" },
+  { src: "/assets/battle/gate-of-dawn.mp3",      title: "Gate of Dawn",          category: "battle", duration: "3:02" },
+  { src: "/assets/battle/ffx-battle.mp3",        title: "FFX Battle",            category: "battle", duration: "3:21" },
 ];
 
-// Complete ordered list of all file-backed tracks — used by nextTrack() when not in battle playlist
-export const ALL_FILE_TRACKS: { src: string; title: string }[] = [
-  { src: "/assets/skyforge-siege.mp3",            title: "Skyforge Siege"      },
-  { src: "/assets/hearthstone-tavern.mp3",         title: "Hearthstone Tavern"  },
-  ...BATTLE_PLAYLIST,
+// All available ambient tracks (source of truth for the Music Library)
+export const ALL_AMBIENT_TRACKS: FileTrack[] = [
+  { src: "/assets/skyforge-siege.mp3",       title: "Skyforge Siege",    category: "ambient", duration: "3:22" },
+  { src: "/assets/hearthstone-tavern.mp3",   title: "Hearthstone Tavern", category: "ambient", duration: "4:44" },
 ];
+
+// Complete ordered list of all file-backed tracks — used by nextTrack() and the Music Library
+export const ALL_FILE_TRACKS: FileTrack[] = [
+  ...ALL_AMBIENT_TRACKS,
+  ...ALL_BATTLE_TRACKS,
+];
+
+// Kept for backward-compat (filtered to enabled tracks at playlist-build time)
+export const BATTLE_PLAYLIST: FileTrack[] = ALL_BATTLE_TRACKS;
+
+// ── Disabled-tracks persistence ───────────────────────────────────────────────
+const DISABLED_TRACKS_KEY = "ts_disabled_tracks";
+
+function loadDisabledTracksFromStorage(): Set<string> {
+  try {
+    if (typeof localStorage === "undefined") return new Set();
+    const raw = localStorage.getItem(DISABLED_TRACKS_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {}
+  return new Set();
+}
+
+function saveDisabledTracksToStorage(set: Set<string>) {
+  try {
+    if (typeof localStorage !== "undefined")
+      localStorage.setItem(DISABLED_TRACKS_KEY, JSON.stringify([...set]));
+  } catch {}
+}
 
 // ── AudioManager ─────────────────────────────────────────────────────────────
 
@@ -124,12 +164,16 @@ class AudioManager {
 
   private _sfxEnabled = true;
 
+  // ── Disabled tracks ───────────────────────────────────────────────────────
+  private _disabledTracks: Set<string> = loadDisabledTracksFromStorage();
+
   // ── Battle playlist ───────────────────────────────────────────────────────
   private _inBattlePlaylist  = false;
-  private _battlePlaylist:  { src: string; title: string }[] = [];
+  private _battlePlaylist:  FileTrack[] = [];
   private _battleIdx         = 0;
   private _onTrackChangeCb:  ((title: string) => void) | null = null;
   private _battleEndedHandler: (() => void) | null = null;
+  private _onLibraryChangeCb: (() => void) | null = null;
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -154,13 +198,76 @@ class AudioManager {
     this._onTrackChangeCb = cb;
   }
 
+  onLibraryChange(cb: (() => void) | null) {
+    this._onLibraryChangeCb = cb;
+  }
+
+  // ── Disabled-tracks API ───────────────────────────────────────────────────
+
+  getDisabledTracks(): Set<string> {
+    return new Set(this._disabledTracks);
+  }
+
+  isTrackEnabled(src: string): boolean {
+    return !this._disabledTracks.has(src);
+  }
+
+  /**
+   * Enable or disable a track in the rotation. Guards against emptying a
+   * category entirely — returns false if the toggle was rejected.
+   */
+  setTrackEnabled(src: string, enabled: boolean): boolean {
+    if (enabled) {
+      this._disabledTracks.delete(src);
+    } else {
+      // Guard: at least one track must stay enabled in the same category
+      const track = ALL_FILE_TRACKS.find(t => t.src === src);
+      if (track) {
+        const sameCat = ALL_FILE_TRACKS.filter(t => t.category === track.category);
+        const enabledInCat = sameCat.filter(t => !this._disabledTracks.has(t.src));
+        if (enabledInCat.length <= 1) return false; // would leave category empty
+      }
+      this._disabledTracks.add(src);
+    }
+    saveDisabledTracksToStorage(this._disabledTracks);
+    // Rebuild active battle playlist if we're mid-battle (without restarting playback)
+    if (this._inBattlePlaylist) this._rebuildBattlePlaylist();
+    if (this._onLibraryChangeCb) this._onLibraryChangeCb();
+    return true;
+  }
+
+  private _enabledBattleTracks(): FileTrack[] {
+    return ALL_BATTLE_TRACKS.filter(t => !this._disabledTracks.has(t.src));
+  }
+
+  private _enabledFileTracks(): FileTrack[] {
+    return ALL_FILE_TRACKS.filter(t => !this._disabledTracks.has(t.src));
+  }
+
+  /** Rebuild the active battle playlist without interrupting the current track. */
+  private _rebuildBattlePlaylist() {
+    const enabled = this._enabledBattleTracks();
+    if (!enabled.length) return;
+    const currentSrc = this.audioEl?.src ?? "";
+    // Fisher-Yates shuffle
+    const list = [...enabled];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    // Keep currently-playing track at current index if still enabled
+    const curIdx = list.findIndex(t => currentSrc.endsWith(t.src));
+    this._battlePlaylist = list;
+    this._battleIdx = curIdx >= 0 ? curIdx : 0;
+  }
+
   playBattlePlaylist() {
     if (this._inBattlePlaylist && this.audioEl && !this.audioEl.paused) return;
     this._stopSynth();
     this.currentTrack = null;
     this._inBattlePlaylist = true;
-    // Fisher-Yates shuffle
-    const list = [...BATTLE_PLAYLIST];
+    // Fisher-Yates shuffle of enabled tracks only
+    const list = [...this._enabledBattleTracks()];
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]];
@@ -186,19 +293,57 @@ class AudioManager {
   }
 
   /**
+   * Play a specific file track immediately (exits battle playlist mode).
+   * Looping: ambient tracks loop; battle tracks play once then stop.
+   */
+  playFileTrack(src: string) {
+    this._stopSynth();
+    this._removeBattleEndedHandler();
+    this._inBattlePlaylist = false;
+    this.currentTrack = null;
+    if (!this.audioEl) this.audioEl = new Audio();
+    this.audioEl.loop = true;
+    this.audioEl.src = src;
+    this.audioEl.load();
+    this.audioEl.volume = this._effectiveMusicVol();
+    this.audioEl.play().catch(() => {});
+    const track = ALL_FILE_TRACKS.find(t => t.src === src);
+    if (this._onTrackChangeCb && track) this._onTrackChangeCb(track.title);
+  }
+
+  pauseMusic() {
+    if (this.audioEl && !this.audioEl.paused) this.audioEl.pause();
+  }
+
+  resumeMusic() {
+    if (this.audioEl && this.audioEl.paused) this.audioEl.play().catch(() => {});
+  }
+
+  get isPlaying(): boolean {
+    return !!this.audioEl && !this.audioEl.paused;
+  }
+
+  currentPlayingSrc(): string {
+    return this.audioEl?.src ?? "";
+  }
+
+  /**
    * Advance to the next track regardless of context.
    * During battle playlist: rotates within the shuffled battle queue.
-   * Otherwise: cycles forward through ALL_FILE_TRACKS (ambient + battle).
+   * Otherwise: cycles forward through enabled file tracks (ambient + battle).
+   * Disabled tracks are skipped.
    */
   nextTrack() {
     if (this._inBattlePlaylist) {
       this.nextBattleTrack();
       return;
     }
+    const enabled = this._enabledFileTracks();
+    if (!enabled.length) return;
     const currentSrc = this.audioEl?.src ?? "";
-    const idx = ALL_FILE_TRACKS.findIndex(t => currentSrc.endsWith(t.src));
-    const nextIdx = (idx + 1) % ALL_FILE_TRACKS.length;
-    const next = ALL_FILE_TRACKS[nextIdx];
+    const idx = enabled.findIndex(t => currentSrc.endsWith(t.src));
+    const nextIdx = (idx + 1) % enabled.length;
+    const next = enabled[nextIdx];
     this._stopSynth();
     this._removeBattleEndedHandler();
     this.currentTrack = null;

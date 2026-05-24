@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser, useClerk, SignIn } from "@clerk/react";
-import { audioManager } from "@/lib/audio";
+import { audioManager, ALL_FILE_TRACKS, type FileTrack } from "@/lib/audio";
 import { useSettings } from "@/context/SettingsContext";
 
 export default function TitleScreen() {
@@ -10,10 +10,43 @@ export default function TitleScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"general" | "music">("general");
+  const [disabledSrcs, setDisabledSrcs] = useState<string[]>(() => {
+    try { const r = localStorage.getItem("ts_disabled_tracks"); return r ? JSON.parse(r) as string[] : []; } catch { return []; }
+  });
+  const [libWarnSrc, setLibWarnSrc] = useState<string | null>(null);
+  const [libPlayingSrc, setLibPlayingSrc] = useState<string | null>(null);
+  const [libIsPaused, setLibIsPaused] = useState(false);
   const {
     settings, setVolume, setMuted, setSfxEnabled,
     setAiDifficulty, setShowDamageNumbers, setAnimationSpeed, resetDefaults,
   } = useSettings();
+
+  const syncDisabled = useCallback(() => {
+    try { const r = localStorage.getItem("ts_disabled_tracks"); setDisabledSrcs(r ? JSON.parse(r) as string[] : []); } catch { setDisabledSrcs([]); }
+  }, []);
+
+  useEffect(() => { if (showSettings) syncDisabled(); }, [showSettings, syncDisabled]);
+
+  const handleLibToggle = useCallback((track: FileTrack, enabled: boolean) => {
+    const ok = audioManager.setTrackEnabled(track.src, enabled);
+    if (!ok) {
+      setLibWarnSrc(track.src);
+      setTimeout(() => setLibWarnSrc(null), 2800);
+    }
+    syncDisabled();
+  }, [syncDisabled]);
+
+  const handleLibPlay = useCallback((src: string) => {
+    if (libPlayingSrc === src) {
+      if (libIsPaused) { audioManager.resumeMusic(); setLibIsPaused(false); }
+      else { audioManager.pauseMusic(); setLibIsPaused(true); }
+    } else {
+      audioManager.playFileTrack(src);
+      setLibPlayingSrc(src);
+      setLibIsPaused(false);
+    }
+  }, [libPlayingSrc, libIsPaused]);
 
   function enterWarRoom() {
     navigate("/warroom");
@@ -84,58 +117,127 @@ export default function TitleScreen() {
           <div className="ts-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ts-modal-title">Settings</div>
 
-            <div className="ts-section-label">Audio</div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Music</label>
-              <button className={`ts-toggle${settings.muted ? " off" : " on"}`} onClick={() => setMuted(!settings.muted)}>
-                {settings.muted ? "Off" : "On"}
+            <div className="ts-tabs">
+              <button
+                className={`ts-tab${settingsTab === "general" ? " active" : ""}`}
+                onClick={() => setSettingsTab("general")}
+              >
+                General
               </button>
-            </div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Volume</label>
-              <input type="range" min={0} max={1} step={0.01} value={settings.volume} className="ts-slider"
-                onChange={(e) => setVolume(parseFloat(e.target.value))} />
-              <span className="ts-val">{Math.round(settings.volume * 100)}%</span>
-            </div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Sound FX</label>
-              <button className={`ts-toggle${settings.sfxEnabled ? " on" : " off"}`} onClick={() => setSfxEnabled(!settings.sfxEnabled)}>
-                {settings.sfxEnabled ? "On" : "Off"}
+              <button
+                className={`ts-tab${settingsTab === "music" ? " active" : ""}`}
+                onClick={() => setSettingsTab("music")}
+              >
+                🎵 Music Library
               </button>
             </div>
 
-            <div className="ts-section-label">AI Opponent</div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Difficulty</label>
-              <div className="ts-radio-group">
-                {(["easy", "normal", "hard"] as const).map((d) => (
-                  <button key={d} className={`ts-radio${settings.aiDifficulty === d ? " active" : ""}`} onClick={() => setAiDifficulty(d)}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
+            {settingsTab === "general" && (
+              <>
+                <div className="ts-section-label">Audio</div>
+                <div className="ts-setting-row">
+                  <label className="ts-lbl">Music</label>
+                  <button className={`ts-toggle${settings.muted ? " off" : " on"}`} onClick={() => setMuted(!settings.muted)}>
+                    {settings.muted ? "Off" : "On"}
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
+                <div className="ts-setting-row">
+                  <label className="ts-lbl">Volume</label>
+                  <input type="range" min={0} max={1} step={0.01} value={settings.volume} className="ts-slider"
+                    onChange={(e) => setVolume(parseFloat(e.target.value))} />
+                  <span className="ts-val">{Math.round(settings.volume * 100)}%</span>
+                </div>
+                <div className="ts-setting-row">
+                  <label className="ts-lbl">Sound FX</label>
+                  <button className={`ts-toggle${settings.sfxEnabled ? " on" : " off"}`} onClick={() => setSfxEnabled(!settings.sfxEnabled)}>
+                    {settings.sfxEnabled ? "On" : "Off"}
+                  </button>
+                </div>
 
-            <div className="ts-section-label">Battle</div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Damage Numbers</label>
-              <button className={`ts-toggle${settings.showDamageNumbers ? " on" : " off"}`} onClick={() => setShowDamageNumbers(!settings.showDamageNumbers)}>
-                {settings.showDamageNumbers ? "On" : "Off"}
-              </button>
-            </div>
-            <div className="ts-setting-row">
-              <label className="ts-lbl">Animation Speed</label>
-              <div className="ts-radio-group">
-                {(["slow", "normal", "fast"] as const).map((s) => (
-                  <button key={s} className={`ts-radio${settings.animationSpeed === s ? " active" : ""}`} onClick={() => setAnimationSpeed(s)}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                <div className="ts-section-label">AI Opponent</div>
+                <div className="ts-setting-row">
+                  <label className="ts-lbl">Difficulty</label>
+                  <div className="ts-radio-group">
+                    {(["easy", "normal", "hard"] as const).map((d) => (
+                      <button key={d} className={`ts-radio${settings.aiDifficulty === d ? " active" : ""}`} onClick={() => setAiDifficulty(d)}>
+                        {d.charAt(0).toUpperCase() + d.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ts-section-label">Battle</div>
+                <div className="ts-setting-row">
+                  <label className="ts-lbl">Damage Numbers</label>
+                  <button className={`ts-toggle${settings.showDamageNumbers ? " on" : " off"}`} onClick={() => setShowDamageNumbers(!settings.showDamageNumbers)}>
+                    {settings.showDamageNumbers ? "On" : "Off"}
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
+                <div className="ts-setting-row">
+                  <label className="ts-lbl">Animation Speed</label>
+                  <div className="ts-radio-group">
+                    {(["slow", "normal", "fast"] as const).map((s) => (
+                      <button key={s} className={`ts-radio${settings.animationSpeed === s ? " active" : ""}`} onClick={() => setAnimationSpeed(s)}>
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {settingsTab === "music" && (
+              <>
+                <div className="ts-section-label">Music Library</div>
+                <div className="ts-lib-list">
+                  {ALL_FILE_TRACKS.map(track => {
+                    const enabled = !disabledSrcs.includes(track.src);
+                    const isActive = libPlayingSrc === track.src && !libIsPaused;
+                    const isThisPaused = libPlayingSrc === track.src && libIsPaused;
+                    return (
+                      <div key={track.src} className={`ts-lib-row${enabled ? "" : " ts-lib-disabled"}`}>
+                        <label className="ts-lib-toggle-wrap">
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            onChange={e => handleLibToggle(track, e.target.checked)}
+                          />
+                          <span className="ts-lib-toggle-track" />
+                          <span className="ts-lib-toggle-thumb" />
+                        </label>
+                        <div className="ts-lib-info">
+                          <div className="ts-lib-title">{track.title}</div>
+                          <div className="ts-lib-meta">
+                            <span className={`ts-lib-badge ts-lib-badge-${track.category}`}>
+                              {track.category === "battle" ? "Battle" : "Ambient"}
+                            </span>
+                            <span className="ts-lib-duration">{track.duration}</span>
+                          </div>
+                        </div>
+                        <button
+                          className={`ts-lib-play${isActive ? " ts-lib-play-active" : ""}`}
+                          onClick={() => handleLibPlay(track.src)}
+                          title={isActive ? "Pause" : isThisPaused ? "Resume" : "Play"}
+                          aria-label={isActive ? `Pause ${track.title}` : `Play ${track.title}`}
+                        >
+                          {isActive ? "⏸" : "▶"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {libWarnSrc && (
+                  <div className="ts-lib-warn">
+                    ⚠ At least one {ALL_FILE_TRACKS.find(t => t.src === libWarnSrc)?.category ?? ""} track must stay enabled
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="ts-modal-footer">
-              <button className="ts-btn-sm" onClick={resetDefaults}>Reset Defaults</button>
+              {settingsTab === "general" && (
+                <button className="ts-btn-sm" onClick={resetDefaults}>Reset Defaults</button>
+              )}
               <button className="ts-btn-sm ts-btn-sm-primary" onClick={() => setShowSettings(false)}>Close</button>
             </div>
           </div>
@@ -543,5 +645,121 @@ const CSS = `
   .ts-btn-sm-primary:hover {
     background: rgba(240,192,64,0.26);
     box-shadow: 0 0 12px rgba(240,192,64,0.15);
+  }
+
+  /* ── Settings tabs ── */
+  .ts-tabs {
+    display: flex; gap: 4px; margin-bottom: 1rem;
+  }
+  .ts-tab {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid rgba(240,192,64,0.18); border-radius: 6px;
+    padding: 0.3rem 0.75rem; cursor: pointer;
+    background: rgba(255,255,255,0.03); color: rgba(200,170,100,0.45);
+    transition: all 0.14s;
+  }
+  .ts-tab:hover { color: rgba(240,192,64,0.75); border-color: rgba(240,192,64,0.32); }
+  .ts-tab.active {
+    background: rgba(240,192,64,0.14); border-color: rgba(240,192,64,0.5);
+    color: #f0c040;
+  }
+
+  /* ── Music Library ── */
+  .ts-lib-list {
+    display: flex; flex-direction: column;
+    border: 1px solid rgba(240,192,64,0.1); border-radius: 8px;
+    overflow: hidden; max-height: 300px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: rgba(240,192,64,0.15) transparent;
+  }
+  .ts-lib-list::-webkit-scrollbar { width: 3px; }
+  .ts-lib-list::-webkit-scrollbar-thumb { background: rgba(240,192,64,0.15); border-radius: 2px; }
+
+  .ts-lib-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid rgba(240,192,64,0.06);
+    transition: background 0.12s;
+  }
+  .ts-lib-row:last-child { border-bottom: none; }
+  .ts-lib-row:hover { background: rgba(240,192,64,0.04); }
+  .ts-lib-disabled { opacity: 0.35; }
+
+  .ts-lib-toggle-wrap {
+    position: relative; display: inline-flex;
+    width: 32px; height: 17px; flex-shrink: 0; cursor: pointer;
+  }
+  .ts-lib-toggle-wrap input { opacity: 0; width: 0; height: 0; }
+  .ts-lib-toggle-track {
+    position: absolute; inset: 0; border-radius: 9px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(240,192,64,0.15);
+    transition: background 0.18s, border-color 0.18s;
+  }
+  .ts-lib-toggle-wrap input:checked ~ .ts-lib-toggle-track {
+    background: rgba(240,192,64,0.22); border-color: rgba(240,192,64,0.5);
+  }
+  .ts-lib-toggle-thumb {
+    position: absolute; top: 2px; left: 2px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: rgba(200,170,100,0.4);
+    transition: transform 0.18s, background 0.18s;
+  }
+  .ts-lib-toggle-wrap input:checked ~ .ts-lib-toggle-thumb {
+    transform: translateX(15px); background: #f0c040;
+  }
+
+  .ts-lib-info { flex: 1; min-width: 0; }
+  .ts-lib-title {
+    font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600;
+    color: rgba(220,200,140,0.88); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .ts-lib-meta { display: flex; align-items: center; gap: 0.4rem; margin-top: 2px; }
+  .ts-lib-duration {
+    font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 600;
+    color: rgba(180,155,100,0.42); white-space: nowrap;
+  }
+  .ts-lib-badge {
+    display: inline-block; font-family: 'Cinzel', serif;
+    font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; border-radius: 3px;
+    padding: 1px 5px; margin-top: 2px;
+  }
+  .ts-lib-badge-battle {
+    background: rgba(220,80,60,0.18); color: rgba(240,130,110,0.8);
+    border: 1px solid rgba(220,80,60,0.25);
+  }
+  .ts-lib-badge-ambient {
+    background: rgba(60,160,220,0.15); color: rgba(110,190,240,0.8);
+    border: 1px solid rgba(60,160,220,0.22);
+  }
+
+  .ts-lib-play {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+    border: 1px solid rgba(240,192,64,0.28);
+    background: rgba(240,192,64,0.05);
+    color: rgba(240,192,64,0.55);
+    font-size: 0.55rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; line-height: 1; padding: 0; margin-left: auto;
+  }
+  .ts-lib-play:hover {
+    background: rgba(240,192,64,0.14); color: rgba(240,192,64,0.9);
+    border-color: rgba(240,192,64,0.55);
+  }
+  .ts-lib-play.ts-lib-play-active {
+    background: rgba(240,192,64,0.18); color: #f0c040;
+    border-color: #f0c040; box-shadow: 0 0 7px rgba(240,192,64,0.35);
+  }
+  .ts-lib-disabled .ts-lib-play { pointer-events: none; opacity: 0.3; }
+
+  .ts-lib-warn {
+    font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 600;
+    color: rgba(240,160,80,0.9); letter-spacing: 0.05em;
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    background: rgba(240,160,80,0.08);
+    border: 1px solid rgba(240,160,80,0.2);
+    border-radius: 5px;
   }
 `;
