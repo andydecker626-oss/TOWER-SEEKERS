@@ -147,6 +147,8 @@ function saveDisabledTracksToStorage(set: Set<string>) {
   } catch {}
 }
 
+const CROSSFADE_MS = 900;
+
 // ── AudioManager ─────────────────────────────────────────────────────────────
 
 class AudioManager {
@@ -157,6 +159,8 @@ class AudioManager {
   private loopTimer:    ReturnType<typeof setTimeout> | null = null;
   private currentTrack: TrackId | null = null;
   private audioEl:      HTMLAudioElement | null = null;
+  private audioElB:     HTMLAudioElement | null = null;
+  private _fadeRaf:     number | null = null;
   private _volume      = 0.33;
   private _musicVolume = 1.0;
   private _sfxVolume   = 1.0;
@@ -381,13 +385,17 @@ class AudioManager {
   setVolume(v: number) {
     this._volume = Math.max(0, Math.min(1, v));
     if (this.masterGain && !this._muted) this.masterGain.gain.value = this._volume;
-    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
+    const vol = this._effectiveMusicVol();
+    if (this.audioEl) this.audioEl.volume = vol;
+    if (this.audioElB) this.audioElB.volume = vol;
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_volume", String(this._volume));
   }
 
   setMusicVolume(v: number) {
     this._musicVolume = Math.max(0, Math.min(1, v));
-    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
+    const vol = this._effectiveMusicVol();
+    if (this.audioEl) this.audioEl.volume = vol;
+    if (this.audioElB) this.audioElB.volume = vol;
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_music_vol", String(this._musicVolume));
   }
 
@@ -399,7 +407,9 @@ class AudioManager {
   setMuted(m: boolean) {
     this._muted = m;
     if (this.masterGain) this.masterGain.gain.value = m ? 0 : this._volume;
-    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
+    const vol = this._effectiveMusicVol();
+    if (this.audioEl) this.audioEl.volume = vol;
+    if (this.audioElB) this.audioElB.volume = vol;
     if (typeof localStorage !== "undefined") localStorage.setItem("ts_muted", String(m));
   }
 
@@ -526,25 +536,36 @@ class AudioManager {
     this._sfxEnabled  = sfxE;
     if (this.masterGain) this.masterGain.gain.value = this._muted ? 0 : this._volume;
     if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
+    if (this.audioElB) this.audioElB.volume = this._effectiveMusicVol();
   }
 
   play(trackId: TrackId) {
-    if (trackId === this.currentTrack && !this._inBattlePlaylist) return;
+    const fileSrc = FILE_TRACKS[trackId];
+
+    // Same-src dedupe: if the requested file track is already playing, do nothing
+    if (fileSrc && this.audioEl && !this.audioEl.paused) {
+      const cur = this.audioEl.getAttribute("src") ?? "";
+      if (cur.endsWith(fileSrc) || this.audioEl.src.endsWith(fileSrc)) return;
+    }
+
+    // Synth same-track early return
+    if (!fileSrc && trackId === this.currentTrack && !this._inBattlePlaylist) return;
+
     // Stop battle playlist if switching to a named track
     if (this._inBattlePlaylist) {
       this._inBattlePlaylist = false;
       this._removeBattleEndedHandler();
-      if (this.audioEl) { this.audioEl.pause(); this.audioEl.currentTime = 0; this.audioEl.loop = true; }
+      if (this.audioEl) { this.audioEl.loop = true; }
     }
     this._stopSynth();
-    // If switching away from a file track, pause it
-    if (this.audioEl && !FILE_TRACKS[trackId]) {
-      this.audioEl.pause();
-      this.audioEl.currentTime = 0;
+
+    // If switching away from a file track to a synth track, fade out instead of hard-pause
+    if (this.audioEl && !fileSrc) {
+      this._fadeOut(this.audioEl, CROSSFADE_MS);
     }
+
     this.currentTrack = trackId;
 
-    const fileSrc = FILE_TRACKS[trackId];
     if (fileSrc) {
       this._playFile(fileSrc);
       return;
@@ -560,9 +581,17 @@ class AudioManager {
     this._inBattlePlaylist = false;
     this._removeBattleEndedHandler();
     this._stopSynth();
+    if (this._fadeRaf) {
+      cancelAnimationFrame(this._fadeRaf);
+      this._fadeRaf = null;
+    }
     if (this.audioEl) {
       this.audioEl.pause();
       this.audioEl.currentTime = 0;
+    }
+    if (this.audioElB) {
+      this.audioElB.pause();
+      this.audioElB.currentTime = 0;
     }
     this.currentTrack = null;
   }
@@ -583,18 +612,122 @@ class AudioManager {
 
   private _playFile(src: string) {
     this._removeBattleEndedHandler();
-    if (!this.audioEl) {
-      this.audioEl = new Audio();
-    }
-    this.audioEl.loop = true;
-    // Only reload if src changed
-    const currentSrc = this.audioEl.getAttribute("src") ?? "";
-    if (!currentSrc.endsWith(src) && this.audioEl.src !== src) {
+
+    // First play — no element yet or no src loaded
+    if (!this.audioEl || !this.audioEl.src || this.audioEl.src === location.origin + "/") {
+      if (!this.audioEl) this.audioEl = new Audio();
+      this.audioEl.loop = true;
       this.audioEl.src = src;
       this.audioEl.load();
+      this.audioEl.volume = 0;
+      this.audioEl.play().catch(() => {});
+      this._rampVolume(this.audioEl, 0, this._effectiveMusicVol(), CROSSFADE_MS);
+      return;
     }
-    this.audioEl.volume = this._effectiveMusicVol();
-    this.audioEl.play().catch(() => {});
+
+    // Same src — just ensure it's playing (no-op for seamless title→warroom)
+    const cur = this.audioEl.getAttribute("src") ?? "";
+    if (cur.endsWith(src) || this.audioEl.src.endsWith(src)) {
+      if (this.audioEl.paused) this.audioEl.play().catch(() => {});
+      return;
+    }
+
+    // Different src — crossfade to new track
+    this._crossfade(src);
+  }
+
+  private _crossfade(newSrc: string) {
+    if (!this.audioEl) {
+      this.audioEl = new Audio();
+      this.audioEl.loop = true;
+      this.audioEl.src = newSrc;
+      this.audioEl.load();
+      this.audioEl.volume = 0;
+      this.audioEl.play().catch(() => {});
+      this._rampVolume(this.audioEl, 0, this._effectiveMusicVol(), CROSSFADE_MS);
+      return;
+    }
+
+    if (!this.audioElB) this.audioElB = new Audio();
+    const from = this.audioEl;
+    const to = this.audioElB;
+
+    to.loop = true;
+    to.src = newSrc;
+    to.load();
+    to.volume = 0;
+    to.play().catch(() => {});
+
+    if (this._fadeRaf) {
+      cancelAnimationFrame(this._fadeRaf);
+      this._fadeRaf = null;
+    }
+
+    const targetVol = this._effectiveMusicVol();
+    const startVol = from.volume;
+    const startTime = performance.now();
+
+    const tick = () => {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(elapsed / CROSSFADE_MS, 1);
+      const s = t * t * (3 - 2 * t); // smoothstep
+      from.volume = Math.max(0, startVol * (1 - s));
+      to.volume   = Math.min(targetVol, targetVol * s);
+
+      if (t < 1) {
+        this._fadeRaf = requestAnimationFrame(tick);
+      } else {
+        from.pause();
+        from.removeAttribute("src");
+        this.audioEl  = to;
+        this.audioElB = from;
+        this._fadeRaf = null;
+      }
+    };
+    this._fadeRaf = requestAnimationFrame(tick);
+  }
+
+  private _rampVolume(el: HTMLAudioElement, fromVol: number, toVol: number, ms: number) {
+    if (this._fadeRaf) {
+      cancelAnimationFrame(this._fadeRaf);
+      this._fadeRaf = null;
+    }
+    const startTime = performance.now();
+    const tick = () => {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(elapsed / ms, 1);
+      const s = t * t * (3 - 2 * t);
+      el.volume = fromVol + (toVol - fromVol) * s;
+      if (t < 1) {
+        this._fadeRaf = requestAnimationFrame(tick);
+      } else {
+        this._fadeRaf = null;
+      }
+    };
+    this._fadeRaf = requestAnimationFrame(tick);
+  }
+
+  private _fadeOut(el: HTMLAudioElement, ms: number) {
+    if (this._fadeRaf) {
+      cancelAnimationFrame(this._fadeRaf);
+      this._fadeRaf = null;
+    }
+    const startVol = el.volume;
+    const startTime = performance.now();
+    const tick = () => {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(elapsed / ms, 1);
+      const s = t * t * (3 - 2 * t);
+      el.volume = Math.max(0, startVol * (1 - s));
+      if (t < 1) {
+        this._fadeRaf = requestAnimationFrame(tick);
+      } else {
+        el.pause();
+        el.currentTime = 0;
+        this._fadeRaf = null;
+      }
+    };
+    this._fadeRaf = requestAnimationFrame(tick);
   }
 
   private _stopSynth() {

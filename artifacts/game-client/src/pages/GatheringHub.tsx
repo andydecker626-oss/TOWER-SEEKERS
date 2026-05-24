@@ -655,7 +655,7 @@ export default function GatheringHub() {
   // Play hub music while in this screen
   useEffect(() => {
     audioManager.play("hub");
-    return () => audioManager.stop();
+    return () => {};
   }, []);
 
   function openNew() { setEditParty(undefined); setModalOpen(true); }

@@ -24,10 +24,8 @@ export default function WarRoom() {
 
   const hasActiveGame = state.phase !== "lobby";
 
-  // Resume skyforge music when returning to war room (e.g. from battle/hub)
   useEffect(() => {
-    audioManager.play("skyforge");
-    // Do NOT stop on unmount — music persists across menu screens
+    audioManager.play("hub");
   }, []);
 
   useEffect(() => {
@@ -44,7 +42,7 @@ export default function WarRoom() {
       <div style={{
         minHeight: "100vh", background: "#07040f", display: "flex",
         alignItems: "center", justifyContent: "center",
-        color: "rgba(240,192,64,0.6)", fontFamily: "'Cinzel', serif",
+        color: "rgba(180,195,230,0.55)", fontFamily: "'Cinzel', serif",
         fontSize: "1rem", letterSpacing: "0.12em",
       }}>
         Loading…
@@ -59,21 +57,34 @@ export default function WarRoom() {
     <div className="war-root">
       <style>{CSS}</style>
 
-      <div className="war-bg" />
+      <div className="war-bg">
+        <div className="war-bg-inner" />
+      </div>
       <div className="war-overlay" />
+      <div className="war-vignette" />
+
+      <div className="war-motes">
+        {Array.from({ length: 14 }, (_, i) => (
+          <span key={i} style={{ "--i": i } as React.CSSProperties} />
+        ))}
+      </div>
 
       <div className="war-topbar">
-        <div className="war-logo">
-          WAR ROOM
-        </div>
-
-        <div className="war-player-info">
+        <div className="war-player-strip">
           {avatarUrl ? (
             <img src={avatarUrl} alt={displayName} className="war-avatar" />
           ) : (
             <div className="war-avatar war-avatar-fallback">⚔</div>
           )}
           <span className="war-username">{displayName}</span>
+          <button
+            className="war-icon-btn"
+            onClick={() => setShowSettings(true)}
+            aria-label="Settings"
+            title="Settings"
+          >
+            ⚙
+          </button>
           <button className="war-signout-btn" onClick={() => signOut(() => navigate("/"))}>
             Sign Out
           </button>
@@ -82,14 +93,7 @@ export default function WarRoom() {
 
       <div className="war-body">
         <div className="war-center">
-          <div className="war-title-block">
-            <div className="war-game-title">TOWER SEEKERS</div>
-            <div className="war-game-subtitle">Season 1 · The Iron Age</div>
-          </div>
-
-          <div className="war-welcome">
-            Welcome back, <span className="war-welcome-name">{displayName}</span>
-          </div>
+          <div className="war-echo">Choose your path.</div>
 
           {hasActiveGame && (
             <div className="war-active-banner">
@@ -131,15 +135,6 @@ export default function WarRoom() {
               </span>
               <span className="war-btn-arrow">›</span>
             </button>
-
-            <button className="war-menu-btn war-btn-settings" onClick={() => setShowSettings(true)}>
-              <span className="war-btn-icon">⚙</span>
-              <span className="war-btn-content">
-                <span className="war-btn-title">Settings</span>
-                <span className="war-btn-sub">Audio, display &amp; controls</span>
-              </span>
-              <span className="war-btn-arrow">›</span>
-            </button>
           </div>
         </div>
       </div>
@@ -150,7 +145,38 @@ export default function WarRoom() {
 }
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@700;900&display=swap');
+
+  :root {
+    --war-pearl-1:   #ffffff;
+    --war-pearl-2:   #dde2ec;
+    --war-pearl-3:   #aab2c2;
+    --war-fg-dim:    rgba(180,190,210,0.6);
+    --war-deep:      #07040f;
+    --war-gold-deep: #c8960d;
+  }
+
+  @keyframes warMoteRise {
+    0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+    10%  { opacity: 0.9; }
+    90%  { opacity: 0.5; }
+    100% { transform: translateY(-100vh) translateX(calc((var(--i, 0) % 3 - 1) * 40px)) scale(0.5); opacity: 0; }
+  }
+
+  @keyframes bannerIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1) }
+    50%     { opacity:0.6; transform:scale(0.82) }
+  }
+
+  @keyframes warCardRise {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   .war-root {
     min-height: 100vh;
@@ -159,97 +185,150 @@ const CSS = `
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: #07040f;
+    background: var(--war-deep);
     font-family: 'Cinzel', serif;
   }
 
   .war-bg {
     position: absolute;
     inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .war-bg-inner {
+    position: absolute;
+    inset: 0;
     background-image: url('/assets/title-bg.png');
     background-size: cover;
     background-position: center 40%;
-    filter: blur(3px) brightness(0.28);
-    z-index: 0;
+    filter: brightness(0.55);
   }
 
   .war-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(4,2,10,0.72);
+    background: linear-gradient(
+      180deg,
+      rgba(4,2,10,0.38) 0%,
+      rgba(4,2,10,0.12) 35%,
+      rgba(4,2,10,0.28) 65%,
+      rgba(4,2,10,0.72) 100%
+    );
     z-index: 1;
     pointer-events: none;
   }
 
+  .war-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(4,2,10,0.5) 68%, rgba(4,2,10,0.85) 100%);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .war-motes {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .war-motes span {
+    position: absolute;
+    bottom: -10px;
+    left: calc(6% + (var(--i, 0) * 6.5%));
+    width: clamp(1px, 0.18vw, 2.5px);
+    height: clamp(1px, 0.18vw, 2.5px);
+    border-radius: 50%;
+    background: rgba(160,180,240,0.5);
+    animation: warMoteRise calc(14s + (var(--i, 0) * 2.1s)) calc(var(--i, 0) * -3.3s) linear infinite;
+  }
+  .war-motes span:nth-child(3n+2) { background: rgba(180,200,255,0.35); width: 1.5px; height: 1.5px; }
+  .war-motes span:nth-child(5n)   { background: rgba(200,220,255,0.25); }
+
+  /* ── Topbar ── */
   .war-topbar {
     position: relative;
     z-index: 10;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: clamp(10px,2vh,18px) clamp(14px,3vw,28px);
+    justify-content: flex-end;
+    padding: clamp(10px,2vh,16px) clamp(14px,3vw,28px);
     flex-shrink: 0;
-    border-bottom: 1px solid rgba(240,192,64,0.1);
-    background: rgba(4,2,10,0.5);
-    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(160,180,240,0.08);
+    background: rgba(4,2,10,0.38);
+    backdrop-filter: blur(10px);
   }
 
-  .war-logo {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(11px, 1.4vw, 16px);
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    color: rgba(240,192,64,0.85);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .war-player-info {
+  .war-player-strip {
     display: flex;
     align-items: center;
     gap: 10px;
   }
 
   .war-avatar {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    border: 1px solid rgba(240,192,64,0.4);
+    border: 1px solid rgba(160,180,240,0.3);
     object-fit: cover;
+    flex-shrink: 0;
   }
   .war-avatar-fallback {
     background: linear-gradient(135deg, #1a0d3a, #2a1555);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .war-username {
-    font-size: clamp(10px,1.1vw,13px);
-    color: rgba(240,192,64,0.8);
+    font-size: clamp(9px,1vw,12px);
+    color: rgba(180,195,230,0.55);
     letter-spacing: 0.08em;
-    font-weight: 600;
+    font-weight: 400;
+  }
+
+  .war-icon-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(160,180,240,0.16);
+    border-radius: 7px;
+    color: rgba(160,180,220,0.55);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .war-icon-btn:hover {
+    border-color: rgba(180,200,255,0.38);
+    color: var(--war-pearl-2);
+    background: rgba(160,180,240,0.08);
   }
 
   .war-signout-btn {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(240,192,64,0.18);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(160,180,240,0.14);
     border-radius: 6px;
     padding: 4px 10px;
-    color: rgba(200,170,100,0.6);
+    color: rgba(160,180,220,0.45);
     font-family: 'Cinzel', serif;
-    font-size: clamp(8px,0.82vw,10px);
+    font-size: clamp(8px,0.78vw,10px);
     letter-spacing: 0.1em;
     cursor: pointer;
     transition: all 0.18s;
   }
   .war-signout-btn:hover {
-    border-color: rgba(240,192,64,0.4);
-    color: rgba(240,192,64,0.85);
-    background: rgba(240,192,64,0.07);
+    border-color: rgba(180,200,255,0.32);
+    color: rgba(180,200,240,0.8);
+    background: rgba(160,180,240,0.07);
   }
 
+  /* ── Body ── */
   .war-body {
     position: relative;
     z-index: 10;
@@ -264,47 +343,33 @@ const CSS = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(20px,3vh,36px);
+    gap: clamp(18px,2.8vh,32px);
     width: 100%;
-    max-width: 500px;
+    max-width: 480px;
   }
 
-  .war-title-block {
-    text-align: center;
-  }
-  .war-game-title {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(20px,3.5vw,42px);
-    font-weight: 900;
-    color: #f0c040;
-    letter-spacing: 0.12em;
-    text-shadow: 0 0 40px rgba(240,192,64,0.3), 0 2px 8px rgba(0,0,0,0.8);
-    line-height: 1;
-  }
-  .war-game-subtitle {
-    font-size: clamp(9px,0.9vw,11px);
-    color: rgba(240,192,64,0.45);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-top: 8px;
-  }
-
-  .war-welcome {
+  .war-echo {
+    font-family: 'Cinzel', serif;
     font-size: clamp(12px,1.3vw,16px);
-    color: rgba(200,170,100,0.7);
-    letter-spacing: 0.08em;
+    font-style: italic;
+    letter-spacing: 0.22em;
+    color: var(--war-fg-dim);
     text-align: center;
-  }
-  .war-welcome-name {
-    color: rgba(240,192,64,0.9);
-    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    animation: warCardRise 0.8s ease forwards;
+    animation-delay: 0.1s;
+    opacity: 0;
   }
 
+  /* ── Menu cards ── */
   .war-menu {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: clamp(8px,1.2vh,14px);
+    animation: warCardRise 0.8s ease forwards;
+    animation-delay: 0.3s;
+    opacity: 0;
   }
 
   .war-menu-btn {
@@ -312,91 +377,43 @@ const CSS = `
     display: flex;
     align-items: center;
     gap: clamp(12px,1.8vw,20px);
-    border-radius: 14px;
+    border-radius: 12px;
     padding: clamp(14px,2vh,20px) clamp(16px,2.5vw,24px);
-    border: 1px solid transparent;
     cursor: pointer;
     text-align: left;
     transition: filter 0.18s, transform 0.18s, box-shadow 0.18s;
     position: relative;
     overflow: hidden;
+    background: rgba(8,6,22,0.78);
+    border: 1px solid rgba(160,180,240,0.18);
   }
-  .war-menu-btn::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    border-radius: 14px 14px 0 0;
-  }
+
   .war-menu-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.5);
-    filter: brightness(1.1);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    filter: brightness(1.08);
   }
   .war-menu-btn:active { transform: translateY(0); }
 
   .war-btn-pvp {
-    background: linear-gradient(135deg, rgba(20,40,100,0.88), rgba(10,25,70,0.95));
-    border-color: rgba(80,120,255,0.28);
+    border-left: 2px solid rgba(80,130,255,0.6);
+    box-shadow: inset 3px 0 12px rgba(60,100,220,0.06);
   }
-  .war-btn-pvp::before { background: linear-gradient(90deg, transparent, rgba(80,120,255,0.6), transparent); }
+  .war-btn-pvp:hover {
+    border-color: rgba(80,130,255,0.55);
+    border-left-color: rgba(100,160,255,0.85);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45), inset 0 0 20px rgba(60,100,220,0.06);
+  }
 
   .war-btn-hub {
-    background: linear-gradient(135deg, rgba(60,35,10,0.88), rgba(40,22,5,0.95));
-    border-color: rgba(200,130,40,0.28);
+    border-left: 2px solid rgba(200,140,40,0.55);
+    box-shadow: inset 3px 0 12px rgba(180,110,20,0.06);
   }
-  .war-btn-hub::before { background: linear-gradient(90deg, transparent, rgba(240,150,50,0.5), transparent); }
-
-  .war-btn-settings {
-    background: linear-gradient(135deg, rgba(18,10,40,0.88), rgba(10,5,25,0.95));
-    border-color: rgba(120,80,200,0.22);
+  .war-btn-hub:hover {
+    border-color: rgba(160,180,240,0.28);
+    border-left-color: rgba(220,160,60,0.85);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45), inset 0 0 20px rgba(180,120,20,0.06);
   }
-  .war-btn-settings::before { background: linear-gradient(90deg, transparent, rgba(120,80,200,0.4), transparent); }
-
-  /* Active game banner */
-  .war-active-banner {
-    width: 100%;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem;
-    background: rgba(200,120,20,0.12);
-    border: 1px solid rgba(240,160,40,0.35);
-    border-radius: 12px;
-    padding: clamp(10px,1.5vh,14px) clamp(14px,2vw,18px);
-    animation: bannerIn 0.25s ease-out;
-  }
-  @keyframes bannerIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-  .war-active-left { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
-  .war-active-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    background: #f0a030;
-    box-shadow: 0 0 8px rgba(240,160,40,0.7);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.65;transform:scale(0.85)} }
-  .war-active-title {
-    font-family: 'Cinzel', serif; font-size: clamp(11px,1.1vw,13px);
-    font-weight: 700; color: rgba(240,180,80,0.92); letter-spacing: 0.06em;
-  }
-  .war-active-sub {
-    font-family: 'Cinzel', serif; font-size: clamp(9px,0.82vw,10px);
-    color: rgba(200,160,80,0.5); letter-spacing: 0.04em; margin-top: 2px;
-  }
-  .war-active-btns { display: flex; gap: 0.5rem; flex-shrink: 0; }
-  .war-active-btn {
-    font-family: 'Cinzel', serif; font-size: clamp(9px,0.85vw,11px);
-    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    border-radius: 7px; padding: 0.38rem 0.9rem; cursor: pointer; transition: all 0.15s;
-  }
-  .war-active-resume {
-    background: rgba(240,160,40,0.18); border: 1px solid rgba(240,160,40,0.45);
-    color: rgba(240,180,80,0.9);
-  }
-  .war-active-resume:hover { background: rgba(240,160,40,0.28); border-color: rgba(240,160,40,0.7); color: #f0c040; }
-  .war-active-abandon {
-    background: rgba(180,40,40,0.1); border: 1px solid rgba(200,60,60,0.28);
-    color: rgba(220,120,120,0.7);
-  }
-  .war-active-abandon:hover { background: rgba(200,50,50,0.18); border-color: rgba(220,80,80,0.5); color: #f87171; }
 
   .war-btn-icon {
     font-size: clamp(18px,2.2vw,26px);
@@ -414,19 +431,19 @@ const CSS = `
   .war-btn-title {
     font-family: 'Cinzel', serif;
     font-size: clamp(12px,1.4vw,17px);
-    font-weight: 700;
-    color: #f0e8d0;
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    color: var(--war-pearl-2);
+    letter-spacing: 0.06em;
   }
   .war-btn-sub {
     font-family: 'Cinzel', serif;
     font-size: clamp(9px,0.82vw,11px);
-    color: rgba(200,180,140,0.5);
+    color: var(--war-fg-dim);
     letter-spacing: 0.04em;
   }
   .war-btn-arrow {
     font-size: clamp(18px,2vw,26px);
-    color: rgba(240,192,64,0.35);
+    color: rgba(160,180,240,0.28);
     font-family: sans-serif;
     font-weight: 300;
     flex-shrink: 0;
@@ -434,130 +451,49 @@ const CSS = `
   }
   .war-menu-btn:hover .war-btn-arrow {
     transform: translateX(3px);
-    color: rgba(240,192,64,0.7);
+    color: rgba(180,200,255,0.6);
   }
 
-  /* Settings modal (reused from TitleScreen) */
-  .ts-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.78);
-    backdrop-filter: blur(6px);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-  .ts-modal {
-    background: linear-gradient(160deg, #0d0921 0%, #070511 100%);
-    border: 1px solid rgba(240,192,64,0.25);
-    border-radius: 14px;
-    padding: 2rem;
+  /* ── Active game banner ── */
+  .war-active-banner {
     width: 100%;
-    max-width: 440px;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(240,192,64,0.08) inset;
-    max-height: 90vh;
-    overflow-y: auto;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    background: rgba(200,120,20,0.1);
+    border: 1px solid rgba(220,150,40,0.3);
+    border-radius: 12px;
+    padding: clamp(10px,1.5vh,14px) clamp(14px,2vw,18px);
+    animation: bannerIn 0.25s ease-out;
   }
-  .ts-modal-title {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #f0e0a0;
-    text-align: center;
-    margin-bottom: 1.5rem;
-    letter-spacing: 0.08em;
+  .war-active-left { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+  .war-active-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: #f0a030;
+    box-shadow: 0 0 8px rgba(240,160,40,0.65);
+    animation: pulse 1.5s ease-in-out infinite;
   }
-  .ts-section-label {
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: rgba(240,192,64,0.5);
-    border-bottom: 1px solid rgba(240,192,64,0.12);
-    padding-bottom: 0.3rem;
-    margin: 1.2rem 0 0.8rem;
+  .war-active-title {
+    font-family: 'Cinzel', serif; font-size: clamp(11px,1.1vw,13px);
+    font-weight: 700; color: rgba(230,175,70,0.9); letter-spacing: 0.06em;
   }
-  .ts-setting-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.7rem;
+  .war-active-sub {
+    font-family: 'Cinzel', serif; font-size: clamp(9px,0.82vw,10px);
+    color: rgba(200,160,80,0.45); letter-spacing: 0.04em; margin-top: 2px;
   }
-  .ts-lbl {
-    font-family: 'Cinzel', serif;
-    font-size: 0.78rem;
-    color: rgba(200,170,100,0.8);
-    min-width: 120px;
+  .war-active-btns { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  .war-active-btn {
+    font-family: 'Cinzel', serif; font-size: clamp(9px,0.85vw,11px);
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    border-radius: 7px; padding: 0.38rem 0.9rem; cursor: pointer; transition: all 0.15s;
   }
-  .ts-toggle {
-    padding: 0.3rem 0.9rem;
-    border-radius: 6px;
-    border: 1px solid rgba(240,192,64,0.25);
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    transition: all 0.15s;
+  .war-active-resume {
+    background: rgba(220,155,40,0.14); border: 1px solid rgba(220,155,40,0.4);
+    color: rgba(230,180,70,0.88);
   }
-  .ts-toggle.on  { background: rgba(240,192,64,0.15); color: #f0c040; }
-  .ts-toggle.off { background: rgba(80,60,40,0.15); color: rgba(180,150,100,0.5); }
-  .ts-slider {
-    flex: 1;
-    accent-color: #f0c040;
+  .war-active-resume:hover { background: rgba(220,155,40,0.24); border-color: rgba(230,165,50,0.65); color: #f0c040; }
+  .war-active-abandon {
+    background: rgba(180,40,40,0.1); border: 1px solid rgba(200,60,60,0.25);
+    color: rgba(220,120,120,0.65);
   }
-  .ts-val {
-    font-size: 0.75rem;
-    color: rgba(240,192,64,0.7);
-    min-width: 38px;
-    text-align: right;
-  }
-  .ts-radio-group { display: flex; gap: 6px; }
-  .ts-radio {
-    padding: 0.28rem 0.75rem;
-    border-radius: 6px;
-    border: 1px solid rgba(240,192,64,0.18);
-    background: rgba(20,12,40,0.6);
-    color: rgba(180,150,100,0.6);
-    font-family: 'Cinzel', serif;
-    font-size: 0.68rem;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .ts-radio.active {
-    background: rgba(240,192,64,0.18);
-    border-color: rgba(240,192,64,0.5);
-    color: #f0c040;
-  }
-  .ts-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    border-top: 1px solid rgba(240,192,64,0.1);
-    padding-top: 1rem;
-  }
-  .ts-btn-sm {
-    padding: 0.38rem 1rem;
-    border-radius: 7px;
-    border: 1px solid rgba(240,192,64,0.22);
-    background: rgba(20,12,40,0.7);
-    color: rgba(200,170,100,0.7);
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 0.06em;
-  }
-  .ts-btn-sm:hover { border-color: rgba(240,192,64,0.45); color: #f0d070; }
-  .ts-btn-sm-primary {
-    background: rgba(240,192,64,0.16);
-    border-color: rgba(240,192,64,0.45);
-    color: #f0c040;
-  }
-  .ts-btn-sm-primary:hover {
-    background: rgba(240,192,64,0.26);
-    box-shadow: 0 0 12px rgba(240,192,64,0.15);
-  }
+  .war-active-abandon:hover { background: rgba(200,50,50,0.18); border-color: rgba(220,80,80,0.45); color: #f87171; }
 `;
