@@ -1,0 +1,123 @@
+Tower Seekers â€” Hub Shell v1 (Clash Royaleâ€“style menu)
+Goal
+Replace the current WarRoom layout with a persistent CR-style menu shell: top HUD bar, central hero canvas, bottom tab bar. Add 3 new placeholder routes. Keep Gathering Hub (/hub) reachable via the Units tab. Build the IA scaffold so we can fill in features later without re-architecting.
+
+Files to create
+1. src/components/MenuShell.tsx
+Reusable layout that wraps every menu page. Props: active: "home" | "towers" | "town" | "units" | "shop" and children.
+
+Provides:
+
+Full-screen container with vista bg = /assets/title-bg.png (DO NOT blur it; only darken with a gradient overlay).
+Top HUD bar (rgba(7,4,15,0.78), 56px tall, 1px inner border rgba(245,243,238,0.08)):
+Left: 32px avatar (Clerk imageUrl) + display name (Cinzel 500, 14px, cream #f5f3ee).
+Center: two currency pills â€” ðŸ’Ž 120 (gems) and ðŸª™ 1,240 (gold). Hardcoded; do NOT wire to backend.
+Right: ? button (opens TutorialModal) + âš™ button (opens existing SettingsModal).
+Bottom tab bar (rgba(7,4,15,0.78), 64px tall, 1px top border rgba(245,243,238,0.08)):
+5 tabs (leftâ†’right): ðŸ› Home â†’ /warroom, ðŸ—º Towers â†’ /towers, ðŸª Town â†’ /town, ðŸ‘¥ Units â†’ /hub, ðŸ›’ Shop â†’ /shop.
+Active tab: 2px pearl underline (rgba(245,243,238,0.9)), icon at 100% opacity, label at 100% opacity, very faint cool glow above icon.
+Inactive tabs: icon and label at 55% opacity. Hover lifts to 80%.
+Icon 22px, label 10â€“11px Cinzel 500 letter-spacing 0.08em.
+Slot for children between HUD and tab bar (flex:1, overflow-y:auto, no scrollbar on the shell itself).
+Responsive: on viewport <768px, currency pills hide their numbers and show only icons; tab labels stay readable but smaller (9px). Avatar shrinks to 28px.
+
+2. src/pages/TowersPage.tsx (route: /towers)
+Wrap in <MenuShell active="towers">.
+Headline: "Choose Your Ascent" (Cinzel 400, 1.6rem, pearl gradient fill).
+Subtitle: "Four towers wake. None yet open." (Cinzel italic 0.95rem, color #c9c4b8).
+4 cards in a grid (2Ã—2 desktop, 1 col mobile, gap 20px):
+ðŸ”¥ Tower of Embers â€” Coming Soon
+ðŸŒŠ Tower of Tides â€” Coming Soon
+â›° Tower of Roots â€” Coming Soon
+ðŸŒ¬ Tower of Gales â€” Coming Soon
+Card: 200Ã—260px, bg rgba(20,15,35,0.55), 1px pearl border rgba(245,243,238,0.18), corner radius 6px. Locked state: ðŸ”’ icon overlay at 60% opacity, no hover scale, cursor:default.
+3. src/pages/TownPage.tsx (route: /town)
+Wrap in <MenuShell active="town">.
+Headline: "The Town"
+Subtitle: "Wander the streets â€” though the doors are not yet open."
+4 cards in a grid (2Ã—2 desktop, 1 col mobile, gap 20px):
+ðŸª™ Vendors â€” "Trade goods and relics."
+ðŸ“– Mentors â€” "Sharpen your tactics."
+âš” Trainers â€” "Drill your unit's craft."
+ðŸ¹ Recruiters â€” "Conscript new champions."
+Card: 220Ã—200px, same disabled styling as Towers cards.
+4. src/pages/ShopPage.tsx (route: /shop)
+Wrap in <MenuShell active="shop">.
+Headline: "Treasury"
+Three horizontal sections, each with a section label and a row of 3 disabled cards:
+Currency Bundles
+Cosmetic Bundles
+Aesthetic Rewards
+Cards: 160Ã—200px, locked styling.
+5. src/components/TutorialModal.tsx
+Stub modal. Mirror SettingsModal styling:
+
+Dark backdrop rgba(4,2,10,0.78), centered panel 480Ã—280px, bg #0a0815, 1px pearl border.
+Title "Tutorial" (Cinzel 600, pearl gradient).
+Body: "Tutorial coming soon â€” for now, jump in via Casual queue. The grid is 4Ã—8, your units act on AP. Tactical depth comes with experimentation."
+Single "Close" button (pearl outline).
+Props: { onClose: () => void }.
+Files to modify
+src/App.tsx
+Import TowersPage, TownPage, ShopPage.
+Add three routes inside <Routes> (each wrapped in <RequireAuth>):
+/towers â†’ TowersPage
+/town â†’ TownPage
+/shop â†’ ShopPage
+In PhaseNavigator's safePaths, add /towers, /town, /shop.
+src/pages/WarRoom.tsx
+Rewrite as the Home tab content (still rendered at /warroom):
+
+Wrap in <MenuShell active="home">.
+REMOVE entirely: the "WAR ROOM" topbar label, the "TOWER SEEKERS" centered title block, the "Season 1 Â· The Iron Age" subtitle, the "Welcome back, [name]" greeting, the 3-card menu (Battle/Gathering Hub/Settings).
+KEEP: the active-game banner logic (state.phase !== "lobby") with Resume + Abandon buttons. Restyle the banner: card width max 520px, bg rgba(20,15,35,0.7), pearl border, Cinzel text. Position it just above the BATTLE button when present.
+ADD: large centered BATTLE button.
+Desktop: 280Ã—84px. Mobile: 240Ã—72px.
+Bg: pearl gradient linear-gradient(180deg, #ffffff 0%, #dde2ec 50%, #aab2c2 100%) â€” but at 18% opacity over a dark fill rgba(20,15,35,0.65) for restraint. The button is dark-with-pearl-sheen, NOT a chunky pure-white block.
+Border: 1px solid #b08a3a (the gold sigil color), corner radius 4px.
+Label: "BATTLE" Cinzel 600 22px letter-spacing 0.18em, color #f5f3ee.
+Sub: "Find a Match" 11px Cinzel 400 italic, color #c9c4b8, centered below the main label.
+Hover: transform scale(1.03), box-shadow 0 0 24px rgba(160,180,220,0.28) (cool glow).
+Click: navigate("/lobby").
+ADD: under the button (12px below), a horizontal mode chip row centered:
+[ðŸ”’ Ranked] â€” disabled, opacity 0.4, no hover.
+[Casual] â€” active, 1px pearl outline, opacity 1.
+Visual only; clicking does nothing for now.
+Audio: keep audioManager.play("skyforge") on mount. Do NOT stop on unmount.
+src/pages/GatheringHub.tsx
+Wrap the existing body in <MenuShell active="units">. Remove any duplicate top/bottom chrome that conflicts (e.g. its own header bar or back button â€” the shell provides nav now).
+Internal page content (unit list, party config) stays unchanged.
+Visual rules (strict â€” do not violate)
+DO NOT regenerate or alter /assets/title-bg.png.
+DO NOT apply backdrop-filter: blur(â€¦) on the vista bg. Use a single CSS linear-gradient overlay for darkening: linear-gradient(180deg, rgba(7,4,15,0.55) 0%, rgba(7,4,15,0.7) 50%, rgba(7,4,15,0.85) 100%).
+DO NOT use gold/yellow for primary text anywhere. Gold #b08a3a is ONLY for the BATTLE button border and the existing heraldic sigil if it survives on title.
+DO NOT re-add the "WAR ROOM" label, the "TOWER SEEKERS" title repeat in the menu, or the "Welcome back" greeting.
+DO NOT add a side-nav, hamburger menu, breadcrumbs, or drawer. Bottom tab bar is the only nav.
+DO NOT touch /lobby, /battle, /preselect, /battleselect, /place, /gameover, /sprites, /sprite-test, or /arena-demo.
+DO NOT introduce new font families. Cinzel + Cinzel Decorative only. Use weights 400, 500, 600. Cinzel Decorative reserved for the BATTLE label sparingly if you like â€” but Cinzel 600 is the default.
+Colors (canonical)
+Deep bg: #07040f
+Vista overlay: linear-gradient(180deg, rgba(7,4,15,0.55) 0%, rgba(7,4,15,0.7) 50%, rgba(7,4,15,0.85) 100%)
+Primary text: #f5f3ee
+Secondary text: #c9c4b8
+Pearl gradient: linear-gradient(180deg, #ffffff 0%, #dde2ec 50%, #aab2c2 100%)
+Cool glow: rgba(160,180,220,0.28)
+Gold accent: #b08a3a (border on BATTLE button only)
+HUD/tab bar bg: rgba(7,4,15,0.78)
+Inner divider: rgba(245,243,238,0.08)
+Pearl border (cards/buttons): rgba(245,243,238,0.18) resting, rgba(245,243,238,0.4) hover
+Responsive breakpoints
+Desktop (â‰¥1024px): tab bar 64px tall, BATTLE 280Ã—84, currency pills show full text.
+Tablet (768â€“1023px): tab bar 60px, BATTLE 260Ã—80, currency pills show numbers.
+Mobile (<768px): tab bar 60px, BATTLE 240Ã—72, currency pills icon-only, tab labels stay at 9px.
+Acceptance criteria
+After this prompt is applied:
+
+/warroom shows vista bg + active-game banner (when applicable) + BATTLE button + Ranked/Casual chips + bottom tab bar; NO "WAR ROOM" header, NO "Welcome back" text, NO 3-card menu.
+All 5 tabs navigate cleanly. Active tab is visually distinct (pearl underline).
+/towers, /town, /shop each render with their headline + locked placeholder cards inside the shell.
+/hub (Units tab) renders existing GatheringHub body inside the new shell, no duplicate chrome.
+? icon opens the TutorialModal stub. âš™ icon opens the existing SettingsModal.
+Music persists across all tab navigations (no stop on unmount in any menu page).
+Layout looks coherent on 1440Ã—900 desktop and 390Ã—844 mobile viewports.
+No console errors. No new dependencies installed.

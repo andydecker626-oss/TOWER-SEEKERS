@@ -22,8 +22,9 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, durationMs);
   }, []);
 
-  /* ── Ramp Hearthstone Tavern track via audioManager ─────────────────── */
+  /* ── Ramp hub track via audioManager ─────────────────────────────────── */
   function rampAudio(target: number, stepSize = 0.025, intervalMs = 80) {
+    if (audioManager.currentTrack === "hub") return; // already playing, don't reset volume
     audioManager.play("hub");
     audioManager.setFileVolume(0);
     let v = 0;
@@ -34,12 +35,22 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, intervalMs);
   }
 
-  /* ── 1. Studio splash: animation ends → crossfade to title + music ───── */
+  /* ── Start music on splash mount (may need user gesture as fallback) ─── */
+  useEffect(() => {
+    rampAudio(0.16);
+    const onInteract = () => rampAudio(0.16);
+    document.addEventListener("click",   onInteract, { once: true });
+    document.addEventListener("keydown", onInteract, { once: true });
+    return () => {
+      document.removeEventListener("click",   onInteract);
+      document.removeEventListener("keydown", onInteract);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ── 1. Studio splash: animation ends → crossfade to title ───────────── */
   const handleStudioEnd = useCallback(() => {
-    crossFade(() => {
-      setPhase("title");
-      rampAudio(0.16);
-    }, 500);
+    crossFade(() => setPhase("title"), 500);
   }, [crossFade]);
 
   /* ── 2. Title: any key or click → complete ───────────────────────────── */

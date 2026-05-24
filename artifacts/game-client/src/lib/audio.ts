@@ -157,7 +157,7 @@ class AudioManager {
   private oscs:         OscillatorNode[]        = [];
   private bufSrcs:      AudioBufferSourceNode[] = [];
   private loopTimer:    ReturnType<typeof setTimeout> | null = null;
-  private currentTrack: TrackId | null = null;
+  private _currentTrack: TrackId | null = null;
   private audioEl:      HTMLAudioElement | null = null;
   private audioElB:     HTMLAudioElement | null = null;
   private _fadeRaf:     number | null = null;
@@ -268,7 +268,7 @@ class AudioManager {
   playBattlePlaylist() {
     if (this._inBattlePlaylist && this.audioEl && !this.audioEl.paused) return;
     this._stopSynth();
-    this.currentTrack = null;
+    this._currentTrack = null;
     this._inBattlePlaylist = true;
     // Fisher-Yates shuffle of enabled tracks only
     const list = [...this._enabledBattleTracks()];
@@ -304,7 +304,7 @@ class AudioManager {
     this._stopSynth();
     this._removeBattleEndedHandler();
     this._inBattlePlaylist = false;
-    this.currentTrack = null;
+    this._currentTrack = null;
     if (!this.audioEl) this.audioEl = new Audio();
     this.audioEl.loop = true;
     this.audioEl.src = src;
@@ -325,6 +325,10 @@ class AudioManager {
 
   get isPlaying(): boolean {
     return !!this.audioEl && !this.audioEl.paused;
+  }
+
+  get currentTrack(): TrackId | null {
+    return this._currentTrack;
   }
 
   currentPlayingSrc(): string {
@@ -350,7 +354,7 @@ class AudioManager {
     const next = enabled[nextIdx];
     this._stopSynth();
     this._removeBattleEndedHandler();
-    this.currentTrack = null;
+    this._currentTrack = null;
     if (!this.audioEl) this.audioEl = new Audio();
     this.audioEl.loop = true;
     this.audioEl.src = next.src;
@@ -549,7 +553,7 @@ class AudioManager {
     }
 
     // Synth same-track early return
-    if (!fileSrc && trackId === this.currentTrack && !this._inBattlePlaylist) return;
+    if (!fileSrc && trackId === this._currentTrack && !this._inBattlePlaylist) return;
 
     // Stop battle playlist if switching to a named track
     if (this._inBattlePlaylist) {
@@ -564,7 +568,7 @@ class AudioManager {
       this._fadeOut(this.audioEl, CROSSFADE_MS);
     }
 
-    this.currentTrack = trackId;
+    this._currentTrack = trackId;
 
     if (fileSrc) {
       this._playFile(fileSrc);
@@ -593,7 +597,7 @@ class AudioManager {
       this.audioElB.pause();
       this.audioElB.currentTime = 0;
     }
-    this.currentTrack = null;
+    this._currentTrack = null;
   }
 
   /**
@@ -739,7 +743,7 @@ class AudioManager {
   }
 
   private _schedule(ctx: AudioContext, trackId: SynthTrackId, startTime: number) {
-    if (this.currentTrack !== trackId) return;
+    if (this._currentTrack !== trackId) return;
     const track = TRACKS[trackId];
     const beat  = 60 / track.bpm;
     let t  = startTime;
@@ -783,7 +787,7 @@ class AudioManager {
     this.loopTimer = setTimeout(() => {
       this.oscs    = [];
       this.bufSrcs = [];
-      if (this.currentTrack === trackId) this._schedule(ctx, trackId, ctx.currentTime);
+      if (this._currentTrack === trackId) this._schedule(ctx, trackId, ctx.currentTime);
     }, Math.max(200, loopMs));
   }
 
