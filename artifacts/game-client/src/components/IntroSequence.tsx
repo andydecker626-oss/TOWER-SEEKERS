@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { audioManager } from "@/lib/audio";
-import { markIntroSeen } from "@/lib/introState";
 
 /* ── Phase machine ───────────────────────────────────────────────────────── */
 type Phase = "studio" | "title";
@@ -46,7 +45,6 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
   /* ── 2. Title: any key or click → complete ───────────────────────────── */
   const handleEnter = useCallback(() => {
     if (phase !== "title" || transitioning.current) return;
-    markIntroSeen();
     crossFade(() => onComplete(), 600);
   }, [phase, crossFade, onComplete]);
 
