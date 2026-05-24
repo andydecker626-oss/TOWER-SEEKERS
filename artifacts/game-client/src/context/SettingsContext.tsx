@@ -41,7 +41,7 @@ const DEFAULT: Settings = {
 function load(): Settings {
   try {
     const raw = localStorage.getItem("ts_settings");
-    if (raw) return { ...DEFAULT, ...JSON.parse(raw) };
+    if (raw) return { ...DEFAULT, ...JSON.parse(raw), muted: false };
   } catch {}
   return { ...DEFAULT };
 }
