@@ -1,0 +1,187 @@
+Tower Seekers — Title v3, Smooth Transitions, Hub Reframe
+This is a polish pass across three surfaces: TitleScreen.tsx, WarRoom.tsx, and lib/audio.ts. Goal is AAA fantasy-RPG fidelity (Final Fantasy / Triangle Strategy / Octopath territory), and a continuous, cinematic flow from title → continue without jarring music or backdrop changes.
+
+Do not regenerate any image assets. Do not change route names. Do not touch /hub, /lobby, /sprite-test, /sprite-preview, /arena-demo, or any battle/placement/game-over routes.
+
+Part 1 — Color tokens (do this first, both files)
+Add this block at the top of the CSS template literal in both TitleScreen.tsx and WarRoom.tsx. Then search-and-replace the gold values throughout those two files only.
+
+Copy
+:root {
+  --ts-fg:        #f5f3ee;
+  --ts-fg-dim:    #c9c4b8;
+  --ts-pearl-1:   #ffffff;
+  --ts-pearl-2:   #dde2ec;
+  --ts-pearl-3:   #aab2c2;
+  --ts-cool-glow: rgba(160,180,220,0.28);
+  --ts-deep:      #07040f;
+  --ts-ink:       rgba(0,0,0,0.6);
+  --ts-gold-deep: #b08a3a; /* heraldic sigil ONLY */
+  --ts-vignette:  radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+Replace every #f0c040, #f5d97a, #f0d060, #f0d070, #d4a017, #c8920e, #b8860b, #e8b820, #c8960d, and rgba(240,192,64,*) in TitleScreen.tsx and WarRoom.tsx with cool-tone equivalents using the new tokens. Examples:
+
+Title text color → transparent (uses pearl gradient, see Part 2).
+Button text color → var(--ts-fg).
+Button border → rgba(245,243,238,0.35) (hover 0.7).
+Hover glow → rgba(160,180,220,0.25), never gold.
+Mute button & corner credit → var(--ts-fg-dim) at 0.5 opacity.
+Sound-toggle border/icon → cool, not gold.
+Gold lives ONLY in the .ts-sigil element introduced in Part 2.
+
+Part 2 — Title Screen polish (TitleScreen.tsx)
+2a. Replace the .ts-logo-text block
+Square Enix-feel: thin silver-pearl metallic gradient, generous tracking, faint cool aura, no chunky white stroke or yellow glow.
+
+Copy
+.ts-logo-text {
+  font-family: 'Cinzel', serif;       /* NOT Cinzel Decorative — too heavy */
+  font-weight: 500;
+  font-size: clamp(32px, 6.5vw, 84px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg,
+    var(--ts-pearl-1) 0%,
+    var(--ts-pearl-2) 48%,
+    var(--ts-pearl-3) 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 0;             /* remove the old 1.5px white stroke */
+  text-shadow: none;                  /* remove old gold glow */
+  filter: drop-shadow(0 2px 0 var(--ts-ink))
+          drop-shadow(0 0 28px var(--ts-cool-glow));
+  white-space: nowrap;
+  margin: 0;
+}
+2b. Add a heraldic sigil above the title
+Inline SVG, four-tower diamond mark — the only place gold remains.
+
+In JSX, replace <div className="ts-logo-block"> content with:
+
+Copy
+<div className="ts-logo-block">
+  <div className="ts-sigil" aria-hidden="true">
+    <svg viewBox="0 0 64 64" width="56" height="56">
+      <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M32 6 L48 32 L32 58 L16 32 Z" />
+        <path d="M32 10 v8 M30 10 h4" />
+        <path d="M32 54 v-8 M30 54 h4" />
+        <path d="M14 32 h8 M14 30 v4" />
+        <path d="M50 32 h-8 M50 30 v4" />
+      </g>
+    </svg>
+  </div>
+  <span className="ts-logo-text">TOWER SEEKERS</span>
+  <div className="ts-tagline">An age of towers. A world to wake.</div>
+</div>
+Tagline alternates (pick before pasting if you prefer):
+
+"Four pillars. One ascent."
+"Beneath four skies, the climb begins."
+"The towers are waking."
+"Where the sky was sundered, climb."
+2c. Add CSS for sigil and tagline
+Copy
+.ts-logo-block {
+  flex-direction: column;             /* stack sigil, title, tagline vertically */
+  gap: clamp(12px, 1.5vh, 20px);
+}
+.ts-sigil {
+  color: var(--ts-gold-deep);
+  opacity: 0.85;
+  filter: drop-shadow(0 0 12px rgba(176,138,58,0.4));
+  display: flex;
+  justify-content: center;
+}
+.ts-tagline {
+  font-family: 'Cinzel', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(11px, 1.3vw, 15px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ts-fg-dim);
+  opacity: 0.85;
+  text-align: center;
+}
+2d. Cinematic ambience layer
+Ken Burns on background. Wrap .ts-bg in an inner element so transforms don't fight parallax:
+
+Copy
+<div className="ts-bg"><div className="ts-bg-inner" /></div>
+Copy
+.ts-bg { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.ts-bg-inner {
+  position: absolute; inset: 0;
+  background-image: url('/assets/title-bg.png');
+  background-size: cover;
+  background-position: center 40%;
+  filter: brightness(0.72);
+  animation: tsKenBurns 90s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes tsKenBurns {
+  from { transform: scale(1.0)  translate(0, 0); }
+  to   { transform: scale(1.06) translate(-1.5%, -1%); }
+}
+Vignette overlay. Add right after .ts-overlay:
+
+Copy
+<div className="ts-vignette" aria-hidden="true" />
+Copy
+.ts-vignette {
+  position: absolute; inset: 0; z-index: 2;
+  background: var(--ts-vignette);
+  pointer-events: none;
+}
+Drifting motes. Sparse, cool-toned, slow upward drift:
+
+Copy
+<div className="ts-motes" aria-hidden="true">
+  {Array.from({ length: 14 }).map((_, i) => (
+    <span key={i} style={{ ['--i' as any]: i }} />
+  ))}
+</div>
+Copy
+.ts-motes { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.ts-motes span {
+  position: absolute;
+  bottom: -10px;
+  left: calc((var(--i) * 7.3%) + (var(--i) % 3) * 4%);
+  width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(220,230,245,0.55);
+  box-shadow: 0 0 6px rgba(180,200,230,0.35);
+  animation: tsMote 18s linear infinite;
+  animation-delay: calc(var(--i) * -1.4s);
+  opacity: 0;
+}
+@keyframes tsMote {
+  0%   { transform: translateY(0)      translateX(0);    opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-110vh) translateX(20px); opacity: 0; }
+}
+Sequential intro animation. Replace the existing .ts-content opacity transition with staggered rise:
+
+Copy
+.ts-content { opacity: 1; transform: none; transition: none; }
+.ts-sigil     { animation: tsRise 1400ms ease-out    0ms both; }
+.ts-logo-text { animation: tsRise 1600ms ease-out  200ms both; }
+.ts-tagline   { animation: tsRise 1400ms ease-out 1100ms both; }
+.ts-menu      { animation: tsRise 1200ms ease-out 1600ms both; }
+@keyframes tsRise {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+You can remove the visible/setVisible state and the 80ms-delay useEffect in TitleScreen.tsx since CSS now handles the cascade.
+
+Subtle mouse parallax. In the component:
+
+Copy
+const rootRef = useRef<HTMLDivElement>(null);
+useEffect(() => {
+  const root = rootRef.current; if (!root) return;
+  const onMove = (e: MouseEvent) => {
+    const x = (e.clientX / window.i
+...(truncated)...

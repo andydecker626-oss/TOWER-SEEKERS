@@ -1,0 +1,546 @@
+Tower Seekers â€” Title v3, Smooth Transitions, Hub Reframe
+This is a polish pass across three surfaces: TitleScreen.tsx, WarRoom.tsx, and lib/audio.ts. Goal is AAA fantasy-RPG fidelity (Final Fantasy / Triangle Strategy / Octopath territory), and a continuous, cinematic flow from title â†’ continue without jarring music or backdrop changes.
+
+Do not regenerate any image assets. Do not change route names. Do not touch /hub, /lobby, /sprite-test, /sprite-preview, /arena-demo, or any battle/placement/game-over routes.
+
+Part 1 â€” Color tokens (do this first, both files)
+Add this block at the top of the CSS template literal in both TitleScreen.tsx and WarRoom.tsx. Then search-and-replace the gold values throughout those two files only.
+
+:root {
+  --ts-fg:        #f5f3ee;
+  --ts-fg-dim:    #c9c4b8;
+  --ts-pearl-1:   #ffffff;
+  --ts-pearl-2:   #dde2ec;
+  --ts-pearl-3:   #aab2c2;
+  --ts-cool-glow: rgba(160,180,220,0.28);
+  --ts-deep:      #07040f;
+  --ts-ink:       rgba(0,0,0,0.6);
+  --ts-gold-deep: #b08a3a; /* heraldic sigil ONLY */
+  --ts-vignette:  radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+Replace every #f0c040, #f5d97a, #f0d060, #f0d070, #d4a017, #c8920e, #b8860b, #e8b820, #c8960d, and rgba(240,192,64,*) in TitleScreen.tsx and WarRoom.tsx with cool-tone equivalents using the new tokens. Examples:
+
+Title text color â†’ transparent (uses pearl gradient, see Part 2).
+Button text color â†’ var(--ts-fg).
+Button border â†’ rgba(245,243,238,0.35) (hover 0.7).
+Hover glow â†’ rgba(160,180,220,0.25), never gold.
+Mute button & corner credit â†’ var(--ts-fg-dim) at 0.5 opacity.
+Sound-toggle border/icon â†’ cool, not gold.
+Gold lives ONLY in the .ts-sigil element introduced in Part 2.
+
+Part 2 â€” Title Screen polish (TitleScreen.tsx)
+2a. Replace the .ts-logo-text block
+Square Enix-feel: thin silver-pearl metallic gradient, generous tracking, faint cool aura, no chunky white stroke or yellow glow.
+
+.ts-logo-text {
+  font-family: 'Cinzel', serif;       /* NOT Cinzel Decorative â€” too heavy */
+  font-weight: 500;
+  font-size: clamp(32px, 6.5vw, 84px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg,
+    var(--ts-pearl-1) 0%,
+    var(--ts-pearl-2) 48%,
+    var(--ts-pearl-3) 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 0;             /* remove the old 1.5px white stroke */
+  text-shadow: none;                  /* remove old gold glow */
+  filter: drop-shadow(0 2px 0 var(--ts-ink))
+          drop-shadow(0 0 28px var(--ts-cool-glow));
+  white-space: nowrap;
+  margin: 0;
+}
+2b. Add a heraldic sigil above the title
+Inline SVG, four-tower diamond mark â€” the only place gold remains.
+
+In JSX, replace <div className="ts-logo-block"> content with:
+
+<div className="ts-logo-block">
+  <div className="ts-sigil" aria-hidden="true">
+    <svg viewBox="0 0 64 64" width="56" height="56">
+      <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M32 6 L48 32 L32 58 L16 32 Z" />
+        <path d="M32 10 v8 M30 10 h4" />
+        <path d="M32 54 v-8 M30 54 h4" />
+        <path d="M14 32 h8 M14 30 v4" />
+        <path d="M50 32 h-8 M50 30 v4" />
+      </g>
+    </svg>
+  </div>
+  <span className="ts-logo-text">TOWER SEEKERS</span>
+  <div className="ts-tagline">An age of towers. A world to wake.</div>
+</div>
+Tagline alternates (pick before pasting if you prefer):
+
+"Four pillars. One ascent."
+"Beneath four skies, the climb begins."
+"The towers are waking."
+"Where the sky was sundered, climb."
+2c. Add CSS for sigil and tagline
+.ts-logo-block {
+  flex-direction: column;             /* stack sigil, title, tagline vertically */
+  gap: clamp(12px, 1.5vh, 20px);
+}
+.ts-sigil {
+  color: var(--ts-gold-deep);
+  opacity: 0.85;
+  filter: drop-shadow(0 0 12px rgba(176,138,58,0.4));
+  display: flex;
+  justify-content: center;
+}
+.ts-tagline {
+  font-family: 'Cinzel', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(11px, 1.3vw, 15px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ts-fg-dim);
+  opacity: 0.85;
+  text-align: center;
+}
+2d. Cinematic ambience layer
+Ken Burns on background. Wrap .ts-bg in an inner element so transforms don't fight parallax:
+
+<div className="ts-bg"><div className="ts-bg-inner" /></div>
+.ts-bg { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.ts-bg-inner {
+  position: absolute; inset: 0;
+  background-image: url('/assets/title-bg.png');
+  background-size: cover;
+  background-position: center 40%;
+  filter: brightness(0.72);
+  animation: tsKenBurns 90s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes tsKenBurns {
+  from { transform: scale(1.0)  translate(0, 0); }
+  to   { transform: scale(1.06) translate(-1.5%, -1%); }
+}
+Vignette overlay. Add right after .ts-overlay:
+
+<div className="ts-vignette" aria-hidden="true" />
+.ts-vignette {
+  position: absolute; inset: 0; z-index: 2;
+  background: var(--ts-vignette);
+  pointer-events: none;
+}
+Drifting motes. Sparse, cool-toned, slow upward drift:
+
+<div className="ts-motes" aria-hidden="true">
+  {Array.from({ length: 14 }).map((_, i) => (
+    <span key={i} style={{ ['--i' as any]: i }} />
+  ))}
+</div>
+.ts-motes { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.ts-motes span {
+  position: absolute;
+  bottom: -10px;
+  left: calc((var(--i) * 7.3%) + (var(--i) % 3) * 4%);
+  width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(220,230,245,0.55);
+  box-shadow: 0 0 6px rgba(180,200,230,0.35);
+  animation: tsMote 18s linear infinite;
+  animation-delay: calc(var(--i) * -1.4s);
+  opacity: 0;
+}
+@keyframes tsMote {
+  0%   { transform: translateY(0)      translateX(0);    opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-110vh) translateX(20px); opacity: 0; }
+}
+Sequential intro animation. Replace the existing .ts-content opacity transition with staggered rise:
+
+.ts-content { opacity: 1; transform: none; transition: none; }
+.ts-sigil     { animation: tsRise 1400ms ease-out    0ms both; }
+.ts-logo-text { animation: tsRise 1600ms ease-out  200ms both; }
+.ts-tagline   { animation: tsRise 1400ms ease-out 1100ms both; }
+.ts-menu      { animation: tsRise 1200ms ease-out 1600ms both; }
+@keyframes tsRise {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+You can remove the visible/setVisible state and the 80ms-delay useEffect in TitleScreen.tsx since CSS now handles the cascade.
+
+Subtle mouse parallax. In the component:
+
+const rootRef = useRef<HTMLDivElement>(null);
+useEffect(() => {
+  const root = rootRef.current; if (!root) return;
+  const onMove = (e: MouseEvent) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    root.style.setProperty('--ts-bg-x', `${-x * 6}px`);
+    root.style.setProperty('--ts-bg-y', `${-y * 6}px`);
+    root.style.setProperty('--ts-fg-x', `${x * 2}px`);
+    root.style.setProperty('--ts-fg-y', `${y * 2}px`);
+  };
+  window.addEventListener('mousemove', onMove);
+  return () => window.removeEventListener('mousemove', onMove);
+}, []);
+Apply on root: <div className="ts-root" ref={rootRef}>. CSS:
+
+.ts-bg-inner { /* keep existing rules, append: */
+  transform: translate(var(--ts-bg-x, 0), var(--ts-bg-y, 0)) scale(1.0);
+}
+.ts-content {
+  transform: translate(var(--ts-fg-x, 0), var(--ts-fg-y, 0));
+  transition: transform 240ms ease-out;
+}
+Note: keep tsKenBurns operating; it composes on top of the parallax translate by virtue of being on the same element. If they fight, move Ken Burns to a deeper child div.
+
+2e. Buttons â€” refine, don't rebuild
+Primary CTA ("Login" / "Enter the War Room"): drop the linear-gradient(135deg, #b8860b...) gold fill. Replace with a quiet pearl outline:
+.ts-btn-login {
+  background: rgba(20,15,35,0.55);
+  border: 1px solid rgba(245,243,238,0.55);
+  color: var(--ts-fg);
+  box-shadow: 0 4px 22px rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+  animation: tsBreath 4.2s ease-in-out infinite;
+}
+.ts-btn-login:hover {
+  background: rgba(35,28,55,0.7);
+  border-color: rgba(245,243,238,0.85);
+  box-shadow: 0 6px 28px rgba(160,180,220,0.25);
+  color: #fff;
+}
+@keyframes tsBreath {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+Settings button: same outline language, dimmer (var(--ts-fg-dim), border 0.25 alpha).
+Also rename the button copy: "Login to Tower Seekers" â†’ "Begin Your Journey". "Enter the War Room" â†’ "Continue".
+2f. Shrink the corner credit + add version stamp
+Current .ts-corner-credit is sized clamp(32px,3vw,40px) â€” way too big for AAA polish. Replace with subtle footer:
+
+{/* remove existing .ts-corner-credit element */}
+<footer className="ts-footer">
+  <span className="ts-credit">Altaris â€” e. 2026</span>
+  <span className="ts-version">v0.1.0 Â· Pre-Alpha</span>
+</footer>
+.ts-footer {
+  position: absolute; bottom: 14px; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+  padding: 0 clamp(14px,2.5vw,28px);
+  z-index: 10; pointer-events: none;
+}
+.ts-credit {
+  font-family: 'Cinzel', serif;
+  font-size: 11px; opacity: 0.5;
+  color: var(--ts-fg-dim); letter-spacing: 0.2em;
+}
+.ts-version {
+  font-family: ui-monospace, 'JetBrains Mono', Menlo, monospace;
+  font-size: 10px; opacity: 0.4;
+  color: var(--ts-fg-dim); letter-spacing: 0.1em;
+}
+Also delete (or de-emphasize to barely-there) the .ts-tower-l / .ts-tower-r side gradients â€” they're competing with the new vignette and reading as letterboxing. If you want to keep them, drop their alpha to 0.25Ã— current values.
+
+Part 3 â€” War Room reframe (WarRoom.tsx)
+The current screen feels like being teleported to a separate menu: heavy background blur, big "WAR ROOM" topbar, big "TOWER SEEKERS" title repeat, "Welcome back, X" greeting, three big-card menu buttons. After "Continue," the player should feel like they're still in the same cinematic frame â€” just with their progress and choices surfaced.
+
+3a. Match the title backdrop exactly
+.war-bg {
+  background-image: url('/assets/title-bg.png');
+  background-size: cover;
+  background-position: center 40%;
+  filter: brightness(0.55);  /* slightly darker than title (0.72), no blur */
+  /* DELETE the existing blur(3px) â€” that's the jarring change */
+}
+.war-overlay {
+  background: linear-gradient(180deg,
+    rgba(4,2,10,0.30) 0%,
+    rgba(4,2,10,0.55) 60%,
+    rgba(4,2,10,0.78) 100%);
+  /* replaces the flat rgba(4,2,10,0.72) for cinematic depth */
+}
+Add the same vignette + motes as the title screen so the visual ambience continues seamlessly.
+
+3b. Strip the topbar branding
+Remove:
+
+The .war-logo "WAR ROOM" element entirely.
+The big .war-title-block with "TOWER SEEKERS" + "Season 1 Â· The Iron Age".
+The .war-welcome "Welcome back, NAME" line.
+Keep ONLY in the topbar (right-aligned, no left content):
+
+Avatar
+Username (smaller, dim)
+Sign Out (smaller, ghost button)
+<div className="war-topbar">
+  <div className="war-topbar-spacer" />
+  <div className="war-player-info">
+    {avatarUrl ? <img src={avatarUrl} alt={displayName} className="war-avatar" />
+               : <div className="war-avatar war-avatar-fallback">âš”</div>}
+    <span className="war-username">{displayName}</span>
+    <button className="war-icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings">âš™</button>
+    <button className="war-signout-btn" onClick={() => signOut(() => navigate("/"))}>
+      Sign Out
+    </button>
+  </div>
+</div>
+3c. Center column = active-game banner + 2 menu options
+Remove the third "Settings" menu card. Settings becomes the gear icon in the topbar (added in 3b).
+
+Final body:
+
+<div className="war-body">
+  <div className="war-center">
+    <div className="war-echo">Choose your path.</div>
+
+    {hasActiveGame && (
+      <div className="war-active-banner">
+        {/* keep existing banner JSX as-is */}
+      </div>
+    )}
+
+    <div className="war-menu">
+      <button className="war-menu-btn war-btn-pvp" onClick={() => navigate("/lobby")}>
+        <span className="war-btn-icon">âš”</span>
+        <span className="war-btn-content">
+          <span className="war-btn-title">Battle</span>
+          <span className="war-btn-sub">Matchmake or play AI</span>
+        </span>
+        <span className="war-btn-arrow">â€º</span>
+      </button>
+
+      <button className="war-menu-btn war-btn-hub" onClick={() => navigate("/hub")}>
+        <span className="war-btn-icon">ðŸ°</span>
+        <span className="war-btn-content">
+          <span className="war-btn-title">Gathering Hub</span>
+          <span className="war-btn-sub">Configure your party &amp; units</span>
+        </span>
+        <span className="war-btn-arrow">â€º</span>
+      </button>
+    </div>
+  </div>
+</div>
+3d. Restyle menu buttons toward outline-pearl
+Drop the colored gradient backgrounds (the #1a4 blue, #3c2 brown). Replace with the same outline language as the title CTA:
+
+.war-menu-btn {
+  background: rgba(20,15,35,0.55);
+  border: 1px solid rgba(245,243,238,0.28);
+  backdrop-filter: blur(2px);
+}
+.war-menu-btn:hover {
+  background: rgba(35,28,55,0.7);
+  border-color: rgba(245,243,238,0.6);
+  box-shadow: 0 6px 28px rgba(160,180,220,0.2);
+}
+.war-menu-btn::before { display: none; } /* remove colored top accent line */
+.war-btn-title { color: var(--ts-fg); }
+.war-btn-sub   { color: var(--ts-fg-dim); opacity: 0.6; }
+.war-btn-arrow { color: rgba(245,243,238,0.4); }
+Distinguish the two cards with subtle accents only â€” a 2px left-edge tint:
+
+.war-btn-pvp { border-left: 2px solid rgba(160,180,220,0.55); }
+.war-btn-hub { border-left: 2px solid rgba(200,160,90,0.55); }
+3e. Tagline echo above the menu
+A single italic line tying back to the title:
+
+.war-echo {
+  font-family: 'Cinzel', serif;
+  font-style: italic;
+  font-size: clamp(11px, 1.1vw, 13px);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ts-fg-dim);
+  opacity: 0.55;
+  text-align: center;
+  margin-bottom: clamp(12px, 1.5vh, 18px);
+}
+3f. Topbar gear icon styling
+.war-icon-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(245,243,238,0.18);
+  color: var(--ts-fg-dim); font-size: 14px;
+  cursor: pointer; transition: all 0.18s;
+  display: flex; align-items: center; justify-content: center;
+}
+.war-icon-btn:hover {
+  border-color: rgba(245,243,238,0.5);
+  color: var(--ts-fg);
+}
+Update .war-signout-btn to use cool tones too:
+
+.war-signout-btn {
+  background: transparent;
+  border: 1px solid rgba(245,243,238,0.18);
+  color: var(--ts-fg-dim);
+}
+.war-signout-btn:hover {
+  border-color: rgba(245,243,238,0.5);
+  color: var(--ts-fg);
+  background: rgba(245,243,238,0.05);
+}
+Part 4 â€” Smooth music transitions (lib/audio.ts)
+The play() method currently swaps tracks instantly: stops synth, pauses old audioEl, immediately starts new. This is the jarring change you hear when going title â†’ /hub (skyforge â†’ hearthstone-tavern), or anywhere a different track loads.
+
+Add a crossfade method and a second <audio> element to ping-pong between.
+
+4a. Add fields to class AudioManager
+private audioElB:    HTMLAudioElement | null = null;
+private fadeRaf:     number | null = null;
+private CROSSFADE_MS = 900; // tweakable
+4b. Replace _playFile(src) with a crossfading version
+private _playFile(src: string) {
+  this._removeBattleEndedHandler();
+
+  // First-ever file play: instantiate primary, no fade needed.
+  if (!this.audioEl) {
+    this.audioEl = new Audio();
+    this.audioEl.loop = true;
+    this.audioEl.src = src;
+    this.audioEl.volume = this._effectiveMusicVol();
+    this.audioEl.play().catch(() => {});
+    return;
+  }
+
+  // Same src already loaded & playing â†’ no-op (don't restart!)
+  const currentSrc = this.audioEl.getAttribute("src") ?? "";
+  const isSameSrc  = currentSrc.endsWith(src) || this.audioEl.src === src;
+  if (isSameSrc && !this.audioEl.paused) {
+    this.audioEl.volume = this._effectiveMusicVol();
+    return;
+  }
+
+  // Different src â†’ crossfade.
+  if (!this.audioElB) this.audioElB = new Audio();
+  this.audioElB.loop = true;
+  this.audioElB.src = src;
+  this.audioElB.volume = 0;
+  this.audioElB.play().catch(() => {});
+
+  this._crossfade(this.audioEl, this.audioElB, this._effectiveMusicVol(), this.CROSSFADE_MS);
+
+  // Swap roles so future calls treat audioElB as primary.
+  const oldPrimary = this.audioEl;
+  this.audioEl  = this.audioElB;
+  this.audioElB = oldPrimary;
+}
+4c. Add _crossfade and _fadeOut helpers
+private _crossfade(from: HTMLAudioElement, to: HTMLAudioElement, targetVol: number, durMs: number) {
+  if (this.fadeRaf) cancelAnimationFrame(this.fadeRaf);
+  const startVolFrom = from.volume;
+  const startTime    = performance.now();
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - startTime) / durMs);
+    const eased = t * t * (3 - 2 * t); // smoothstep
+    from.volume = startVolFrom * (1 - eased);
+    to.volume   = targetVol * eased;
+    if (t < 1) {
+      this.fadeRaf = requestAnimationFrame(tick);
+    } else {
+      from.pause();
+      from.currentTime = 0;
+      this.fadeRaf = null;
+    }
+  };
+  this.fadeRaf = requestAnimationFrame(tick);
+}
+
+private _fadeOut(el: HTMLAudioElement, durMs: number) {
+  if (this.fadeRaf) cancelAnimationFrame(this.fadeRaf);
+  const startVol = el.volume;
+  const startTime = performance.now();
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - startTime) / durMs);
+    el.volume = startVol * (1 - t);
+    if (t < 1) {
+      this.fadeRaf = requestAnimationFrame(tick);
+    } else {
+      el.pause();
+      el.currentTime = 0;
+      this.fadeRaf = null;
+    }
+  };
+  this.fadeRaf = requestAnimationFrame(tick);
+}
+4d. Update play(trackId) to NOT pause the old element prematurely
+Find the early section in play():
+
+this._stopSynth();
+if (this.audioEl && !FILE_TRACKS[trackId]) {
+  this.audioEl.pause();
+  this.audioEl.currentTime = 0;
+}
+Replace with:
+
+// If switching from fileâ†’synth, fade the file out instead of hard-pausing.
+if (this.audioEl && !FILE_TRACKS[trackId] && !this.audioEl.paused) {
+  this._fadeOut(this.audioEl, this.CROSSFADE_MS);
+} else {
+  this._stopSynth(); // synthâ†’file fade handled by _playFile starting at 0
+}
+Also harden the dedupe check at the very top of play():
+
+play(trackId: TrackId) {
+  // Same file track already playing? Just adjust volume, don't restart.
+  if (trackId === this.currentTrack && !this._inBattlePlaylist) {
+    if (this.audioEl && FILE_TRACKS[trackId]) {
+      this.audioEl.volume = this._effectiveMusicVol();
+    }
+    return;
+  }
+  // â€¦rest of method as before
+}
+4e. Stop call-sites from hard-stopping on screen transitions
+In GatheringHub.tsx, find:
+
+useEffect(() => {
+  audioManager.play("hub");
+  return () => audioManager.stop();
+}, []);
+Change to:
+
+useEffect(() => {
+  audioManager.play("hub");
+  // Don't stop on unmount â€” let the next screen's play() crossfade.
+}, []);
+audioManager.stop() should only be called on full sign-out or game exit â€” not on screen transitions.
+
+Part 5 â€” Do NOT do any of this
+Do NOT regenerate /assets/title-bg.png or any background image.
+Do NOT add yellow/gold back to title text, war-room text, or any button text. Gold is only .ts-sigil and the .war-btn-hub 2px left edge tint.
+Do NOT add any particle library (tsparticles, three-particles). The CSS motes are intentional.
+Do NOT add a "Press Start" overlay or modal.
+Do NOT change route names or auth flow.
+Do NOT touch /sprite-test, /sprite-preview, /arena-demo, /lobby, /preselect, /battleselect, /place, /battle, /gameover.
+Do NOT introduce new font families beyond Cinzel + system monospace.
+Do NOT autoplay anything new â€” just smooth what's already triggered.
+Do NOT add scroll behavior to title or war room â€” they are fixed cinematic frames.
+Acceptance check
+After this lands:
+
+Title screen
+
+No yellow/gold text anywhere except the small heraldic sigil above the title.
+"TOWER SEEKERS" renders in a thin silver-pearl metallic gradient with a subtle cool drop-shadow â€” no white stroke, no chunky glow.
+New tagline "An age of towers. A world to wake." (or chosen alternate) appears in italic uppercase Cinzel below the title.
+Background slowly Ken-Burns; vignette frames the screen; ~14 sparse cool motes drift upward.
+Sigil â†’ title â†’ tagline â†’ menu fade-rises in sequence on mount.
+"v0.1.0 Â· Pre-Alpha" stamp in the bottom-right (mono); studio credit shrunk to a tasteful 11px in bottom-left.
+Mouse parallax is felt but not distracting.
+Primary CTA reads "Begin Your Journey" (signed-out) or "Continue" (signed-in).
+Continue (formerly War Room)
+
+No "WAR ROOM" topbar text.
+No big "TOWER SEEKERS" repeat or "Welcome back, NAME".
+Background is the same image, no blur â€” just slightly darker than title for menu legibility.
+Vignette + motes continue from title (visual continuity).
+Topbar = avatar, username, gear icon, sign out â€” all small and dim.
+Body = "Choose your path." italic line, active-game banner if applicable, then exactly two menu cards: Battle / Gathering Hub.
+Menu cards use the same pearl-outline language as the title CTA, with subtle 2px left-edge color tints to distinguish.
+Audio
+
+Going title â†’ continue: no audible change (same skyforge track keeps playing).
+Going continue â†’ /hub: smooth ~900ms crossfade between skyforge and hearthstone-tavern.
+Going /hub â†’ continue: smooth crossfade back.
+No restart-from-zero, no hard cut, no silence gap.
+Send a screenshot of the new title screen and the new continue screen when it's running.
