@@ -1,0 +1,29 @@
+# Tower Seekers — Drop Towers Vista (Towers tab bg)
+## Input
+A new painted vista image is attached/uploaded with this prompt: a "Gate of Ascent" scene — POV from a town gate looking out across a misty valley toward four monumental elemental towers, late golden hour bleeding into early dusk.
+## What to do
+### Step 1 — Save the image
+Save the attached PNG at this exact path (overwrite if present):
+`artifacts/game-client/public/assets/towers-bg.png`
+### Step 2 — Verify wiring
+The MenuShell component (created in hub-shell-v1) should already reference `towers-bg.png` for the Towers tab via its VISTAS map. After saving the image, verify:
+- Open `src/components/MenuShell.tsx` (or wherever the bg-stack lives).
+- Confirm the VISTAS object contains `towers: "/assets/towers-bg.png"` (or equivalent — the active-tab bg for `active="towers"` should resolve to that file).
+- If it does NOT, add/fix that mapping so the Towers tab points at `/assets/towers-bg.png`.
+### Step 3 — Verify visually
+Navigate to the Towers tab in the app. The new vista should render full-screen behind the locked tower placeholder cards, with the same darkening gradient overlay as the Home tab. The 4 cards (🔥 Embers / 🌊 Tides / ⛰ Roots / 🌬 Gales) should remain legible against the darkened painting.
+If the cards feel low-contrast against the brighter parts of the painting, **only** adjust the gradient overlay's middle stop slightly (e.g. `rgba(7,4,15,0.70)` → `rgba(7,4,15,0.75)`). Do NOT add blur. Do NOT touch the bg image itself.
+## Strict rules
+- DO NOT alter or regenerate any other vista (`title-bg.png`, `hub-bg.png`).
+- DO NOT apply `backdrop-filter: blur(…)` to the bg layer. The image must be visible.
+- DO NOT change any other page or route.
+- DO NOT add new dependencies.
+- DO NOT touch the MenuShell's HUD bar, tab bar, content slot, or transition logic.
+- DO NOT modify the locked-state styling on the tower placeholder cards.
+## Acceptance criteria
+After applying:
+- The file `artifacts/game-client/public/assets/towers-bg.png` exists and matches the uploaded image.
+- The Towers tab shows the new painting clearly visible (sharp, no blur), with the gradient darkening overlay intact.
+- The 4 locked tower cards remain legible.
+- No console errors.
+- No other tab's background is affected (Home still uses `hub-bg.png`, etc.).

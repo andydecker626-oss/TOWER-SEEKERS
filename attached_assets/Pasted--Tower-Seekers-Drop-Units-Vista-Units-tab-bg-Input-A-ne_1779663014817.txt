@@ -1,0 +1,29 @@
+# Tower Seekers — Drop Units Vista (Units tab bg)
+## Input
+A new painted vista image is attached/uploaded with this prompt: a "Hall of Banners" scene — interior of a great hall / barracks at dusk, weapon racks along the walls, hanging vertical banners, a tactical map table in the middle distance, a warm hearth fire as the primary light source.
+## What to do
+### Step 1 — Save the image
+Save the attached PNG at this exact path (overwrite if present):
+`artifacts/game-client/public/assets/units-bg.png`
+### Step 2 — Verify wiring
+The MenuShell component (created in hub-shell-v1) should already reference `units-bg.png` for the Units tab via its VISTAS map. After saving the image, verify:
+- Open `src/components/MenuShell.tsx` (or wherever the bg-stack lives).
+- Confirm the VISTAS object contains `units: "/assets/units-bg.png"` (or equivalent — the active-tab bg for `active="units"` should resolve to that file).
+- If it does NOT, add/fix that mapping so the Units tab (route `/hub`, where GatheringHub lives) points at `/assets/units-bg.png`.
+### Step 3 — Verify visually
+Navigate to the Units tab in the app. The new vista should render full-screen behind the existing GatheringHub roster/loadout UI, with the same darkening gradient overlay as the other tabs. The unit cards and roster controls should remain legible against the darkened painting.
+If the GatheringHub content feels low-contrast against the brighter parts of the painting (especially the hearth glow), **only** adjust the gradient overlay's middle stop slightly (e.g. `rgba(7,4,15,0.70)` → `rgba(7,4,15,0.75)`). Do NOT add blur. Do NOT touch the bg image itself.
+## Strict rules
+- DO NOT alter or regenerate any other vista (`title-bg.png`, `hub-bg.png`, `towers-bg.png`, `town-bg.png`).
+- DO NOT apply `backdrop-filter: blur(…)` to the bg layer. The image must be visible.
+- DO NOT change any other page or route.
+- DO NOT add new dependencies.
+- DO NOT touch the MenuShell's HUD bar, tab bar, content slot, or transition logic.
+- DO NOT modify GatheringHub's internal UI (unit list, party config, etc.) — only the background it renders against.
+## Acceptance criteria
+After applying:
+- The file `artifacts/game-client/public/assets/units-bg.png` exists and matches the uploaded image.
+- The Units tab shows the new painting clearly visible (sharp, no blur), with the gradient darkening overlay intact.
+- The existing GatheringHub UI (roster, unit cards, etc.) remains fully functional and legible.
+- No console errors.
+- No other tab's background is affected.
