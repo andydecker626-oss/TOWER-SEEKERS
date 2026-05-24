@@ -1,0 +1,36 @@
+# Tower Seekers — Vista Overlay Tune (lighten the murk)
+## Problem
+The current dark gradient overlay over the vista backgrounds is too heavy — the paintings are being muted to ~40% of their actual vibrance. Sunsets, midtones, and atmospheric detail are getting crushed.
+## What to change
+In `src/components/MenuShell.tsx` (or wherever the bg-overlay CSS lives), find the `.menu-shell__bg-overlay` style.
+Current values:
+    background: linear-gradient(
+      180deg,
+      rgba(7,4,15,0.55) 0%,
+      rgba(7,4,15,0.70) 50%,
+      rgba(7,4,15,0.85) 100%
+    );
+Replace with:
+    background: linear-gradient(
+      180deg,
+      rgba(7,4,15,0.20) 0%,
+      rgba(7,4,15,0.35) 50%,
+      rgba(7,4,15,0.55) 100%
+    );
+That's the only line that changes. Everything else (bg-stack, crossfade, content animation, HUD/tab bars) stays as-is.
+## Card legibility fallback
+If after lightening the overlay the placeholder cards on the Towers / Town / Shop tabs feel like they're floating without enough contrast against the now-brighter bg, ALSO bump the card background opacity from `rgba(20,15,35,0.55)` to `rgba(20,15,35,0.72)`. This applies to the locked card containers — NOT the headline text, NOT the icons, NOT the borders.
+If the cards already read fine after the overlay change, skip this step.
+## Strict rules
+- ONLY modify the overlay gradient and (optionally) the card background opacity.
+- DO NOT add any blur to the bg layer or overlay.
+- DO NOT change any image, route, layout, animation timing, or font.
+- DO NOT touch the HUD bar or tab bar styling.
+- DO NOT add a vignette, radial gradient, or any new layer.
+## Acceptance criteria
+After applying:
+- The Towers vista (sunset valley with towers and banners) shows visible sunset color, distinct tower silhouettes, and atmospheric haze.
+- The Home, Town, and Units vistas similarly come through with more visible color and depth.
+- Headline text (e.g. "CHOOSE YOUR ASCENT") and placeholder card text remain legible.
+- The bottom tab bar (with its own ~78% opacity bg) still cleanly separates from the painting above it.
+- No layout shifts, no animation changes, no console errors.

@@ -1,0 +1,29 @@
+# Tower Seekers — Drop Town Vista (Town tab bg)
+## Input
+A new painted vista image is attached/uploaded with this prompt: a "Bustling Market Quarter at Midday" scene — generic high-fantasy town hub with a blacksmith's forge, market stalls, a college/library, central fountain, NPC silhouettes, banners between buildings.
+## What to do
+### Step 1 — Save the image
+Save the attached PNG at this exact path (overwrite if present):
+`artifacts/game-client/public/assets/town-bg.png`
+### Step 2 — Verify wiring
+The MenuShell component (created in hub-shell-v1) should already reference `town-bg.png` for the Town tab via its VISTAS map. After saving the image, verify:
+- Open `src/components/MenuShell.tsx` (or wherever the bg-stack lives).
+- Confirm the VISTAS object contains `town: "/assets/town-bg.png"` (or equivalent — the active-tab bg for `active="town"` should resolve to that file).
+- If it does NOT, add/fix that mapping so the Town tab points at `/assets/town-bg.png`.
+### Step 3 — Verify visually
+Navigate to the Town tab in the app. The new vista should render full-screen behind the locked NPC placeholder cards (Vendors / Mentors / Trainers / Recruiters), with the same lighter darkening gradient overlay as the other tabs. The 4 cards should remain legible against the painting.
+If the cards feel low-contrast against the brighter midday painting, **only** adjust the gradient overlay's middle stop slightly (e.g. `rgba(7,4,15,0.35)` → `rgba(7,4,15,0.45)`). Do NOT add blur. Do NOT touch the bg image itself.
+## Strict rules
+- DO NOT alter or regenerate any other vista (`title-bg.png`, `hub-bg.png`, `towers-bg.png`, `units-bg.png`).
+- DO NOT apply `backdrop-filter: blur(…)` to the bg layer. The image must be visible.
+- DO NOT change any other page or route.
+- DO NOT add new dependencies.
+- DO NOT touch the MenuShell's HUD bar, tab bar, content slot, or transition logic.
+- DO NOT modify the locked-state styling on the NPC placeholder cards.
+## Acceptance criteria
+After applying:
+- The file `artifacts/game-client/public/assets/town-bg.png` exists and matches the uploaded image.
+- The Town tab shows the new painting clearly visible (sharp, no blur), with the gradient darkening overlay intact.
+- The 4 locked NPC cards (Vendors / Mentors / Trainers / Recruiters) remain legible.
+- No console errors.
+- No other tab's background is affected.
