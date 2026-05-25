@@ -1,0 +1,161 @@
+Tower Seekers — write docs/GAME_BIBLE_V2.md from scratch. Use the existing tseekers game bible V. 1.0.pdf (or its text contents if I paste them) as the structural template, but apply ALL the deltas below. Do NOT keep any v1.0 numbers, rules, or status definitions that contradict v2.0. Do NOT invent rules I haven't specified — if something isn't covered here, copy it from v1.0 verbatim.
+
+File structure
+Match v1.0's section order:
+
+Vision & Ethos (copy from v1.0, unchanged)
+Core Rules & Mechanics (REWRITTEN per below)
+All 12 Units (copy unit stats verbatim from v1.0; apply skill/passive deltas listed below)
+Master Stats Reference (copy verbatim from v1.0)
+Navigation & Playlists (copy from v1.0)
+Gathering Hub (REWRITTEN — loadout model changed)
+Release Roadmap (copy from v1.0)
+Future PvE — The Tower (copy from v1.0)
+Add a new short section at the front: "Changelog from v1.0" listing the bullet points below in plain language.
+
+Core Rules & Mechanics — REWRITTEN
+Loadout
+Each unit equips 4 skills + 1 passive (Bard exception: 1 instrument passive + 1 standard passive, as v1.0).
+In addition to the 4 equipped skills, every unit always has these universal actions available: Basic Attack, Move, Defend, Wait.
+Per turn a unit may take one action + one movement (movement is optional and resolved separately from the action).
+Action menu order
+Move → Attack → Defend → Wait → Skill (unchanged from v1.0).
+
+AP economy (REPLACE v1.0 table)
+Rule	Value
+Starting AP	3
+AP cap	10
+Baseline income	+1 AP every turn, always
+Basic Attack	Cost 1 AP, +2 AP on hit (net +2 with baseline, plus damage)
+Wait	Cost 0 AP, +1 AP gained (net +2 with baseline, no damage)
+Defend	Cost 1 AP, 40% damage mitigation
+Move	Cost 1 AP flat, default 2 tiles (per-unit overrides per v1.0)
+Skill	Cost varies per move, no AP return
+AP carries across turns. Unused AP is not lost.
+
+Status Effects (REPLACE v1.0 status table with this three-tier system)
+Core Afflictions — only ONE may be active on a unit at a time. A new Core Affliction replaces any existing one.
+
+Status	Effect
+Burn	PhysAtk −30%, 8 damage/turn
+Poison	Pure DoT; stacks intensity on reapply (10 → 18 → 24 damage/turn)
+Bleed	6 damage/turn; doubles to 12 if target moved that turn
+Sleep	Skip turn; breaks on damage taken
+Stun	Skip turn; ignores damage
+Silence	Cannot use Skills (Basic Attack / Move / Defend / Wait still allowed)
+Doom	Boss-tier; target takes fixed damage per turn for X turns (Warlock's Doom skill is the canonical applier on player units)
+Tactical Conditions — multiple may stack on the same unit.
+
+Condition	Effect
+Marked	+25% damage taken from next attack only, then consumed
+Rooted	Cannot move
+Taunted	Must target the taunter with single-target offensive actions
+Vulnerable	+20% damage taken from all sources for 2 turns
+Shielded	Absorbs X HP until depleted
+AP Block	Prevents AP gain (caps current AP, no income)
+Evasion Up	+30% evasion for 2 turns
+Slow	Move Distance −1 (minimum 1)
+Armor Break	PhysDef −25% for duration (kept from v1.0 as a Tactical Condition)
+Field / Tile effects — occupy grid cells, separate from units.
+
+Field	Notes
+Trap	Triggers on entering tile
+Mire	Slows movement on tiles
+Fire tile	DoT on units standing in
+Smoke	Obscures targeting
+Holy zone	Heals/buffs allies inside (Paladin's Blessed Ground, Cleric's Sacred Ground are existing Holy zones)
+Removed / migrated statuses (changelog item)
+Paralysis (v1.0): REMOVED. Replaced by Stun where it appeared (see Shaman Spore Cloud below).
+Slow (v1.0 form: "movement costs double AP"): REMOVED. Replaced by new Slow definition above (Move Distance −1).
+Root (v1.0): renamed to Rooted in the Tactical Conditions list. Same mechanic.
+Curse as a status name: renamed to Vulnerable. Warlock's Curse SKILL keeps its name; it now applies the Vulnerable condition.
+Wither effect ("MagAtk/PhysAtk −X% for N turns"): not a status. Modeled as a per-skill stat-debuff rider. Skills that apply it (Warlock Wither, Mage Frost Lance Speed debuff, Rogue Cheap Shot, etc.) keep working — they apply temporary stat modifiers, not a tagged status.
+Everything else in Core Rules (grid, attack styles, damage formula, accuracy standards, speed ties, crits) — copy from v1.0 unchanged.
+
+Unit deltas (apply to existing skill/passive lists; otherwise keep v1.0 verbatim)
+Knight
+REWRITE passive Iron Guard to: "Defend costs 0 AP for Knight and grants 60% damage mitigation (vs the standard 40%)." Remove the "+1 AP" clause from v1.0.
+Shaman
+REWRITE Spore Cloud effect: "Hits 2-tile radius; inflicts Stun on all hit enemies for 1 turn (replaces v1.0 Paralysis effect)." Keep cost (3 AP), style (Ranged-Volley), and power (35).
+REWRITE Mycelium Web effect: "Claims up to 4 tiles; enemies on or entering those tiles have Move Distance −1 (Slow) for 5 turns." Keep cost (5 AP).
+Rogue
+REWRITE Smokescreen effect: "Blankets Rogue's entire 4×4 side of the field with a Smoke field effect for 2 turns; enemy cannot accurately target specific tiles on Rogue's side." Keep cost (3 AP). Clarify in description that this is a single field-wide Smoke effect, not a tile patch.
+Warlock
+Keep Doom skill as-is. Note in the skill description that Doom is a Core Affliction (one-slot, mutually exclusive with Burn/Poison/Bleed/Sleep/Stun/Silence). On Warlock's player kit it is the canonical Doom applier; bosses in PvE may also apply it.
+Curse skill: keep name and stats. Update effect text to clarify it applies the Vulnerable Tactical Condition.
+All other units (Paladin, Cleric, Mage, Archer, Berserker, Lancer, Wanderer, Bard)
+No skill or passive changes are being made to existing v1.0 moves in this pass. Copy them from v1.0 verbatim.
+
+HOWEVER — new moves WILL be added across multiple units in subsequent edits to this same v2.0 document. Andy and I are actively designing those moves, especially around the new status effects (Burn, Bleed) which currently have no inflicting move in the roster. Add a clearly labeled section after the unit list:
+
+New Moves — In Design (placeholder)
+The following new mechanical categories and statuses are now part of the v2.0 ruleset but do not yet have a complete set of inflicting/interacting moves wired into the unit pools. Moves will be added here in subsequent edits to this document, then merged into the relevant unit skill pools.
+
+Categories with active design:
+
+Tempo / priority (no current move; candidates: Rogue, Wanderer)
+Redirection (sparse coverage; candidate: Paladin)
+Speed manipulation — field-wide flip (no current move; candidate: Mage)
+Action denial — skill lock / forced repeat (sparse coverage; candidates: Warlock, Bard)
+Burn application (no current inflicting move; candidate: Mage)
+Bleed application (no current inflicting move; candidate: Berserker)
+Single-target positioning — push / pull (sparse coverage; candidates: Lancer, Knight)
+Support amplification (one-note coverage; candidate: Bard)
+Each category will receive 1–2 new moves with full stat blocks (name, type, power, AP, style, effect) once design is locked.
+
+Do not invent moves to fill these slots in this pass. Leave the section as a placeholder.
+
+Open discussion items for Andy (Replit: surface these back to him)
+After writing the document, end your reply by listing these unresolved questions for Andy. They are sweeping changes still being discussed and need his input before v2.0 is considered final:
+
+New move distribution. Each new move is owned by 1–2 candidate units (see placeholder section). Confirm or veto the candidate list. Decide cap: one new move per unit, or some units get two?
+Echo vs Encore overlap. Both proposed moves involve forcing a target to repeat their last action. Differentiate (Echo = lock OUT of other moves, Encore = compel USE of last move) or pick one.
+Field-wide speed flip ownership. Currently proposed for Mage as "Hourglass". Confirm Mage, or move to Warlock or a future Time-themed unit.
+Should v2.0 introduce a 13th unit? Some categories (pure Tank-with-redirection-as-identity, Time Mage, dedicated Burn applier) might justify a new class instead of bolting moves onto existing units. Decide before move design finalizes.
+AP cost convention for new moves. v1.0 has very few 1-AP moves. Should new T0 basics (Snap Strike, Quick Slash, Bleeding Strike, Ember Mark, Vanguard's Call) skew toward 1–2 AP to fix the "nothing to do at low AP" problem, or stay at 2–3 AP to match v1.0 norms?
+Status interactions. When a unit has both a Core Affliction (e.g., Burn) and Tactical Conditions (e.g., Vulnerable), do effects compound multiplicatively or additively? (Affects how Burn's PhysAtk debuff stacks with Wither/Armor Break, etc.)
+Doom availability. v2.0 keeps Warlock's Doom skill. Should any other unit get a Doom-applying move, or is it Warlock-exclusive?
+Burn / Poison / Bleed cleansing. Cleric's Cleanse and Bard's Cleanse currently say "removes all debuffs". Confirm both Tactical Conditions AND the active Core Affliction are removed by these, or do Core Afflictions need a separate cleanse tier?
+Surface these as a numbered list at the end of your reply so Andy can answer them in order.
+
+Gathering Hub — REWRITTEN
+Replace the v1.0 Gathering Hub section with this:
+
+The Gathering Hub is the party management screen — a dedicated space to build, customize, and save unit loadouts before queuing.
+
+Features:
+
+Unit Browser
+
+Browse all 12 units via a scrollable/filterable menu.
+View each unit's stat block, lore blurb, and visual sprite.
+Skill & Passive Preview
+
+Click any skill or passive to see its full description.
+Full Release: each move has a .gif animation preview.
+Party Builder (party-level loadouts)
+
+Select 6 units to form a party.
+For each unit IN THAT PARTY, configure:
+4 skills from their skill pool
+1 passive from their passive options (Bard: 1 instrument + 1 standard)
+Name and save the party as a Party loadout.
+Multiple saved parties supported, and the same unit may appear across multiple parties with different skill/passive configurations. Configuration is bound to the party slot, not the unit. (Example: "Team PvP" contains a Knight with one loadout; "Team Tower Run" contains the same Knight with a different loadout. Both are valid simultaneously.)
+One XP/progression pool per unit, shared across all parties they appear in.
+Playtest Rule: All units, skills, and passives are fully unlocked for all players. All units at tournament standard level 11. No grind required.
+
+Acceptance checks
+New file docs/GAME_BIBLE_V2.md exists.
+Starting AP says 3 (not 2).
+Defend costs 1 AP (Knight exception spelled out in Iron Guard passive).
+Status section is the three-tier system (Core Afflictions / Tactical Conditions / Fields).
+Paralysis is not in the status list. Spore Cloud reads "Stun".
+Mycelium Web reads "Move Distance −1", not "double AP".
+Rogue Smokescreen explicitly says "entire 4×4 side / Smoke field".
+Warlock Curse skill description references "Vulnerable" condition.
+Knight Iron Guard says "Defend costs 0 AP and grants 60% mitigation".
+Gathering Hub section says party-level loadouts with the same unit configurable per party.
+New moves are NOT added to existing unit skill pools in this pass, BUT a clearly labeled "New Moves — In Design (placeholder)" section exists after the unit list, listing the active design categories.
+Changelog section at the top lists every delta above in plain language.
+The reply ends with the numbered "Open discussion items for Andy" list (8 items), surfacing the unresolved sweeping changes.
+Report back with the file written and the changelog section contents.

@@ -455,3 +455,15 @@ id = "icMk1ueBKfXUB_LM8vatn"
 uri = "file://artifacts/game-client/public/assets/units/myrmidon/windup_strip.png"
 type = "image"
 title = "Wind-up frames 004–010 (left to right)"
+
+[[outputs]]
+id = "uMkBPq1Va9ZEHtKW79EA5"
+uri = "file://attached_assets/tseekers_game_bible_V._1.0.txt"
+type = "text"
+title = "Tower Seekers Game Bible V1.0 (Text)"
+
+[[outputs]]
+id = "WHFWqevQ6FMiwGbkIkKz7"
+uri = "file://attached_assets/tseekers_game_bible_V._1.0.pdf"
+type = "pdf"
+title = "Tower Seekers Game Bible V1.0 (Formatted PDF)"
