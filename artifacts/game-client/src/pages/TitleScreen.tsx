@@ -116,7 +116,7 @@ export default function TitleScreen() {
             </svg>
           </div>
           <span className="ts-logo-text">TOWER SEEKERS</span>
-          <div className="ts-tagline">An age of towers. A world to wake.</div>
+          <div className="ts-tagline">The battlefield waits. So does your rival.</div>
         </div>
 
         <div className="ts-menu">
