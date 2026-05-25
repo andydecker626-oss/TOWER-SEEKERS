@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ALL_UNITS, getUnitDef } from "@/lib/units";
 import { useParties, type Party, type UnitLoadout } from "@/hooks/useParties";
 import type { UnitDef, SkillDef, PassiveDef } from "@/lib/types";
-import MenuShell from "@/components/MenuShell";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap');`;
 
@@ -667,7 +666,7 @@ export default function GatheringHub() {
   }
 
   return (
-    <MenuShell active="units" bgSrc="/assets/units-bg.png">
+    <>
       <style>{FONTS + HUB_CSS}</style>
 
       <div className="hub-body">
@@ -717,6 +716,6 @@ export default function GatheringHub() {
       {selectedUnit && (
         <UnitDetailPanel unit={selectedUnit} onClose={() => setSelectedUnit(null)} />
       )}
-    </MenuShell>
+    </>
   );
 }

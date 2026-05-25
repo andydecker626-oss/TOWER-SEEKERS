@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useUser, useClerk } from "@clerk/react";
 import { audioManager } from "@/lib/audio";
 import SettingsModal from "@/components/SettingsModal";
@@ -15,18 +15,31 @@ const TABS: { id: ActiveTab; label: string; icon: string; path: string }[] = [
   { id: "shop",   label: "Shop",   icon: "💎", path: "/shop"    },
 ];
 
-interface Props {
-  active: ActiveTab;
-  children: React.ReactNode;
-  bgSrc?: string;
-}
+const PATH_TO_TAB: Record<string, ActiveTab> = {
+  "/warroom": "home",
+  "/towers":  "towers",
+  "/town":    "town",
+  "/hub":     "units",
+  "/shop":    "shop",
+};
 
-export default function MenuShell({ active, children, bgSrc }: Props) {
+const VISTAS: Record<ActiveTab, string> = {
+  home:   "/assets/hub-bg.png",
+  towers: "/assets/towers-bg.png",
+  town:   "/assets/town-bg.png",
+  units:  "/assets/units-bg.png",
+  shop:   "/assets/hub-bg.png",
+};
+
+export default function MenuShell() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
   const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  const active: ActiveTab = PATH_TO_TAB[pathname] ?? "home";
 
   useEffect(() => {
     audioManager.play("hub");
@@ -43,16 +56,17 @@ export default function MenuShell({ active, children, bgSrc }: Props) {
     <div className="ms-root">
       <style>{CSS}</style>
 
-      <div
-        className="ms-bg"
-        style={bgSrc ? { backgroundImage: `url('${bgSrc}')`, filter: "none" } : undefined}
-      />
-      <div
-        className="ms-overlay"
-        style={bgSrc ? {
-          background: "linear-gradient(180deg, rgba(7,4,15,0.20) 0%, rgba(7,4,15,0.35) 50%, rgba(7,4,15,0.55) 100%)"
-        } : undefined}
-      />
+      {/* ── Background stack (crossfade) ────────────────────────── */}
+      <div className="ms-bg-stack">
+        {(Object.keys(VISTAS) as ActiveTab[]).map((tab) => (
+          <div
+            key={tab}
+            className={`ms-bg${active === tab ? " is-active" : ""}`}
+            style={{ backgroundImage: `url('${VISTAS[tab]}')` }}
+          />
+        ))}
+        <div className="ms-overlay" />
+      </div>
 
       {/* ── Top HUD ─────────────────────────────────────────────── */}
       <div className="ms-topbar">
@@ -89,8 +103,10 @@ export default function MenuShell({ active, children, bgSrc }: Props) {
         </div>
       </div>
 
-      {/* ── Scrollable content ───────────────────────────────────── */}
-      <div className="ms-content">{children}</div>
+      {/* ── Scrollable content (re-keyed on active tab) ──────────── */}
+      <main className="ms-content" key={active}>
+        <Outlet />
+      </main>
 
       {/* ── Bottom tab bar ───────────────────────────────────────── */}
       <nav className="ms-tabbar">
@@ -123,15 +139,22 @@ const CSS = `
     overflow: hidden;
   }
 
-  /* ── Background ── */
-  .ms-bg {
+  /* ── Background stack ── */
+  .ms-bg-stack {
     position: absolute; inset: 0; z-index: 0;
-    background-image: url('/assets/title-bg.png');
+  }
+  .ms-bg {
+    position: absolute; inset: 0;
     background-size: cover; background-position: center 40%;
     filter: brightness(0.45);
+    opacity: 0;
+    transition: opacity 300ms ease-in-out;
+  }
+  .ms-bg.is-active {
+    opacity: 1;
   }
   .ms-overlay {
-    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    position: absolute; inset: 0; pointer-events: none;
     background: linear-gradient(
       180deg,
       rgba(4,2,10,0.42) 0%,
@@ -209,12 +232,18 @@ const CSS = `
 
   /* ── Content ── */
   .ms-content {
-    position: relative; z-index: 10; flex: 1; overflow-y: auto;
+    position: relative; z-index: 2; flex: 1; overflow-y: auto;
     scrollbar-width: thin; scrollbar-color: rgba(160,180,240,0.15) transparent;
+    animation: msContentEnter 300ms ease-out both;
   }
   .ms-content::-webkit-scrollbar { width: 4px; }
   .ms-content::-webkit-scrollbar-track { background: transparent; }
   .ms-content::-webkit-scrollbar-thumb { background: rgba(160,180,240,0.2); border-radius: 2px; }
+
+  @keyframes msContentEnter {
+    from { opacity: 0; transform: scale(0.985); }
+    to   { opacity: 1; transform: scale(1); }
+  }
 
   /* ── Tab bar ── */
   .ms-tabbar {
@@ -243,5 +272,11 @@ const CSS = `
   }
   @media (max-width: 768px) {
     .ms-tab-label { font-size: 9px; }
+  }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    .ms-bg { transition: none; }
+    .ms-content { animation: none; }
   }
 `;

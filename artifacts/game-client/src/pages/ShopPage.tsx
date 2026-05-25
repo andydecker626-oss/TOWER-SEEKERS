@@ -1,5 +1,3 @@
-import MenuShell from "@/components/MenuShell";
-
 const ROWS: { label: string; cards: { name: string; icon: string }[] }[] = [
   {
     label: "Currency Bundles",
@@ -29,7 +27,7 @@ const ROWS: { label: string; cards: { name: string; icon: string }[] }[] = [
 
 export default function ShopPage() {
   return (
-    <MenuShell active="shop">
+    <>
       <style>{CSS}</style>
       <div className="sp-body">
         <div className="sp-head">
@@ -52,7 +50,7 @@ export default function ShopPage() {
           </div>
         ))}
       </div>
-    </MenuShell>
+    </>
   );
 }
 

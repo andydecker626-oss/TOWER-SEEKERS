@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/react";
-import { audioManager } from "@/lib/audio";
 import { useSocket } from "@/context/SocketContext";
-import MenuShell from "@/components/MenuShell";
 
 const PHASE_ROUTES: Record<string, string> = {
   preselection: "/preselect",
@@ -22,10 +20,6 @@ export default function WarRoom() {
   const hasActiveGame = state.phase !== "lobby";
 
   useEffect(() => {
-    audioManager.play("hub");
-  }, []);
-
-  useEffect(() => {
     if (!isLoaded || !user) return;
     const username =
       user.username ||
@@ -42,7 +36,7 @@ export default function WarRoom() {
   if (!isLoaded) {
     return (
       <div style={{
-        minHeight: "100vh", background: "#07040f", display: "flex",
+        height: "100%", display: "flex",
         alignItems: "center", justifyContent: "center",
         color: "rgba(180,195,230,0.55)", fontFamily: "'Cinzel', serif",
         fontSize: "1rem", letterSpacing: "0.12em",
@@ -53,7 +47,7 @@ export default function WarRoom() {
   }
 
   return (
-    <MenuShell active="home" bgSrc="/assets/hub-bg.png">
+    <>
       <style>{CSS}</style>
       <div className="wr-body">
 
@@ -90,7 +84,7 @@ export default function WarRoom() {
         </div>
 
       </div>
-    </MenuShell>
+    </>
   );
 }
 

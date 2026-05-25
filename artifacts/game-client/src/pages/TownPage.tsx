@@ -1,5 +1,3 @@
-import MenuShell from "@/components/MenuShell";
-
 const DISTRICTS = [
   { name: "The Forge",      icon: "⚒",  desc: "Craft and upgrade gear" },
   { name: "The Barracks",   icon: "🛡",  desc: "Train and level units"  },
@@ -9,7 +7,7 @@ const DISTRICTS = [
 
 export default function TownPage() {
   return (
-    <MenuShell active="town" bgSrc="/assets/town-bg.png">
+    <>
       <style>{CSS}</style>
       <div className="tn-body">
         <div className="tn-head">
@@ -28,7 +26,7 @@ export default function TownPage() {
           ))}
         </div>
       </div>
-    </MenuShell>
+    </>
   );
 }
 

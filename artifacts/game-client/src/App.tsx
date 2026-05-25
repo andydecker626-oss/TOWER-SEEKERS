@@ -13,6 +13,7 @@ import Battle from "@/pages/Battle";
 import GameOver from "@/pages/GameOver";
 import GatheringHub from "@/pages/GatheringHub";
 import TitleScreen from "@/pages/TitleScreen";
+import MenuShell from "@/components/MenuShell";
 import WarRoom from "@/pages/WarRoom";
 import TowersPage from "@/pages/TowersPage";
 import TownPage from "@/pages/TownPage";
@@ -141,12 +142,14 @@ function AppRoutes() {
         <MusicControls />
         <Routes>
           <Route path="/" element={<TitleScreen />} />
-          <Route path="/warroom" element={<RequireAuth><WarRoom /></RequireAuth>} />
-          <Route path="/towers" element={<RequireAuth><TowersPage /></RequireAuth>} />
-          <Route path="/town" element={<RequireAuth><TownPage /></RequireAuth>} />
-          <Route path="/shop" element={<RequireAuth><ShopPage /></RequireAuth>} />
+          <Route element={<RequireAuth><MenuShell /></RequireAuth>}>
+            <Route path="/warroom" element={<WarRoom />} />
+            <Route path="/towers" element={<TowersPage />} />
+            <Route path="/town" element={<TownPage />} />
+            <Route path="/hub" element={<GatheringHub />} />
+            <Route path="/shop" element={<ShopPage />} />
+          </Route>
           <Route path="/lobby" element={<RequireAuth><Lobby /></RequireAuth>} />
-          <Route path="/hub" element={<RequireAuth><GatheringHub /></RequireAuth>} />
           <Route path="/sprites" element={<RequireAuth><SpritePreview /></RequireAuth>} />
           <Route path="/preselect" element={<RequireAuth><PreSelection /></RequireAuth>} />
           <Route path="/battleselect" element={<RequireAuth><BattleSelect /></RequireAuth>} />

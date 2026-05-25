@@ -1,5 +1,3 @@
-import MenuShell from "@/components/MenuShell";
-
 const TOWERS = [
   { name: "The Iron Spire",    sub: "Tier I — Level 1–10"   },
   { name: "The Ember Citadel", sub: "Tier II — Level 11–25"  },
@@ -9,7 +7,7 @@ const TOWERS = [
 
 export default function TowersPage() {
   return (
-    <MenuShell active="towers" bgSrc="/assets/towers-bg.png">
+    <>
       <style>{CSS}</style>
       <div className="tp-body">
         <div className="tp-head">
@@ -27,7 +25,7 @@ export default function TowersPage() {
           ))}
         </div>
       </div>
-    </MenuShell>
+    </>
   );
 }
 
