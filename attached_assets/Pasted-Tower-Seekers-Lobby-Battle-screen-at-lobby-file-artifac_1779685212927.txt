@@ -1,0 +1,28 @@
+Tower Seekers Lobby/Battle screen at /lobby (file: artifacts/game-client/src/pages/Lobby.tsx) needs a full face-lift. It currently violates locked aesthetic rules and feels like a SaaS sign-in card. Fix it.
+
+Locked tokens: Cinzel + Cinzel Decorative only. Cream #f5f3ee primary. Pearl gradient #ffffff to #dde2ec to #aab2c2. Deep bg #07040f. Cool silver-blue accent #c8d4e6. Gold #b08a3a is sigil-only — strip it from every other element.
+
+New background. Replace /assets/title-bg.png with a Battle-specific image at /assets/lobby-bg.png — generate or commission a war-camp/arena-gate atmospheric shot (banners, dimly lit stone, depth, NOT the title screen art). Render it at 0.75 opacity over base #07040f. Layer over: radial atmosphere glow rgba(40,30,60,0.45) center to transparent at 70%, hard vignette transparent at 50% to rgba(0,0,0,0.65) at 100%, film grain overlay 10% opacity blend overlay, drifting motes (10-14 particles, sizes 1-3px, opacity 0.2-0.6, slow random drift).
+
+Title block. Change .lobby-title color from #f0c040 to pearl gradient via background-clip:text (linear-gradient(180deg, #ffffff 0%, #dde2ec 50%, #aab2c2 100%)). Drop the gold glow shadows entirely — replace with soft pearl shadow 0 0 24px rgba(221,226,236,0.25) and 2px 2px 0 rgba(0,0,0,0.8) for depth. Change .lobby-subtitle from gold to "Choose Your Battlefield" in #aab2c2 at 60% opacity (more atmospheric, less explanatory than "Turn-Based PvP Battler").
+
+Card panel. Replace .lobby-card border from gold tint to 1px pearl border rgba(221,226,236,0.12). Drop border-radius from 12px to 6px. Replace bg with linear-gradient(180deg, rgba(20,15,35,0.85), rgba(7,4,15,0.95)). Keep backdrop-blur. Replace .lobby-card-title from gold/tan to #aab2c2 at 60% opacity.
+
+Buttons. Kill all gold gradients and gold borders. New button system:
+
+.btn-primary (Create Room): dark fill #0d0918, 1px pearl border rgba(221,226,236,0.4), Cinzel uppercase cream label #f5f3ee, no gradient, no warm shadow. Hover: border brightens to #dde2ec, faint inset pearl glow inset 0 0 12px rgba(221,226,236,0.08).
+.btn-ai (Battle vs AI): same treatment as btn-primary but with a cool silver-blue accent — border rgba(200,212,230,0.5), label #c8d4e6. NOT teal. Match the palette.
+.btn-secondary (Cancel): same dark/pearl-border treatment, label at 70% opacity.
+.join-btn and .hub-link-btn: same family — dark fill, pearl border, cream/pearl label. Strip gold.
+.war-room-btn: same treatment but slightly more prominent — 1.5px pearl border, Cinzel Decorative uppercase, cream label. Hover: border brightens, pearl outer glow rgba(221,226,236,0.18).
+Border radius across all buttons: 6px (rounded-md). No rounded-8 or higher on interactive elements.
+
+Input field. .join-input: bg rgba(7,4,15,0.8), 1px pearl border rgba(221,226,236,0.25), cream text #f5f3ee, placeholder #aab2c2 at 40%. Focus: border #c8d4e6. Strip gold.
+
+Status dots. Connected: change from #22c55e to a pearl-cool #c8d4e6 with rgba(200,212,230,0.4) glow. Disconnected: keep red. Status text: #aab2c2 at 60%.
+
+Waiting state. .waiting-code: pearl gradient via background-clip:text, drop gold text-shadow, replace with soft pearl glow rgba(221,226,236,0.3). .copy-btn: dark fill, pearl border, pearl label. .pulse-dot: change from #f0c040 to #c8d4e6.
+
+Reconnecting banner (OpponentReconnectingBanner in App.tsx). Currently warm gold/orange (rgba(180,120,0,0.95) bg, #fff8e1 text, #f0c040 dot). Recolor to: bg rgba(15,10,25,0.95), text #f5f3ee, border-bottom rgba(221,226,236,0.3), dot #c8d4e6 with cool glow. Same urgency but matches palette.
+
+Acceptance: (1) Codebase grep for #f0c040, #c89000, #c8a000, gold, yellow, amber inside Lobby.tsx and OpponentReconnectingBanner returns zero matches. (2) Lobby visually feels like a war-room antechamber, not a SaaS dashboard. (3) "Battle vs AI" button no longer teal. (4) New /assets/lobby-bg.png exists and renders. (5) All buttons rounded-md (6px) max.

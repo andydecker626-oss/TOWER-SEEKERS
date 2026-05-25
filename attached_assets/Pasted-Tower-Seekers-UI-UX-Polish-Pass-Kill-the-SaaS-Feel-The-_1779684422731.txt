@@ -1,0 +1,54 @@
+Tower Seekers — UI/UX Polish Pass: Kill the SaaS Feel
+
+The current build has three problems I need fixed in one pass. Do not deviate from the locked aesthetic tokens below.
+
+Locked Aesthetic Tokens (do not change)
+Fonts: Cinzel (body/UI) + Cinzel Decorative (display/headers). No other typefaces.
+Primary text: Cream-white #f5f3ee
+Secondary text / pearl gradient: #ffffff → #dde2ec → #aab2c2 (use as linear-gradient on display text)
+Deep background base: #07040f
+Gold #b08a3a: RESERVED for the 4-tower diamond heraldic sigil ONLY. Do not use gold/yellow on tabs, buttons, labels, body text, borders, or any other UI element.
+Atmosphere: vignette + drifting dust motes must be present on title and hub.
+Problem 1: Title Menu Background Too Faded
+Current background reads washed out and flat. Fix it:
+
+Replace the current bg with a layered composition:
+Layer 1 (base): Solid #07040f
+Layer 2 (atmosphere): Radial gradient from center: rgba(40, 30, 60, 0.45) at 0% → transparent at 70%. Gives a soft glow behind the sigil/title without lifting the edges.
+Layer 3 (vignette): Radial gradient from center: transparent at 50% → rgba(0,0,0,0.65) at 100%. Hard vignette — corners should feel heavy.
+Layer 4 (texture): Subtle film grain overlay at 8–12% opacity, blend mode overlay. Animated grain (slow drift) preferred.
+Layer 5 (motes): Existing drifting motes — increase count by ~30%, vary sizes (1px–3px), slow random drift, opacity 0.2–0.6.
+The title and sigil should feel like they're emerging from depth, not floating on a neutral page.
+Problem 2: Hub Shell Tab Backgrounds Too Faded
+The 5-tab bottom shell (Home / Towers / Town / Units / +) currently looks like a SaaS app footer. Make it feel like the bottom of a war room.
+
+Tab bar background: Linear gradient top-to-bottom: rgba(15, 10, 25, 0.92) → rgba(7, 4, 15, 0.98). With backdrop-filter: blur(12px). Add a 1px top border in rgba(170, 178, 194, 0.18) (pearl, very low alpha) to separate from content above.
+Tab inactive state: Icon + label in #aab2c2 (pearl-mid) at 70% opacity.
+Tab active state: Icon + label in #f5f3ee (cream) at 100% opacity. Add a 2px top accent bar above the active tab in pearl gradient (linear-gradient(90deg, #dde2ec, #ffffff, #dde2ec)). NO gold underline. NO yellow accent.
+Tab labels: Cinzel, uppercase, letter-spacing 0.08em, 10–11px. Treat them like engraved labels, not app nav.
+Center "+" tab: If it's currently a circular floating button, give it a subtle ornamental frame — thin pearl ring, dark inner fill (#0d0918), pearl "+" glyph. No glow halo, no gold.
+Problem 3: Replace Yellow Font Everywhere
+Audit every text element in the app. Anywhere text is currently yellow, gold, amber, #ffd700, #b08a3a, or any warm yellow tone — replace it:
+
+Primary/headers: #f5f3ee cream-white, OR apply the pearl gradient as a background-clip: text fill: background: linear-gradient(180deg, #ffffff 0%, #dde2ec 50%, #aab2c2 100%); -webkit-background-clip: text; color: transparent;
+Body text: #f5f3ee at 90% opacity
+Muted/secondary text: #aab2c2 at 70% opacity
+Interactive accents (hover, focus rings, active states): Use a cool silver-blue: #c8d4e6 — never warm yellow.
+The ONLY place gold #b08a3a is allowed to appear is on the 4-tower diamond heraldic sigil graphic. If it currently appears anywhere else in the codebase, remove it.
+
+De-SaaS Pass (general)
+The reason the UI feels SaaS-y is a mix of: flat panels, generous neutral padding, soft modern shadows, rounded-2xl chips, and Inter-adjacent body sizing. Counter-treat:
+
+Panel backgrounds: Replace any pure bg-white/5 or flat semi-transparent panels with: linear-gradient(180deg, rgba(20, 15, 35, 0.85), rgba(7, 4, 15, 0.95)), 1px pearl border at 12% alpha, inset shadow inset 0 1px 0 rgba(255,255,255,0.04) to suggest engraved edge.
+Border radius: Tighten chrome — buttons and panels from rounded-2xl down to rounded-md (6px) or rounded-lg (8px) max. Sharper corners read more "game UI" than "SaaS card."
+Buttons: Replace flat solid-fill buttons with bordered ornamental buttons: dark fill #0d0918, 1px pearl border, Cinzel uppercase label in cream. Hover: border brightens to #dde2ec, faint pearl inner glow. No gradient fills, no drop shadows that lift them off the page.
+Dividers / separators: Replace solid grey lines with hairline pearl gradients fading at the ends: linear-gradient(90deg, transparent, rgba(221, 226, 236, 0.3), transparent).
+Icon weight: If using Lucide/Heroicons at default stroke 2, drop to stroke 1.5 for a more refined, engraved feel.
+Spacing: Tighten padding by ~15% across panels — current SaaS feel partly comes from generous breathing room. Compress.
+Acceptance Checks (do all of these before declaring done)
+Open title screen — background should feel deep and atmospheric, not flat. Vignette visible at corners. Motes drifting.
+Open hub — tab bar at bottom feels weighty and engraved, not transparent/floating. Active tab is pearl-cream, not yellow/gold.
+Search the codebase for: yellow, #ffd700, #fbbf24, amber, gold, #b08a3a. Every match outside the sigil SVG/component must be removed or replaced per the rules above.
+No rounded-2xl or rounded-3xl on any interactive element.
+Cinzel + Cinzel Decorative are the only font-family declarations active in the app.
+Report back with: (a) screenshot of new title screen, (b) screenshot of hub with tab bar visible, (c) list of files touched.
