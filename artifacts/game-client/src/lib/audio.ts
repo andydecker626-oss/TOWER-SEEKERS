@@ -179,7 +179,8 @@ class AudioManager {
   private _battlePlaylist:  FileTrack[] = [];
   private _battleIdx         = 0;
   private _onTrackChangeCb:  ((title: string) => void) | null = null;
-  private _battleEndedHandler: (() => void) | null = null;
+  private _battleEndedHandler:  (() => void) | null = null;
+  private _ambientEndedHandler: (() => void) | null = null;
   private _onLibraryChangeCb: (() => void) | null = null;
 
   private getCtx(): AudioContext {
@@ -247,6 +248,10 @@ class AudioManager {
     return ALL_BATTLE_TRACKS.filter(t => !this._disabledTracks.has(t.src));
   }
 
+  private _enabledAmbientTracks(): FileTrack[] {
+    return ALL_AMBIENT_TRACKS.filter(t => !this._disabledTracks.has(t.src));
+  }
+
   private _enabledFileTracks(): FileTrack[] {
     return ALL_FILE_TRACKS.filter(t => !this._disabledTracks.has(t.src));
   }
@@ -283,6 +288,7 @@ class AudioManager {
     this._battleIdx = 0;
     if (!this.audioEl) this.audioEl = new Audio();
     this._removeBattleEndedHandler();
+    this._removeAmbientEndedHandler();
     this.audioEl.loop = false;
     this._battleEndedHandler = () => {
       if (!this._inBattlePlaylist) return;
@@ -306,16 +312,18 @@ class AudioManager {
   playFileTrack(src: string) {
     this._stopSynth();
     this._removeBattleEndedHandler();
+    this._removeAmbientEndedHandler();
     this._inBattlePlaylist = false;
     this._currentTrack = null;
     if (!this.audioEl) this.audioEl = new Audio();
-    this.audioEl.loop = true;
+    this.audioEl.loop = false;
     this.audioEl.src = src;
     this.audioEl.load();
     this.audioEl.volume = this._effectiveMusicVol();
     this.audioEl.play().catch(() => {});
     const track = ALL_FILE_TRACKS.find(t => t.src === src);
     if (this._onTrackChangeCb && track) this._onTrackChangeCb(track.title);
+    if (track?.category === "ambient") this._attachAmbientEndedHandler(src);
   }
 
   pauseMusic() {
@@ -357,14 +365,16 @@ class AudioManager {
     const next = enabled[nextIdx];
     this._stopSynth();
     this._removeBattleEndedHandler();
+    this._removeAmbientEndedHandler();
     this._currentTrack = null;
     if (!this.audioEl) this.audioEl = new Audio();
-    this.audioEl.loop = true;
+    this.audioEl.loop = false;
     this.audioEl.src = next.src;
     this.audioEl.load();
     this.audioEl.volume = this._effectiveMusicVol();
     this.audioEl.play().catch(() => {});
     if (this._onTrackChangeCb) this._onTrackChangeCb(next.title);
+    if (next.category === "ambient") this._attachAmbientEndedHandler(next.src);
   }
 
   private _removeBattleEndedHandler() {
@@ -372,6 +382,26 @@ class AudioManager {
       this.audioEl.removeEventListener("ended", this._battleEndedHandler);
       this._battleEndedHandler = null;
     }
+  }
+
+  private _removeAmbientEndedHandler() {
+    if (this._ambientEndedHandler && this.audioEl) {
+      this.audioEl.removeEventListener("ended", this._ambientEndedHandler);
+      this._ambientEndedHandler = null;
+    }
+  }
+
+  /** Attach an ended listener that shuffles to a different enabled ambient track. */
+  private _attachAmbientEndedHandler(currentSrc: string) {
+    this._removeAmbientEndedHandler();
+    this._ambientEndedHandler = () => {
+      const pool = this._enabledAmbientTracks();
+      if (!pool.length) return;
+      const others = pool.filter(t => t.src !== currentSrc);
+      const next = others.length ? others[Math.floor(Math.random() * others.length)] : pool[0];
+      this.playFileTrack(next.src);
+    };
+    this.audioEl!.addEventListener("ended", this._ambientEndedHandler);
   }
 
   private _loadBattleTrack(idx: number) {
@@ -566,8 +596,8 @@ class AudioManager {
     if (this._inBattlePlaylist) {
       this._inBattlePlaylist = false;
       this._removeBattleEndedHandler();
-      if (this.audioEl) { this.audioEl.loop = true; }
     }
+    this._removeAmbientEndedHandler();
     this._stopSynth();
 
     // If switching away from a file track to a synth track, fade out instead of hard-pause
@@ -591,6 +621,7 @@ class AudioManager {
   stop() {
     this._inBattlePlaylist = false;
     this._removeBattleEndedHandler();
+    this._removeAmbientEndedHandler();
     this._stopSynth();
     if (this._fadeRaf) {
       cancelAnimationFrame(this._fadeRaf);
@@ -623,16 +654,19 @@ class AudioManager {
 
   private _playFile(src: string) {
     this._removeBattleEndedHandler();
+    this._removeAmbientEndedHandler();
+    const isAmbient = ALL_AMBIENT_TRACKS.some(t => t.src === src);
 
     // First play — no element yet or no src loaded
     if (!this.audioEl || !this.audioEl.src || this.audioEl.src === location.origin + "/") {
       if (!this.audioEl) this.audioEl = new Audio();
-      this.audioEl.loop = true;
+      this.audioEl.loop = false;
       this.audioEl.src = src;
       this.audioEl.load();
       this.audioEl.volume = 0;
       this.audioEl.play().catch(() => {});
       this._rampVolume(this.audioEl, 0, this._effectiveMusicVol(), CROSSFADE_MS);
+      if (isAmbient) this._attachAmbientEndedHandler(src);
       return;
     }
 
@@ -640,22 +674,24 @@ class AudioManager {
     const cur = this.audioEl.getAttribute("src") ?? "";
     if (cur.endsWith(src) || this.audioEl.src.endsWith(src)) {
       if (this.audioEl.paused) this.audioEl.play().catch(() => {});
+      if (isAmbient) this._attachAmbientEndedHandler(src);
       return;
     }
 
     // Different src — crossfade to new track
-    this._crossfade(src);
+    this._crossfade(src, isAmbient);
   }
 
-  private _crossfade(newSrc: string) {
+  private _crossfade(newSrc: string, isAmbient = false) {
     if (!this.audioEl) {
       this.audioEl = new Audio();
-      this.audioEl.loop = true;
+      this.audioEl.loop = false;
       this.audioEl.src = newSrc;
       this.audioEl.load();
       this.audioEl.volume = 0;
       this.audioEl.play().catch(() => {});
       this._rampVolume(this.audioEl, 0, this._effectiveMusicVol(), CROSSFADE_MS);
+      if (isAmbient) this._attachAmbientEndedHandler(newSrc);
       return;
     }
 
@@ -663,7 +699,7 @@ class AudioManager {
     const from = this.audioEl;
     const to = this.audioElB;
 
-    to.loop = true;
+    to.loop = false;
     to.src = newSrc;
     to.load();
     to.volume = 0;
@@ -693,6 +729,7 @@ class AudioManager {
         this.audioEl  = to;
         this.audioElB = from;
         this._fadeRaf = null;
+        if (isAmbient) this._attachAmbientEndedHandler(newSrc);
       }
     };
     this._fadeRaf = requestAnimationFrame(tick);
