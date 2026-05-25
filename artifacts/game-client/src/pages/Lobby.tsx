@@ -26,7 +26,7 @@ export default function Lobby() {
 
         .lobby-root {
           min-height: 100vh;
-          background: #08060f;
+          background: #07040f;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -35,47 +35,80 @@ export default function Lobby() {
           overflow: hidden;
         }
 
-        .lobby-title-bg {
+        /* ── Background image layer ── */
+        .lobby-bg-img {
           position: fixed;
           inset: 0;
-          background-image: url('/assets/title-bg.png');
-          background-size: 110%;
-          background-position: center 60%;
-          opacity: 0.55;
+          background-image: url('/assets/lobby-bg.png');
+          background-size: cover;
+          background-position: center 40%;
+          opacity: 0.75;
           pointer-events: none;
           z-index: 0;
         }
 
-        .lobby-bg {
-          position: absolute;
+        /* ── Atmosphere layers stacked over bg image ── */
+        .lobby-atmosphere {
+          position: fixed;
           inset: 0;
           background:
-            radial-gradient(ellipse 100% 70% at 50% 100%, rgba(5,3,13,0.9) 0%, transparent 70%),
-            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(5,3,13,0.6) 0%, transparent 70%),
-            radial-gradient(ellipse 60% 40% at 20% 80%, rgba(40,20,80,0.15) 0%, transparent 60%);
+            radial-gradient(ellipse 80% 70% at 50% 50%, rgba(40,30,60,0.45) 0%, transparent 70%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(0,0,0,0.65) 100%);
           pointer-events: none;
-          z-index: 0;
+          z-index: 1;
         }
 
-        .lobby-stars {
-          position: absolute;
+        /* ── Film grain overlay ── */
+        .lobby-grain {
+          position: fixed;
           inset: 0;
-          background-image:
-            radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
-            radial-gradient(1px 1px at 30% 50%, rgba(255,255,255,0.4) 0%, transparent 100%),
-            radial-gradient(1px 1px at 60% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
-            radial-gradient(1px 1px at 80% 30%, rgba(255,255,255,0.3) 0%, transparent 100%),
-            radial-gradient(1px 1px at 50% 70%, rgba(255,255,255,0.4) 0%, transparent 100%),
-            radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.5) 0%, transparent 100%),
-            radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
-            radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.4) 0%, transparent 100%);
           pointer-events: none;
-          z-index: 0;
+          z-index: 2;
+          opacity: 0.10;
+          mix-blend-mode: overlay;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23grain)' opacity='1'/%3E%3C/svg%3E");
+          background-repeat: repeat;
+          background-size: 200px 200px;
         }
 
+        /* ── Drifting motes ── */
+        @keyframes mote-float {
+          0%   { transform: translateY(0) translateX(0); opacity: 0; }
+          10%  { opacity: 1; }
+          90%  { opacity: 0.6; }
+          100% { transform: translateY(-120px) translateX(8px); opacity: 0; }
+        }
+        .lobby-motes {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 3;
+        }
+        .mote {
+          position: absolute;
+          width: 1.5px;
+          height: 1.5px;
+          border-radius: 50%;
+          background: rgba(245,243,238,0.55);
+          animation: mote-float linear infinite;
+        }
+        .mote:nth-child(1)  { left: 12%; top: 72%; animation-duration: 9s;  animation-delay: 0s; }
+        .mote:nth-child(2)  { left: 24%; top: 80%; animation-duration: 11s; animation-delay: 1.2s; }
+        .mote:nth-child(3)  { left: 37%; top: 65%; animation-duration: 8s;  animation-delay: 2.5s; }
+        .mote:nth-child(4)  { left: 50%; top: 78%; animation-duration: 13s; animation-delay: 0.7s; }
+        .mote:nth-child(5)  { left: 62%; top: 70%; animation-duration: 10s; animation-delay: 3.1s; }
+        .mote:nth-child(6)  { left: 74%; top: 75%; animation-duration: 12s; animation-delay: 1.8s; }
+        .mote:nth-child(7)  { left: 85%; top: 68%; animation-duration: 9s;  animation-delay: 4.0s; }
+        .mote:nth-child(8)  { left: 18%; top: 60%; animation-duration: 14s; animation-delay: 0.4s; }
+        .mote:nth-child(9)  { left: 43%; top: 85%; animation-duration: 11s; animation-delay: 5.5s; }
+        .mote:nth-child(10) { left: 57%; top: 62%; animation-duration: 8s;  animation-delay: 2.2s; }
+        .mote:nth-child(11) { left: 30%; top: 88%; animation-duration: 15s; animation-delay: 6.3s; }
+        .mote:nth-child(12) { left: 68%; top: 82%; animation-duration: 10s; animation-delay: 3.8s; }
+
+        /* ── Content ── */
         .lobby-content {
           position: relative;
-          z-index: 1;
+          z-index: 10;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -93,11 +126,12 @@ export default function Lobby() {
           font-family: 'Cinzel Decorative', serif;
           font-size: 3.2rem;
           font-weight: 700;
-          color: #f0c040;
-          text-shadow:
-            0 0 20px rgba(240,192,64,0.6),
-            0 0 40px rgba(200,140,0,0.4),
-            2px 2px 0 rgba(0,0,0,0.8);
+          background: linear-gradient(180deg, #ffffff 0%, #dde2ec 50%, #aab2c2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-shadow: none;
+          filter: drop-shadow(0 0 24px rgba(221,226,236,0.25)) drop-shadow(2px 2px 0 rgba(0,0,0,0.8));
           letter-spacing: 0.05em;
           line-height: 1.1;
           margin: 0;
@@ -106,7 +140,7 @@ export default function Lobby() {
         .lobby-subtitle {
           font-family: 'Cinzel', serif;
           font-size: 0.95rem;
-          color: rgba(200,170,100,0.7);
+          color: rgba(170,178,194,0.6);
           letter-spacing: 0.3em;
           text-transform: uppercase;
           margin-top: 0.4rem;
@@ -115,72 +149,73 @@ export default function Lobby() {
         .lobby-divider {
           width: 100%;
           height: 1px;
-          background: linear-gradient(to right, transparent, rgba(240,192,64,0.4), transparent);
+          background: linear-gradient(to right, transparent, rgba(221,226,236,0.2), transparent);
         }
 
         .lobby-card {
-          background: rgba(15,10,30,0.8);
-          border: 1px solid rgba(240,192,64,0.2);
-          border-radius: 12px;
+          background: linear-gradient(180deg, rgba(20,15,35,0.85), rgba(7,4,15,0.95));
+          border: 1px solid rgba(221,226,236,0.12);
+          border-radius: 6px;
           padding: 2rem;
           width: 100%;
           display: flex;
           flex-direction: column;
           gap: 1.2rem;
           backdrop-filter: blur(12px);
-          box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
         }
 
         .lobby-card-title {
           font-family: 'Cinzel', serif;
           font-size: 0.8rem;
-          color: rgba(200,170,100,0.6);
+          color: rgba(170,178,194,0.6);
           letter-spacing: 0.25em;
           text-transform: uppercase;
           text-align: center;
         }
 
+        /* ── Buttons ── */
         .btn-primary {
           font-family: 'Cinzel', serif;
           font-size: 1rem;
           font-weight: 600;
           letter-spacing: 0.08em;
-          background: linear-gradient(135deg, #c89000, #f0c040, #c89000);
-          color: #0a0810;
-          border: none;
-          border-radius: 8px;
+          text-transform: uppercase;
+          background: #0d0918;
+          color: #f5f3ee;
+          border: 1px solid rgba(221,226,236,0.4);
+          border-radius: 6px;
           padding: 0.85rem 2rem;
           cursor: pointer;
           transition: all 0.2s;
-          box-shadow: 0 4px 16px rgba(240,192,64,0.3), 0 2px 4px rgba(0,0,0,0.4);
           width: 100%;
         }
         .btn-primary:hover:not(:disabled) {
+          border-color: #dde2ec;
+          box-shadow: inset 0 0 12px rgba(221,226,236,0.08);
           transform: translateY(-1px);
-          box-shadow: 0 6px 24px rgba(240,192,64,0.45), 0 2px 4px rgba(0,0,0,0.4);
         }
         .btn-primary:active:not(:disabled) { transform: translateY(0); }
-        .btn-primary:disabled {
-          opacity: 0.5; cursor: not-allowed;
-        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .btn-secondary {
           font-family: 'Cinzel', serif;
           font-size: 1rem;
           font-weight: 600;
           letter-spacing: 0.08em;
-          background: transparent;
-          color: #f0c040;
-          border: 1px solid rgba(240,192,64,0.4);
-          border-radius: 8px;
+          text-transform: uppercase;
+          background: #0d0918;
+          color: rgba(245,243,238,0.7);
+          border: 1px solid rgba(221,226,236,0.3);
+          border-radius: 6px;
           padding: 0.85rem 2rem;
           cursor: pointer;
           transition: all 0.2s;
           width: 100%;
         }
         .btn-secondary:hover:not(:disabled) {
-          background: rgba(240,192,64,0.1);
-          border-color: rgba(240,192,64,0.6);
+          border-color: rgba(221,226,236,0.55);
+          box-shadow: inset 0 0 10px rgba(221,226,236,0.06);
         }
         .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -189,19 +224,20 @@ export default function Lobby() {
           font-size: 1rem;
           font-weight: 600;
           letter-spacing: 0.08em;
-          background: linear-gradient(135deg, #006a6a, #00b8b8, #006a6a);
-          color: #e8fffe;
-          border: none;
-          border-radius: 8px;
+          text-transform: uppercase;
+          background: #0d0918;
+          color: #c8d4e6;
+          border: 1px solid rgba(200,212,230,0.5);
+          border-radius: 6px;
           padding: 0.85rem 2rem;
           cursor: pointer;
           transition: all 0.2s;
-          box-shadow: 0 4px 16px rgba(0,184,184,0.3), 0 2px 4px rgba(0,0,0,0.4);
           width: 100%;
         }
         .btn-ai:hover:not(:disabled) {
+          border-color: rgba(200,212,230,0.8);
+          box-shadow: inset 0 0 12px rgba(200,212,230,0.08);
           transform: translateY(-1px);
-          box-shadow: 0 6px 24px rgba(0,184,184,0.45), 0 2px 4px rgba(0,0,0,0.4);
         }
         .btn-ai:active:not(:disabled) { transform: translateY(0); }
         .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -218,36 +254,36 @@ export default function Lobby() {
           font-weight: 600;
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          background: rgba(10,8,20,0.8);
-          border: 1px solid rgba(240,192,64,0.3);
-          border-radius: 8px;
+          background: rgba(7,4,15,0.8);
+          border: 1px solid rgba(221,226,236,0.25);
+          border-radius: 6px;
           padding: 0.85rem 1rem;
-          color: #f0c040;
+          color: #f5f3ee;
           flex: 1;
           outline: none;
           transition: border-color 0.2s;
           text-align: center;
         }
-        .join-input::placeholder { color: rgba(240,192,64,0.3); letter-spacing: 0.2em; }
-        .join-input:focus { border-color: rgba(240,192,64,0.7); }
+        .join-input::placeholder { color: rgba(170,178,194,0.4); letter-spacing: 0.2em; }
+        .join-input:focus { border-color: #c8d4e6; }
 
         .join-btn {
           font-family: 'Cinzel', serif;
           font-size: 0.9rem;
           font-weight: 600;
           letter-spacing: 0.06em;
-          background: rgba(30,20,60,0.9);
-          color: #f0c040;
-          border: 1px solid rgba(240,192,64,0.4);
-          border-radius: 8px;
+          background: #0d0918;
+          color: #f5f3ee;
+          border: 1px solid rgba(221,226,236,0.35);
+          border-radius: 6px;
           padding: 0.85rem 1.2rem;
           cursor: pointer;
           transition: all 0.2s;
           white-space: nowrap;
         }
         .join-btn:hover:not(:disabled) {
-          background: rgba(240,192,64,0.15);
-          border-color: rgba(240,192,64,0.6);
+          border-color: rgba(221,226,236,0.65);
+          box-shadow: inset 0 0 10px rgba(221,226,236,0.07);
         }
         .join-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -257,13 +293,13 @@ export default function Lobby() {
           height: 8px;
           border-radius: 50%;
           margin-right: 6px;
-          background: #22c55e;
-          box-shadow: 0 0 6px #22c55e;
+          background: #c8d4e6;
+          box-shadow: 0 0 6px rgba(200,212,230,0.4);
         }
         .status-dot.disconnected { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
         .status-text {
           font-size: 0.75rem;
-          color: rgba(200,170,100,0.6);
+          color: rgba(170,178,194,0.6);
           text-align: center;
         }
 
@@ -276,20 +312,23 @@ export default function Lobby() {
           font-size: 2.2rem;
           font-weight: 700;
           letter-spacing: 0.35em;
-          color: #f0c040;
-          text-shadow: 0 0 20px rgba(240,192,64,0.5);
+          background: linear-gradient(180deg, #ffffff 0%, #dde2ec 50%, #aab2c2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          filter: drop-shadow(0 0 16px rgba(221,226,236,0.3));
           margin: 0.5rem 0;
         }
         .waiting-label {
           font-family: 'Cinzel', serif;
           font-size: 0.75rem;
-          color: rgba(200,170,100,0.6);
+          color: rgba(170,178,194,0.6);
           letter-spacing: 0.2em;
           text-transform: uppercase;
         }
         .waiting-hint {
           font-size: 0.85rem;
-          color: rgba(200,170,100,0.5);
+          color: rgba(170,178,194,0.5);
           margin-top: 0.5rem;
           font-style: italic;
         }
@@ -297,16 +336,16 @@ export default function Lobby() {
           font-family: 'Cinzel', serif;
           font-size: 0.75rem;
           letter-spacing: 0.1em;
-          background: rgba(240,192,64,0.1);
-          color: rgba(240,192,64,0.8);
-          border: 1px solid rgba(240,192,64,0.3);
+          background: #0d0918;
+          color: rgba(221,226,236,0.75);
+          border: 1px solid rgba(221,226,236,0.3);
           border-radius: 6px;
           padding: 0.35rem 0.9rem;
           cursor: pointer;
           transition: all 0.2s;
           margin-top: 0.3rem;
         }
-        .copy-btn:hover { background: rgba(240,192,64,0.2); border-color: rgba(240,192,64,0.6); color: #f0c040; }
+        .copy-btn:hover { border-color: rgba(221,226,236,0.6); color: #dde2ec; }
         .copy-btn.copied { color: #86efac; border-color: rgba(134,239,172,0.5); background: rgba(134,239,172,0.08); }
 
         .reconnecting-box {
@@ -317,13 +356,13 @@ export default function Lobby() {
           font-family: 'Cinzel', serif;
           font-size: 1rem;
           font-weight: 600;
-          color: #f0c040;
+          color: #dde2ec;
           letter-spacing: 0.1em;
           margin-bottom: 0.5rem;
         }
         .reconnecting-hint {
           font-size: 0.82rem;
-          color: rgba(200,170,100,0.55);
+          color: rgba(170,178,194,0.55);
           font-style: italic;
         }
 
@@ -332,7 +371,7 @@ export default function Lobby() {
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          background: #f0c040;
+          background: #c8d4e6;
           margin: 0.5rem auto;
           animation: pulse 1.4s ease-in-out infinite;
         }
@@ -344,7 +383,7 @@ export default function Lobby() {
         .error-msg {
           background: rgba(200,40,40,0.15);
           border: 1px solid rgba(200,40,40,0.4);
-          border-radius: 8px;
+          border-radius: 6px;
           padding: 0.75rem 1rem;
           font-size: 0.875rem;
           color: #fca5a5;
@@ -356,10 +395,10 @@ export default function Lobby() {
           font-size: 0.78rem;
           letter-spacing: 0.14em;
           text-transform: uppercase;
-          background: transparent;
-          color: rgba(200,170,100,0.55);
-          border: 1px solid rgba(240,192,64,0.15);
-          border-radius: 8px;
+          background: #0d0918;
+          color: rgba(170,178,194,0.6);
+          border: 1px solid rgba(221,226,236,0.18);
+          border-radius: 6px;
           padding: 0.55rem 1.2rem;
           cursor: pointer;
           transition: all 0.18s;
@@ -370,20 +409,21 @@ export default function Lobby() {
           width: 100%;
         }
         .hub-link-btn:hover {
-          color: #f0c040;
-          border-color: rgba(240,192,64,0.38);
-          background: rgba(240,192,64,0.05);
+          color: #dde2ec;
+          border-color: rgba(221,226,236,0.4);
+          box-shadow: inset 0 0 10px rgba(221,226,236,0.05);
         }
+
         .war-room-btn {
-          font-family: 'Cinzel', serif;
-          font-size: 1.1rem;
+          font-family: 'Cinzel Decorative', serif;
+          font-size: 1rem;
           font-weight: 700;
           letter-spacing: 0.12em;
           text-transform: uppercase;
           background: rgba(14,8,32,0.96);
-          color: #f0c040;
-          border: 1.5px solid rgba(240,192,64,0.55);
-          border-radius: 8px;
+          color: #f5f3ee;
+          border: 1.5px solid rgba(221,226,236,0.45);
+          border-radius: 6px;
           padding: 0.68rem 1.4rem;
           cursor: pointer;
           transition: all 0.18s;
@@ -392,30 +432,33 @@ export default function Lobby() {
           justify-content: center;
           gap: 0.5rem;
           white-space: nowrap;
-          box-shadow: 0 2px 14px rgba(240,192,64,0.15);
         }
         .war-room-btn:hover {
-          color: #fff8d6;
-          border-color: rgba(240,192,64,0.9);
-          background: rgba(240,192,64,0.13);
-          box-shadow: 0 4px 22px rgba(240,192,64,0.28);
+          color: #ffffff;
+          border-color: rgba(221,226,236,0.85);
+          box-shadow: 0 4px 22px rgba(221,226,236,0.18);
         }
       `}</style>
 
-      <div className="lobby-title-bg" />
-      <div className="lobby-bg" />
-      <div className="lobby-stars" />
+      <div className="lobby-bg-img" />
+      <div className="lobby-atmosphere" />
+      <div className="lobby-grain" />
+      <div className="lobby-motes">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="mote" />
+        ))}
+      </div>
 
       <div className="lobby-content">
         <div style={{ width: "100%", display: "flex", justifyContent: "flex-start" }}>
           <button className="war-room-btn" onClick={() => navigate("/warroom")}>
-            ← War Room
+            ← Back to Home
           </button>
         </div>
 
         <div className="lobby-logo">
           <h1 className="lobby-title">Tower Seekers</h1>
-          <p className="lobby-subtitle">Turn-Based PvP Battler</p>
+          <p className="lobby-subtitle">Choose Your Battlefield</p>
         </div>
 
         <div className="lobby-divider" />

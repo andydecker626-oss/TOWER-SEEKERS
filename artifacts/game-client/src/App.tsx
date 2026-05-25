@@ -83,21 +83,21 @@ function OpponentReconnectingBanner() {
       left: 0,
       right: 0,
       zIndex: 9999,
-      background: "rgba(180, 120, 0, 0.95)",
-      color: "#fff8e1",
+      background: "rgba(15,10,25,0.95)",
+      color: "#f5f3ee",
       textAlign: "center",
       padding: "0.6rem 1rem",
       fontFamily: "'Cinzel', serif",
       fontSize: "0.85rem",
       letterSpacing: "0.08em",
       backdropFilter: "blur(4px)",
-      borderBottom: "1px solid rgba(240,192,64,0.4)",
+      borderBottom: "1px solid rgba(221,226,236,0.3)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       gap: "0.6rem",
     }}>
-      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: "#f0c040", animation: "pulse 1.4s ease-in-out infinite" }} />
+      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: "#c8d4e6", boxShadow: "0 0 6px rgba(200,212,230,0.5)", animation: "pulse 1.4s ease-in-out infinite" }} />
       Opponent lost connection — waiting for them to rejoin…
     </div>
   );
@@ -172,7 +172,7 @@ function App() {
 
   if (!clerkPubKey) {
     return (
-      <div style={{ color: "#f0c040", background: "#07040f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "serif" }}>
+      <div style={{ color: "#dde2ec", background: "#07040f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "serif" }}>
         Missing Clerk publishable key — check VITE_CLERK_PUBLISHABLE_KEY.
       </div>
     );

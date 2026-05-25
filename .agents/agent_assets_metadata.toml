@@ -390,6 +390,12 @@ uri = "file://attached_assets/wdr-anim-f06-recover.png"
 type = "image"
 title = "wanderer recovery frame"
 
+[[generated]]
+id = "Nvh_spqCN820ynEg76vCD"
+uri = "file://artifacts/game-client/public/assets/lobby-bg.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "3BluA1wXnC8d6y6lHL8Fm"
 uri = "file://.local/game-design.md"
