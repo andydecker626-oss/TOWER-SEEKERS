@@ -1,0 +1,118 @@
+# Tower Seekers — Menu Transitions v1
+## Goal
+Make tab switches feel like camera moves to a new location — not React route swaps. Add (1) background crossfade between the 4 vista images and (2) a 300ms fade+scale entrance for the page contents whenever the active tab changes.
+**Apply this AFTER hub-shell-v1.md is in place.** It modifies `MenuShell.tsx` only.
+## What this prompt does (high level)
+- All 4 vista images (`hub-bg`, `towers-bg`, `town-bg`, `units-bg`) are rendered as stacked absolute-positioned divs inside MenuShell. The active one is `opacity: 1`, the others are `opacity: 0`. Switching tabs transitions opacity over 300ms — that's the crossfade. All 4 images load on first mount, so subsequent switches are instant from a network standpoint.
+- The shell's content area (`<main>`) gets `key={active}` so React unmounts/remounts it on every tab change. A CSS keyframe animation runs on each mount: `opacity 0→1, transform scale(0.985)→1, 300ms cubic-bezier(0.4, 0, 0.2, 1)`. Looks like a small camera lens-in.
+- HUD bar and tab bar do NOT animate — they're persistent chrome. The "window" stays fixed; the "world" behind it changes.
+## Files to modify
+### `src/components/MenuShell.tsx`
+Replace the existing single-bg-image rendering with a stacked vista crossfade. Below is the structural shape — fit it to the existing component, do not rewrite parts that aren't related to the bg or content slot.
+#### 1. Add a vistas map at the top of the component
+ type ActiveTab = "home" | "towers" | "town" | "units" | "shop";
+ const VISTAS: Record<ActiveTab, string> = {
+ home: "/assets/hub-bg.png",
+ towers: "/assets/towers-bg.png",
+ town: "/assets/town-bg.png",
+ units: "/assets/units-bg.png",
+ shop: "/assets/hub-bg.png", // placeholder reuse until shop vista exists
+ };
+If any of these PNGs doesn't exist yet at the path, the corresponding tab will show a black bg + the gradient overlay — that's fine, do NOT add any error fallback or onError handler. Missing assets are an acceptable temporary state.
+#### 2. Replace the single `.menu-shell__bg` div with a stacked vista bg-stack
+ <div className="menu-shell__bg-stack" aria-hidden>
+ {(Object.keys(VISTAS) as ActiveTab[]).map((key) => (
+ <div
+ key={key}
+ className={`menu-shell__bg ${active === key ? "is-active" : ""}`}
+ style={{ backgroundImage: `url(${VISTAS[key]})` }}
+ />
+ ))}
+ <div className="menu-shell__bg-overlay" />
+ </div>
+The bg-stack and its overlay sit at `z-index: 0`. HUD/content/tabs all sit above.
+#### 3. Wrap children with a re-keying content slot
+ <main className="menu-shell__content" key={active}>
+ {children}
+ </main>
+The `key={active}` is critical — it forces React to remount on tab change, which retriggers the CSS keyframe animation defined below.
+#### 4. Add this CSS to the shell's `<style>` block (or stylesheet)
+ .menu-shell {
+ position: relative;
+ min-height: 100vh;
+ width: 100%;
+ display: flex;
+ flex-direction: column;
+ background: #07040f;
+ overflow: hidden;
+ }
+ .menu-shell__bg-stack {
+ position: absolute;
+ inset: 0;
+ z-index: 0;
+ pointer-events: none;
+ }
+ .menu-shell__bg {
+ position: absolute;
+ inset: 0;
+ background-size: cover;
+ background-position: center;
+ background-repeat: no-repeat;
+ opacity: 0;
+ transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+ will-change: opacity;
+ }
+ .menu-shell__bg.is-active {
+ opacity: 1;
+ }
+ .menu-shell__bg-overlay {
+ position: absolute;
+ inset: 0;
+ background: linear-gradient(
+ 180deg,
+ rgba(7,4,15,0.20) 0%,
+ rgba(7,4,15,0.35) 50%,
+ rgba(7,4,15,0.55) 100%
+ );
+ }
+ .menu-shell__content {
+ position: relative;
+ z-index: 2;
+ flex: 1;
+ overflow-y: auto;
+ animation: msContentEnter 300ms cubic-bezier(0.4, 0, 0.2, 1);
+ will-change: opacity, transform;
+ }
+ @keyframes msContentEnter {
+ from { opacity: 0; transform: scale(0.985); }
+ to { opacity: 1; transform: scale(1); }
+ }
+ /* Reduced-motion users get instant transitions */
+ @media (prefers-reduced-motion: reduce) {
+ .menu-shell__bg { transition: none; }
+ .menu-shell__content { animation: none; }
+ }
+The HUD bar and tab bar should sit at `z-index: 10` (above content) — that's already the case in hub-shell-v1.
+## Strict rules
+- DO NOT install any new dependencies (no framer-motion, no react-transition-group). CSS-only solution.
+- DO NOT animate the HUD bar or tab bar. They are persistent chrome. Only the bg layer and the content slot animate.
+- DO NOT add a loading spinner during transitions. The crossfade IS the loading state.
+- DO NOT preload images via `<link rel="preload">` in index.html. Rendering all 4 bg divs in MenuShell already triggers the browser to fetch them on first mount.
+- DO NOT change the gradient overlay values. Keep the 0.20 / 0.35 / 0.55 stops from the recent overlay tune.
+- Respect `prefers-reduced-motion: reduce` — the media query above kills the animations for users who set that OS preference.
+## Acceptance criteria
+After this prompt is applied:
+- Switching between Home / Towers / Town / Units tabs visibly crossfades the vista bg over ~300ms.
+- The page contents (cards, headlines, BATTLE button) fade-scale in over ~300ms on every tab change.
+- The HUD bar (avatar, currencies, ?, ⚙) does not flicker, fade, or remount during transitions.
+- The bottom tab bar does not flicker, fade, or remount during transitions.
+- Switching to a tab whose vista PNG doesn't exist yet shows a dark gradient bg with no JS console errors (just the missing image network 404 — that's expected).
+- DevTools throttled to "Slow 3G" → first tab switch may show a brief gray flash for unloaded vistas; subsequent switches are instant.
+- macOS `System Settings → Accessibility → Reduce Motion` ON → tab switches are instant cuts (animations disabled).
+## Notes for next iteration (do NOT do now)
+These are explicitly out of scope for this prompt — listed so you don't try to be helpful and add them:
+- Per-tab music ambience (forge clangs in Units, market chatter in Town).
+- Parallax inside each vista (foreground layer drifting).
+- A subtle camera-pan motion within each vista (Ken Burns).
+- A "swoosh" SFX on tab change.
+We'll do those once the static crossfade lands and feels right.
