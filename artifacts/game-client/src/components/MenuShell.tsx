@@ -113,7 +113,7 @@ export default function MenuShell() {
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            className={`ms-tab${active === tab.id ? " ms-tab-active" : ""}`}
+            className={`ms-tab${active === tab.id ? " ms-tab-active" : ""}${tab.id === "shop" ? " ms-tab-shop" : ""}`}
             onClick={() => navigate(tab.path)}
           >
             <span className="ms-tab-icon">{tab.icon}</span>
@@ -129,7 +129,7 @@ export default function MenuShell() {
 }
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Orbitron:wght@300&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap');
 
   .ms-root {
     position: fixed; inset: 0;
@@ -249,29 +249,49 @@ const CSS = `
   .ms-tabbar {
     position: relative; z-index: 10; flex-shrink: 0;
     display: flex; align-items: stretch;
-    background: rgba(4,2,10,0.78); backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(160,180,240,0.09);
+    background: linear-gradient(180deg, rgba(4,2,12,0.82) 0%, rgba(7,4,15,0.95) 100%);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(221,226,236,0.09);
     height: clamp(56px,7vh,68px);
   }
   .ms-tab {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; border: none; background: transparent; cursor: pointer;
-    opacity: 0.52; transition: opacity 0.18s;
-    border-bottom: 2px solid transparent;
-    padding: 0; color: rgba(200,210,240,0.8);
+    color: #aab2c2; opacity: 0.7; transition: opacity 0.18s, color 0.18s;
+    padding: 0;
+    position: relative;
   }
-  .ms-tab:hover { opacity: 0.8; }
-  .ms-tab-active {
-    opacity: 1;
-    border-bottom-color: rgba(220,225,255,0.85);
+  .ms-tab:hover { opacity: 0.88; color: #dde2ec; }
+  /* 2px pearl gradient accent bar via pseudo-element */
+  .ms-tab::before {
+    content: ""; position: absolute; top: 0; left: 10%; right: 10%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(221,226,236,0.9) 30%, rgba(200,215,245,0.7) 70%, transparent);
+    opacity: 0; transition: opacity 0.18s;
+    border-radius: 0 0 1px 1px;
   }
+  .ms-tab-active { opacity: 1; color: #f5f3ee; }
+  .ms-tab-active::before { opacity: 1; }
   .ms-tab-icon { font-size: clamp(16px,2vw,20px); line-height: 1; }
   .ms-tab-label {
-    font-family: 'Cinzel', serif; font-size: clamp(9px,0.8vw,11px);
-    letter-spacing: 0.1em; text-transform: uppercase; color: inherit;
+    font-family: 'Cinzel', serif; font-size: clamp(9px,0.8vw,10px);
+    letter-spacing: 0.08em; text-transform: uppercase; color: inherit;
+  }
+  /* Shop tab — ornamental pearl ring around icon */
+  .ms-tab-shop .ms-tab-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid rgba(200,215,245,0.22);
+    background: rgba(10,7,24,0.55);
+    transition: border-color 0.18s, background 0.18s;
+  }
+  .ms-tab-shop:hover .ms-tab-icon,
+  .ms-tab-shop.ms-tab-active .ms-tab-icon {
+    border-color: rgba(221,226,236,0.65);
+    background: rgba(160,180,240,0.1);
   }
   @media (max-width: 768px) {
     .ms-tab-label { font-size: 9px; }
+    .ms-tab-shop .ms-tab-icon { width: 24px; height: 24px; }
   }
 
   /* ── Reduced motion ── */

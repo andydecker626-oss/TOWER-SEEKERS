@@ -142,7 +142,7 @@ const S = {
   } as React.CSSProperties,
 
   titleWordmark: {
-    fontFamily:    "'Cinzel Decorative', 'Cinzel', Georgia, serif",
+    fontFamily:    "'Cinzel Decorative', 'Cinzel', serif",
     fontWeight:     700,
     fontSize:      "clamp(28px, 5.5vw, 72px)",
     letterSpacing: "0.18em",
@@ -152,7 +152,7 @@ const S = {
   } as React.CSSProperties,
 
   titleTagline: {
-    fontFamily:    "'Cinzel', Georgia, serif",
+    fontFamily:    "'Cinzel', serif",
     fontWeight:     400,
     fontSize:      "clamp(9px, 1.05vw, 13px)",
     letterSpacing: "0.1em",
@@ -182,22 +182,22 @@ const S = {
   } as React.CSSProperties,
 
   pressText: {
-    fontFamily:    "'Cinzel', Georgia, serif",
+    fontFamily:    "'Cinzel', serif",
     fontSize:      "clamp(11px, 1.35vw, 16px)",
     letterSpacing: "0.34em",
     textTransform: "uppercase",
     color:         "rgba(255,248,220,0.92)",
-    textShadow:    "0 2px 20px rgba(0,0,0,0.95), 0 0 36px rgba(240,192,64,0.25)",
+    textShadow:    "0 2px 20px rgba(0,0,0,0.95), 0 0 36px rgba(140,160,230,0.22)",
   } as React.CSSProperties,
 } as const;
 
 /* ── Keyframe CSS ────────────────────────────────────────────────────────── */
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cinzel+Decorative:wght@700&family=Orbitron:wght@300;400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cinzel+Decorative:wght@700&display=swap');
 
   /* ALTA Studios wordmark: 0.8s fade-in, 4s hold, 0.8s fade-out = 5.6s */
   .studio-wordmark {
-    font-family: 'Orbitron', 'Futura', sans-serif;
+    font-family: 'Cinzel', serif;
     font-weight: 300;
     font-size: clamp(22px, 4vw, 52px);
     letter-spacing: 0.38em;

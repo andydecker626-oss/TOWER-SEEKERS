@@ -100,8 +100,8 @@ const CSS = `
     50%      { opacity:0.6; transform:scale(0.82); }
   }
   @keyframes battleGlow {
-    0%,100% { box-shadow: 0 4px 24px rgba(176,138,58,0.22), inset 0 1px 0 rgba(255,255,255,0.07); }
-    50%      { box-shadow: 0 8px 36px rgba(176,138,58,0.38), inset 0 1px 0 rgba(255,255,255,0.09); }
+    0%,100% { box-shadow: 0 4px 24px rgba(100,130,220,0.18), inset 0 1px 0 rgba(200,220,255,0.07); }
+    50%      { box-shadow: 0 8px 36px rgba(100,130,220,0.32), inset 0 1px 0 rgba(200,220,255,0.11); }
   }
 
   .wr-body {
@@ -117,37 +117,37 @@ const CSS = `
   .wr-banner {
     width: 100%; max-width: 520px;
     display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-    background: rgba(200,120,20,0.09);
-    border: 1px solid rgba(220,150,40,0.28);
-    border-radius: 12px;
+    background: rgba(160,180,240,0.06);
+    border: 1px solid rgba(200,215,245,0.18);
+    border-radius: 8px;
     padding: clamp(10px,1.4vh,14px) clamp(14px,2vw,18px);
     animation: bannerIn 0.25s ease-out;
   }
   .wr-banner-left { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
   .wr-banner-dot {
     width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-    background: #f0a030; box-shadow: 0 0 8px rgba(240,160,40,0.65);
+    background: #aab2c2; box-shadow: 0 0 8px rgba(170,178,194,0.55);
     animation: pulse 1.5s ease-in-out infinite;
   }
   .wr-banner-title {
     font-family: 'Cinzel', serif; font-size: clamp(11px,1vw,13px);
-    font-weight: 700; color: rgba(230,175,70,0.9); letter-spacing: 0.06em;
+    font-weight: 700; color: rgba(245,243,238,0.88); letter-spacing: 0.06em;
   }
   .wr-banner-sub {
     font-family: 'Cinzel', serif; font-size: clamp(9px,0.78vw,10px);
-    color: rgba(200,160,80,0.45); letter-spacing: 0.04em; margin-top: 2px;
+    color: rgba(170,178,194,0.55); letter-spacing: 0.04em; margin-top: 2px;
   }
   .wr-banner-btns { display: flex; gap: 0.45rem; flex-shrink: 0; }
   .wr-banner-btn {
     font-family: 'Cinzel', serif; font-size: clamp(9px,0.82vw,11px);
     font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    border-radius: 7px; padding: 0.36rem 0.85rem; cursor: pointer; transition: all 0.15s;
+    border-radius: 6px; padding: 0.36rem 0.85rem; cursor: pointer; transition: all 0.15s;
   }
   .wr-banner-resume {
-    background: rgba(220,155,40,0.14); border: 1px solid rgba(220,155,40,0.38);
-    color: rgba(230,180,70,0.88);
+    background: rgba(160,180,240,0.08); border: 1px solid rgba(200,215,245,0.28);
+    color: rgba(221,226,236,0.88);
   }
-  .wr-banner-resume:hover { background: rgba(220,155,40,0.24); color: #f0c040; border-color: rgba(230,165,50,0.6); }
+  .wr-banner-resume:hover { background: rgba(160,180,240,0.16); color: #f5f3ee; border-color: rgba(200,215,245,0.52); }
   .wr-banner-abandon {
     background: rgba(180,40,40,0.09); border: 1px solid rgba(200,60,60,0.22);
     color: rgba(220,120,120,0.62);
@@ -159,28 +159,29 @@ const CSS = `
     display: flex; flex-direction: column; align-items: center; gap: 6px;
     width: clamp(220px,28vw,320px);
     padding: clamp(22px,3.2vh,34px) clamp(28px,4vw,48px);
-    background: linear-gradient(145deg, rgba(14,9,30,0.96) 0%, rgba(22,14,44,0.96) 100%);
-    border: 1.5px solid #b08a3a; border-radius: 16px; cursor: pointer;
-    transition: transform 0.2s, filter 0.2s;
+    background: linear-gradient(145deg, rgba(10,7,24,0.96) 0%, rgba(16,10,36,0.96) 100%);
+    border: 1px solid rgba(200,215,245,0.28); border-radius: 8px; cursor: pointer;
+    transition: transform 0.2s, filter 0.2s, border-color 0.2s;
     animation: battleGlow 3s ease-in-out infinite;
     position: relative; overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .wr-battle-btn::before {
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
     pointer-events: none;
   }
-  .wr-battle-btn:hover { transform: scale(1.04); filter: brightness(1.1); }
+  .wr-battle-btn:hover { transform: scale(1.04); border-color: rgba(200,215,245,0.52); filter: brightness(1.1); }
   .wr-battle-btn:active { transform: scale(0.99); }
   .wr-battle-label {
     font-family: 'Cinzel', serif; font-size: clamp(22px,3vw,34px); font-weight: 700;
-    letter-spacing: 0.28em; color: #f0e4c0;
-    text-shadow: 0 0 24px rgba(240,192,64,0.28), 0 2px 4px rgba(0,0,0,0.8);
+    letter-spacing: 0.28em; color: #f5f3ee;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     position: relative;
   }
   .wr-battle-sub {
     font-family: 'Cinzel', serif; font-size: clamp(9px,0.9vw,12px);
-    letter-spacing: 0.2em; color: rgba(176,138,58,0.65); position: relative;
+    letter-spacing: 0.2em; color: rgba(160,180,220,0.55); position: relative;
   }
 
   /* ── Mode chips ── */

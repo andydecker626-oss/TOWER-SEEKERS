@@ -77,10 +77,11 @@ export default function TitleScreen() {
       <div className="ts-vignette" />
 
       <div className="ts-motes">
-        {Array.from({ length: 14 }, (_, i) => (
+        {Array.from({ length: 18 }, (_, i) => (
           <span key={i} style={{ "--i": i } as React.CSSProperties} />
         ))}
       </div>
+      <div className="ts-grain" aria-hidden="true" />
 
       <div className="ts-tower ts-tower-l" />
       <div className="ts-tower ts-tower-r" />
@@ -289,7 +290,7 @@ export default function TitleScreen() {
 }
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@700;900&family=Orbitron:wght@300&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@700;900&display=swap');
 
   :root {
     --ts-fg:        #e8edf5;
@@ -300,7 +301,6 @@ const CSS = `
     --ts-cool-glow: rgba(120,140,220,0.22);
     --ts-deep:      #07040f;
     --ts-ink:       rgba(4,2,10,0.92);
-    --ts-gold-deep: #c8960d;
     --ts-vignette:  rgba(4,2,10,0.82);
   }
 
@@ -316,9 +316,23 @@ const CSS = `
 
   @keyframes tsMoteRise {
     0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
-    10%  { opacity: 1; }
-    90%  { opacity: 0.6; }
-    100% { transform: translateY(-100vh) translateX(calc((var(--i, 0) % 3 - 1) * 40px)) scale(0.5); opacity: 0; }
+    10%  { opacity: var(--mote-opacity, 0.3); }
+    90%  { opacity: var(--mote-opacity, 0.3); }
+    100% { transform: translateY(-100vh) translateX(var(--mote-drift, 0px)) scale(0.5); opacity: 0; }
+  }
+
+  @keyframes tsGrain {
+    0%   { transform: translate(0, 0); }
+    10%  { transform: translate(-2%, -3%); }
+    20%  { transform: translate(1%, 2%); }
+    30%  { transform: translate(-1%, 3%); }
+    40%  { transform: translate(2%, -1%); }
+    50%  { transform: translate(-2%, 2%); }
+    60%  { transform: translate(1%, -2%); }
+    70%  { transform: translate(-1%, 1%); }
+    80%  { transform: translate(2%, 3%); }
+    90%  { transform: translate(-2%, -1%); }
+    100% { transform: translate(0, 0); }
   }
 
   .ts-root {
@@ -364,9 +378,23 @@ const CSS = `
   .ts-vignette {
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgba(4,2,10,0.55) 72%, rgba(4,2,10,0.88) 100%);
+    background:
+      radial-gradient(ellipse 60% 55% at 50% 50%, rgba(60,30,120,0.18) 0%, transparent 65%),
+      radial-gradient(ellipse at 50% 50%, transparent 32%, rgba(4,2,10,0.62) 68%, rgba(4,2,10,0.92) 100%);
     z-index: 2;
     pointer-events: none;
+  }
+
+  .ts-grain {
+    position: absolute;
+    inset: -20%;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.09;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    animation: tsGrain 0.4s steps(1) infinite;
   }
 
   .ts-motes {
@@ -379,15 +407,41 @@ const CSS = `
   .ts-motes span {
     position: absolute;
     bottom: -10px;
-    left: calc(6% + (var(--i, 0) * 6.5%));
-    width: clamp(1px, 0.18vw, 2.5px);
-    height: clamp(1px, 0.18vw, 2.5px);
+    width: clamp(1px, 0.16vw, 2px);
+    height: clamp(1px, 0.16vw, 2px);
     border-radius: 50%;
-    background: rgba(160,180,240,0.55);
-    animation: tsMoteRise calc(14s + (var(--i, 0) * 2.1s)) calc(var(--i, 0) * -3.3s) linear infinite;
+    background: rgba(160,180,240,0.5);
+    --mote-opacity: 0.3;
+    --mote-drift: 0px;
   }
-  .ts-motes span:nth-child(3n+2) { background: rgba(180,200,255,0.4); width: 1.5px; height: 1.5px; }
-  .ts-motes span:nth-child(5n)   { background: rgba(200,220,255,0.3); }
+  /* distribute 18 motes across the width using nth-child */
+  .ts-motes span:nth-child(1)  { left:  4%; animation: tsMoteRise 14.0s  0.0s linear infinite; }
+  .ts-motes span:nth-child(2)  { left:  9%; animation: tsMoteRise 16.2s -2.9s linear infinite; }
+  .ts-motes span:nth-child(3)  { left: 14%; animation: tsMoteRise 17.4s -5.8s linear infinite; }
+  .ts-motes span:nth-child(4)  { left: 19%; animation: tsMoteRise 15.6s -8.7s linear infinite; }
+  .ts-motes span:nth-child(5)  { left: 24%; animation: tsMoteRise 18.8s -1.4s linear infinite; }
+  .ts-motes span:nth-child(6)  { left: 30%; animation: tsMoteRise 14.6s -4.3s linear infinite; }
+  .ts-motes span:nth-child(7)  { left: 36%; animation: tsMoteRise 16.8s -7.2s linear infinite; }
+  .ts-motes span:nth-child(8)  { left: 42%; animation: tsMoteRise 15.2s -0.6s linear infinite; }
+  .ts-motes span:nth-child(9)  { left: 48%; animation: tsMoteRise 17.6s -3.5s linear infinite; }
+  .ts-motes span:nth-child(10) { left: 54%; animation: tsMoteRise 14.4s -6.4s linear infinite; }
+  .ts-motes span:nth-child(11) { left: 60%; animation: tsMoteRise 16.4s -9.3s linear infinite; }
+  .ts-motes span:nth-child(12) { left: 66%; animation: tsMoteRise 18.2s -2.1s linear infinite; }
+  .ts-motes span:nth-child(13) { left: 71%; animation: tsMoteRise 15.8s -5.0s linear infinite; }
+  .ts-motes span:nth-child(14) { left: 76%; animation: tsMoteRise 17.0s -7.9s linear infinite; }
+  .ts-motes span:nth-child(15) { left: 80%; animation: tsMoteRise 14.8s -1.8s linear infinite; }
+  .ts-motes span:nth-child(16) { left: 85%; animation: tsMoteRise 16.6s -4.7s linear infinite; }
+  .ts-motes span:nth-child(17) { left: 90%; animation: tsMoteRise 18.0s -8.6s linear infinite; }
+  .ts-motes span:nth-child(18) { left: 95%; animation: tsMoteRise 15.4s -3.2s linear infinite; }
+  /* opacity variation */
+  .ts-motes span:nth-child(4n+1) { --mote-opacity: 0.22; --mote-drift: -24px; }
+  .ts-motes span:nth-child(4n+2) { --mote-opacity: 0.42; --mote-drift:  14px; }
+  .ts-motes span:nth-child(4n+3) { --mote-opacity: 0.30; --mote-drift:  32px; }
+  .ts-motes span:nth-child(4n)   { --mote-opacity: 0.55; --mote-drift: -10px; }
+  /* size variation */
+  .ts-motes span:nth-child(3n+2) { background: rgba(180,200,255,0.35); width: 1.5px; height: 1.5px; }
+  .ts-motes span:nth-child(5n)   { background: rgba(200,220,255,0.25); width: 3px; height: 3px; }
+  .ts-motes span:nth-child(7n)   { background: rgba(140,160,220,0.3); width: 1px; height: 1px; }
 
   .ts-tower {
     position: absolute;
@@ -500,7 +554,7 @@ const CSS = `
   .ts-menu-btn {
     width: 100%;
     padding: clamp(14px,2vh,20px) clamp(20px,3vw,32px);
-    border-radius: 12px;
+    border-radius: 8px;
     font-family: 'Cinzel', serif;
     font-size: clamp(11px,1.2vw,15px);
     letter-spacing: 0.12em;
@@ -586,7 +640,7 @@ const CSS = `
     color: rgba(160,180,220,0.28);
   }
   .ts-footer-right {
-    font-family: 'Orbitron', monospace;
+    font-family: 'Cinzel', serif;
     font-size: 10px;
     letter-spacing: 0.12em;
     color: rgba(140,160,200,0.25);
@@ -638,7 +692,7 @@ const CSS = `
   .ts-modal {
     background: linear-gradient(160deg, #0d0921 0%, #070511 100%);
     border: 1px solid rgba(160,180,240,0.18);
-    border-radius: 14px;
+    border-radius: 8px;
     padding: 2rem;
     width: 100%;
     max-width: 440px;
@@ -754,35 +808,35 @@ const CSS = `
   .ts-tab {
     font-family: 'Cinzel', serif; font-size: 0.62rem; font-weight: 700;
     letter-spacing: 0.1em; text-transform: uppercase;
-    border: 1px solid rgba(240,192,64,0.18); border-radius: 6px;
+    border: 1px solid rgba(160,180,240,0.18); border-radius: 6px;
     padding: 0.3rem 0.75rem; cursor: pointer;
-    background: rgba(255,255,255,0.03); color: rgba(200,170,100,0.45);
+    background: rgba(255,255,255,0.03); color: rgba(160,180,220,0.45);
     transition: all 0.14s;
   }
-  .ts-tab:hover { color: rgba(240,192,64,0.75); border-color: rgba(240,192,64,0.32); }
+  .ts-tab:hover { color: rgba(200,215,245,0.75); border-color: rgba(160,180,240,0.32); }
   .ts-tab.active {
-    background: rgba(240,192,64,0.14); border-color: rgba(240,192,64,0.5);
-    color: #f0c040;
+    background: rgba(140,160,240,0.14); border-color: rgba(160,180,240,0.5);
+    color: #dde2ec;
   }
 
   /* ── Music Library ── */
   .ts-lib-list {
     display: flex; flex-direction: column;
-    border: 1px solid rgba(240,192,64,0.1); border-radius: 8px;
+    border: 1px solid rgba(160,180,240,0.1); border-radius: 8px;
     overflow: hidden; max-height: 300px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: rgba(240,192,64,0.15) transparent;
+    scrollbar-width: thin; scrollbar-color: rgba(160,180,240,0.15) transparent;
   }
   .ts-lib-list::-webkit-scrollbar { width: 3px; }
-  .ts-lib-list::-webkit-scrollbar-thumb { background: rgba(240,192,64,0.15); border-radius: 2px; }
+  .ts-lib-list::-webkit-scrollbar-thumb { background: rgba(160,180,240,0.15); border-radius: 2px; }
 
   .ts-lib-row {
     display: flex; align-items: center; gap: 0.6rem;
     padding: 0.55rem 0.75rem;
-    border-bottom: 1px solid rgba(240,192,64,0.06);
+    border-bottom: 1px solid rgba(160,180,240,0.06);
     transition: background 0.12s;
   }
   .ts-lib-row:last-child { border-bottom: none; }
-  .ts-lib-row:hover { background: rgba(240,192,64,0.04); }
+  .ts-lib-row:hover { background: rgba(160,180,240,0.04); }
   .ts-lib-disabled { opacity: 0.35; }
 
   .ts-lib-toggle-wrap {
@@ -792,32 +846,32 @@ const CSS = `
   .ts-lib-toggle-wrap input { opacity: 0; width: 0; height: 0; }
   .ts-lib-toggle-track {
     position: absolute; inset: 0; border-radius: 9px;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(240,192,64,0.15);
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(160,180,240,0.15);
     transition: background 0.18s, border-color 0.18s;
   }
   .ts-lib-toggle-wrap input:checked ~ .ts-lib-toggle-track {
-    background: rgba(240,192,64,0.22); border-color: rgba(240,192,64,0.5);
+    background: rgba(140,160,240,0.22); border-color: rgba(160,180,240,0.5);
   }
   .ts-lib-toggle-thumb {
     position: absolute; top: 2px; left: 2px;
     width: 11px; height: 11px; border-radius: 50%;
-    background: rgba(200,170,100,0.4);
+    background: rgba(160,175,210,0.4);
     transition: transform 0.18s, background 0.18s;
   }
   .ts-lib-toggle-wrap input:checked ~ .ts-lib-toggle-thumb {
-    transform: translateX(15px); background: #f0c040;
+    transform: translateX(15px); background: #dde2ec;
   }
 
   .ts-lib-info { flex: 1; min-width: 0; }
   .ts-lib-title {
     font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600;
-    color: rgba(220,200,140,0.88); white-space: nowrap;
+    color: rgba(221,226,236,0.88); white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
   }
   .ts-lib-meta { display: flex; align-items: center; gap: 0.4rem; margin-top: 2px; }
   .ts-lib-duration {
     font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 600;
-    color: rgba(180,155,100,0.42); white-space: nowrap;
+    color: rgba(160,175,210,0.42); white-space: nowrap;
   }
   .ts-lib-badge {
     display: inline-block; font-family: 'Cinzel', serif;
@@ -836,30 +890,30 @@ const CSS = `
 
   .ts-lib-play {
     flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
-    border: 1px solid rgba(240,192,64,0.28);
-    background: rgba(240,192,64,0.05);
-    color: rgba(240,192,64,0.55);
+    border: 1px solid rgba(160,180,240,0.28);
+    background: rgba(160,180,240,0.05);
+    color: rgba(160,180,240,0.55);
     font-size: 0.55rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.15s; line-height: 1; padding: 0; margin-left: auto;
   }
   .ts-lib-play:hover {
-    background: rgba(240,192,64,0.14); color: rgba(240,192,64,0.9);
-    border-color: rgba(240,192,64,0.55);
+    background: rgba(160,180,240,0.14); color: rgba(200,215,245,0.9);
+    border-color: rgba(160,180,240,0.55);
   }
   .ts-lib-play.ts-lib-play-active {
-    background: rgba(240,192,64,0.18); color: #f0c040;
-    border-color: #f0c040; box-shadow: 0 0 7px rgba(240,192,64,0.35);
+    background: rgba(140,160,240,0.18); color: #dde2ec;
+    border-color: #aab2c2; box-shadow: 0 0 7px rgba(140,160,240,0.28);
   }
   .ts-lib-disabled .ts-lib-play { pointer-events: none; opacity: 0.3; }
 
   .ts-lib-warn {
     font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 600;
-    color: rgba(240,160,80,0.9); letter-spacing: 0.05em;
+    color: rgba(200,215,245,0.8); letter-spacing: 0.05em;
     margin-top: 0.4rem;
     padding: 0.3rem 0.6rem;
-    background: rgba(240,160,80,0.08);
-    border: 1px solid rgba(240,160,80,0.2);
+    background: rgba(160,180,240,0.07);
+    border: 1px solid rgba(200,215,245,0.18);
     border-radius: 5px;
   }
 `;
