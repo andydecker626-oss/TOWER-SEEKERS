@@ -23,7 +23,7 @@ import ArenaDemo from "@/pages/ArenaDemo";
 import SpriteTestPage from "@/pages/SpriteTestPage";
 import IntroSequence from "@/components/IntroSequence";
 import MusicControls from "@/components/MusicControls";
-import { shouldShowIntro } from "@/lib/introState";
+import { shouldShowIntro, markIntroDone } from "@/lib/introState";
 import { audioManager } from "@/lib/audio";
 
 const queryClient = new QueryClient();
@@ -187,7 +187,7 @@ function App() {
         signUpUrl={`${basePath}/`}
       >
         {!introComplete && (
-          <IntroSequence onComplete={() => setIntroComplete(true)} />
+          <IntroSequence onComplete={() => { markIntroDone(); setIntroComplete(true); }} />
         )}
         {introComplete && (
           <BrowserRouter basename={base}>
