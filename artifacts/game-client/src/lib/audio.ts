@@ -539,8 +539,12 @@ class AudioManager {
     this._muted       = m;
     this._sfxEnabled  = sfxE;
     if (this.masterGain) this.masterGain.gain.value = this._muted ? 0 : this._volume;
-    if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
-    if (this.audioElB) this.audioElB.volume = this._effectiveMusicVol();
+    // Don't snap volume if a crossfade/ramp is currently running — the ramp
+    // already targets _effectiveMusicVol() and will land at the correct level.
+    if (!this._fadeRaf) {
+      if (this.audioEl) this.audioEl.volume = this._effectiveMusicVol();
+      if (this.audioElB) this.audioElB.volume = this._effectiveMusicVol();
+    }
   }
 
   play(trackId: TrackId) {

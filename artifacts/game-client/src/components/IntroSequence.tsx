@@ -22,30 +22,17 @@ export default function IntroSequence({ onComplete }: { onComplete: () => void }
     }, durationMs);
   }, []);
 
-  /* ── Ramp hub track via audioManager ─────────────────────────────────── */
-  function rampAudio(target: number, stepSize = 0.025, intervalMs = 80) {
-    if (audioManager.currentTrack === "hub") return; // already playing, don't reset volume
-    audioManager.play("hub");
-    audioManager.setFileVolume(0);
-    let v = 0;
-    const id = setInterval(() => {
-      v = Math.min(target, v + stepSize);
-      audioManager.setFileVolume(v);
-      if (v >= target) clearInterval(id);
-    }, intervalMs);
-  }
-
   /* ── Start music on splash mount (may need user gesture as fallback) ─── */
   useEffect(() => {
-    rampAudio(0.16);
-    const onInteract = () => rampAudio(0.16);
+    const tryPlay = () => audioManager.play("hub");
+    tryPlay();
+    const onInteract = () => { if (!audioManager.isFilePlaying) tryPlay(); };
     document.addEventListener("click",   onInteract, { once: true });
     document.addEventListener("keydown", onInteract, { once: true });
     return () => {
       document.removeEventListener("click",   onInteract);
       document.removeEventListener("keydown", onInteract);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── 1. Studio splash: animation ends → crossfade to title ───────────── */
