@@ -111,6 +111,9 @@ export const ALL_BATTLE_TRACKS: FileTrack[] = [
   { src: "/assets/battle/dawn-over-aster-vale.mp3", title: "Dawn Over Aster Vale", category: "battle", duration: "4:43" },
   { src: "/assets/battle/gate-of-dawn.mp3",      title: "Gate of Dawn",          category: "battle", duration: "3:02" },
   { src: "/assets/battle/ffx-battle.mp3",        title: "FFX Battle",            category: "battle", duration: "3:21" },
+  { src: "/assets/battle/celtic-adventure.mp3",  title: "Celtic Adventure",      category: "battle", duration: "4:54" },
+  { src: "/assets/battle/tower-siege.mp3",       title: "Tower Siege",           category: "battle", duration: "4:09" },
+  { src: "/assets/battle/ashen-crown-run.mp3",   title: "Ashen Crown Run",       category: "battle", duration: "2:58" },
 ];
 
 // All available ambient tracks (source of truth for the Music Library)
