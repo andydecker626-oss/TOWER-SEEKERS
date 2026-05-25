@@ -9,7 +9,7 @@ const DISTRICTS = [
 
 export default function TownPage() {
   return (
-    <MenuShell active="town">
+    <MenuShell active="town" bgSrc="/assets/town-bg.png">
       <style>{CSS}</style>
       <div className="tn-body">
         <div className="tn-head">
