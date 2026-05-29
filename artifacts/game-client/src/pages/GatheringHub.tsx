@@ -2,18 +2,9 @@ import { useState } from "react";
 import { ALL_UNITS, getUnitDef } from "@/lib/units";
 import { useParties, type Party, type UnitLoadout } from "@/hooks/useParties";
 import type { UnitDef, SkillDef, PassiveDef } from "@/lib/types";
+import { ClassEmblem } from "@/components/ClassEmblem";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap');`;
-
-function UnitSprite({ unit, size = 48 }: { unit: UnitDef; size?: number }) {
-  return (
-    <img
-      src={`/assets/units/${unit.id}-sprite.png`}
-      alt={unit.name}
-      style={{ width: size, height: size, imageRendering: "pixelated", objectFit: "contain", display: "block", flexShrink: 0 }}
-    />
-  );
-}
 
 function StatRow({ label, value, max, color = "#dde2ec" }: { label: string; value: number; max: number; color?: string }) {
   const pct = Math.min(100, Math.round((value / max) * 100));
@@ -61,7 +52,7 @@ function PartyCard({ party, onEdit, onDelete }: { party: Party; onEdit: () => vo
       <div className="party-sprites">
         {units.map((u, i) => (
           <div key={`${u.id}-${i}`} className="party-unit-slot">
-            <UnitSprite unit={u} size={36} />
+            <ClassEmblem classId={u.id} size={36} sigilSize={14} />
             <div className="party-unit-name">{u.name}</div>
           </div>
         ))}
@@ -202,7 +193,7 @@ function PartyModal({
                       const u = getUnitDef(uid);
                       return (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(160,180,240,0.08)", border: "1px solid rgba(200,215,245,0.2)", borderRadius: 6, padding: "2px 6px 2px 4px" }}>
-                          {u && <img src={`/assets/units/${u.id}-sprite.png`} alt={u.name} style={{ width: 20, height: 20, imageRendering: "pixelated", objectFit: "contain" }} />}
+                          {u && <ClassEmblem classId={u.id} size={20} showSigil={false} />}
                           <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.62rem", color: "#dde2ec" }}>{u?.name ?? uid}</span>
                           <button onClick={() => removeUnit(uid)} style={{ background: "none", border: "none", color: "rgba(200,215,245,0.5)", cursor: "pointer", padding: 0, fontSize: "0.6rem", lineHeight: 1 }}>✕</button>
                         </div>
@@ -222,7 +213,7 @@ function PartyModal({
                         onClick={() => canAdd ? addUnit(u.id) : undefined}
                         title={count === 2 ? "Max 2 of this unit" : count === 1 ? "Click to add a second copy" : state.selectedSlots.length >= 6 ? "Party is full" : `Add ${u.name}`}
                       >
-                        <UnitSprite unit={u} size={36} />
+                        <ClassEmblem classId={u.id} size={48} sigilSize={18} />
                         {count > 0 && <div className="picker-check">×{count}</div>}
                         <div className="picker-name">{u.name}</div>
                         <div className="picker-cls">{u.cls.replace(/-/g, " ")}</div>
@@ -365,10 +356,8 @@ function UnitDetailPanel({ unit, onClose }: { unit: UnitDef; onClose: () => void
           <button className="icon-btn" onClick={onClose}>✕</button>
         </div>
 
-        <div className="detail-portrait">
-          <img src={`/assets/units/${unit.id}-portrait.png`} alt={`${unit.name} portrait`}
-            style={{ width: "100%", maxHeight: 420, objectFit: "cover", objectPosition: "top center", display: "block" }} />
-          <div className="detail-portrait-fade" />
+        <div className="detail-emblem">
+          <ClassEmblem classId={unit.id} size={280} sigilSize={72} />
         </div>
 
         <div className="detail-body">
@@ -625,8 +614,14 @@ const HUB_CSS = `
   }
   .detail-name { font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 700; color: #f5f3ee; }
   .detail-cls { font-family: 'Cinzel', serif; font-size: 0.78rem; color: rgba(160,180,220,0.65); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 0.2rem; }
-  .detail-portrait { flex-shrink: 0; position: relative; }
-  .detail-portrait-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #080618); }
+  .detail-emblem {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.6rem 1rem 0.8rem;
+    background: linear-gradient(180deg, rgba(12,9,28,0.55) 0%, rgba(8,6,20,0) 100%);
+  }
   .detail-body { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; scrollbar-width: thin; scrollbar-color: rgba(160,180,240,0.12) transparent; }
   .detail-description { font-size: 0.88rem; color: rgba(200,210,235,0.75); line-height: 1.6; margin: 0 0 0.9rem; font-style: italic; }
   .detail-tag { font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(160,180,240,0.07); border: 1px solid rgba(200,215,245,0.15); border-radius: 4px; padding: 3px 8px; color: rgba(200,215,245,0.65); }
@@ -708,7 +703,8 @@ export default function GatheringHub() {
         <div className="roster-grid">
           {ALL_UNITS.map((u) => (
             <div key={u.id} className="roster-card" onClick={() => setSelectedUnit(u)}>
-              <UnitSprite unit={u} size={68} />
+              {/* TODO(progression): pass state="locked" once unlock flag exists on UnitDef */}
+              <ClassEmblem classId={u.id} size={84} />
               <div className="roster-card-name">{u.name}</div>
               <div className="roster-card-cls">{u.cls.replace(/-/g, " ")}</div>
             </div>

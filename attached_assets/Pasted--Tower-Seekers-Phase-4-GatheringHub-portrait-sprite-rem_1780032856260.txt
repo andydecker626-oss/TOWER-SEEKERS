@@ -1,0 +1,188 @@
+# Tower Seekers — Phase 4: GatheringHub portrait + sprite removal, ClassEmblem in
+
+## Goal
+
+Replace every portrait + sprite reference in `GatheringHub.tsx` with `<ClassEmblem>`. The Hub becomes the first screen where the redesigned identity language (silhouette + sigil) is visible end-to-end.
+
+## Why
+
+- Portraits are deprecated. On full release, multiple individual units will share a class, so a single canonical portrait per class is wrong by design. The silhouette + sigil pair represents the **class archetype**, which is what every roster surface should show.
+- Today GatheringHub uses sprite tiles (in-world action assets) on cards meant to communicate identity. That's a category error. Sprites belong in battle, not in the Hub.
+
+## Scope
+
+**Single file:** `artifacts/game-client/src/pages/GatheringHub.tsx`
+
+Touches:
+- `UnitSprite` helper component (becomes obsolete — delete it)
+- Roster grid cards
+- Party card unit slots
+- Selected-pill row inside party builder modal
+- Unit picker grid inside party builder modal
+- Unit detail panel (portrait section → emblem section)
+- CSS class names that referenced sprites or portraits
+
+## Asset rules (locked)
+
+- Sprite assets do not appear anywhere on this screen.
+- Portrait assets do not appear anywhere on this screen.
+- Class identity is communicated by `<ClassEmblem>` in every slot.
+
+## Exact changes
+
+### 1. Imports
+
+At the top of the file, add the ClassEmblem import:
+
+```ts
+import { ClassEmblem } from "@/components/ClassEmblem";
+```
+
+You can also drop the `UnitDef` import only if it becomes unused after removing UnitSprite — check before removing.
+
+### 2. Delete the `UnitSprite` helper
+
+The file currently defines:
+
+```tsx
+function UnitSprite({ unit, size = 48 }: { unit: UnitDef; size?: number }) {
+  return (
+    <img
+      src={`/assets/units/${unit.id}-sprite.png`}
+      alt={unit.name}
+      style={{ width: size, height: size, imageRendering: "pixelated", objectFit: "contain", display: "block", flexShrink: 0 }}
+    />
+  );
+}
+```
+
+Remove this entire function. All callers will be replaced below.
+
+### 3. Party card unit slots (`PartyCard` component)
+
+In the `.party-sprites` grid, each slot currently renders:
+
+```tsx
+<UnitSprite unit={u} size={36} />
+<div className="party-unit-name">{u.name}</div>
+```
+
+Replace `<UnitSprite ...>` with:
+
+```tsx
+<ClassEmblem classId={u.id} size={36} sigilSize={14} />
+```ep the `<div className="party-unit-name">` as-is.
+
+### 4. Roster grid (the `ALL_UNITS.map(...)` block in the main return)
+
+Currently:
+
+```tsx
+<div key={u.id} className="roster-card" onClick={() => setSelectedUnit(u)}>
+  <UnitSprite unit={u} size={68} />
+  <div className="roster-card-name">{u.name}</div>
+  <div className="roster-card-cls">{u.cls.replace(/-/g, " ")}</div>
+</div>
+```
+
+Replace with:
+
+```tsx
+<div key={u.id} className="roster-card" onClick={() => setSelectedUnit(u)}>
+  {/* TODO(progression): pass state="locked" once unlock flag exists on UnitDef */}
+  <ClassEmblem classId={u.id} size={84} />
+  <div className="roster-card-name">{u.name}</div>
+  <div className="roster-card-cls">{u.cls.replace(/-/g, " ")}</div>
+</div>
+```
+
+(Slightly bigger emblem since the sprite-tile padding is gone.)
+
+### 5. Party builder modal — selected-pill row
+
+Currently inside step 1 of the modal:
+
+```tsx
+{u && <img src={`/assets/units/${u.id}-sprite.png`} alt={u.name} style={{ width: 20, height: 20, imageRendering: "pixelated", objectFit: "contain" }} />}
+```
+
+Replace with:
+
+```tsx
+{u && <ClassEmblem classId={u.id} size={20} showSigil={false} />}
+```
+
+(At 20px the sigil is illegible — silhouette only is the right call.)
+
+### 6. Party builder modal — unit picker grid
+
+Inside `.unit-picker-grid` each card renders:
+
+```tsx
+<UnitSprite unit={u} size={36} />
+```
+
+Replace with:
+
+```tsx
+<ClassEmblem classId={u.id} size={48} sigilSize={18} />
+```
+
+### 7. Unit detail panel (`UnitDetailPanel` component)
+
+The current `<div className="detail-portrait">` block uses a portrait PNG:
+
+```tsx
+<div className="detail-portrait">
+  <img src={`/assets/units/${unit.id}-portrait.png`} alt={`${unit.name} portrait`}
+    style={{ width: "100%", maxHeight: 420, objectFit: "cover", objectPosition: "top center", display: "block" }} />
+  <div className="detail-portrait-fade" />
+</div>
+```
+
+Replace the entire block with:
+
+```tsx
+<div className="detail-emblem">
+  <ClassEmblem classId={unit.id} size={280} sigilSize={72} />
+</div>
+```
+
+### 8. CSS adjustments inside `HUB_CSS`
+
+Find the existing `.detail-portrait` and `.detail-portrait-fade` rules and replace them with a single `.detail-emblem` rule:
+
+```css
+.detail-emblem {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6rem 1rem 0.8rem;
+  background: linear-gradient(180deg, rgba(12,9,28,0.55) 0%, rgba(8,6,20,0) 100%);
+}
+```
+
+(Centered emblem with a soft top-glow gradient, no portrait crop or fade-out needed.)
+
+## Acceptance checks
+
+1. `grep -n "/assets/units/.*sprite\.png" artifacts/game-client/src/pages/GatheringHub.tsx` returns nothing.
+2. `grep -n "/assets/units/.*portrait\.png" artifacts/game-client/src/pages/GatheringHub.tsx` returns nothing.
+3. `grep -n "UnitSprite" artifacts/game-client/src/pages/GatheringHub.tsx` returns nothing.
+4. `grep -n "ClassEmblem" artifacts/game-client/src/pages/GatheringHub.tsx` returns at least 5 matches (one per usage above + the import).
+5. App builds with no TypeScript errors.
+6. **Visual check:** Hub roster grid shows 12 colored silhouettes with sigil corner badges. Party cards show 6-slot rows of small emblems. Unit detail panel opens with a large emblem (no PNG portrait). Party builder modal shows emblem-based picker.
+
+## Commit message
+
+```
+feat(hub): GatheringHub now uses ClassEmblem for class identity
+
+- Remove UnitSprite helper and all <class>-sprite.png usage
+- Remove <class>-portrait.png usage (portraits being deprecated app-wide)
+- Roster grid, party cards, party builder picker, selected pills, and
+  unit detail panel all now render <ClassEmblem>
+- Detail panel "portrait" section becomes "emblem" section with centered ClassEmblem
+- TODO comment added for future locked-state progression hook
+```
