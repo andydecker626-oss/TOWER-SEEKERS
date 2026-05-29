@@ -194,8 +194,10 @@ export default function GameOver() {
                   return (
                     <div key={`my-${r}-${c}`} className={`go-tile ally-tile${unit ? " has-unit" : ""}`} style={{ width: TILE, height: TILE }}>
                       {def && (
-                        <div
-                          className={`sprite sprite--${def.cls} sprite-ally sprite-idle`}
+                        <img
+                          className="sprite sprite-ally"
+                          src={`/assets/units/${def.id}-sprite.png`}
+                          alt={def.name ?? def.id}
                           style={{ transform: "scale(0.55)", transformOrigin: "center" }}
                         />
                       )}
@@ -219,8 +221,10 @@ export default function GameOver() {
                   return (
                     <div key={`en-${r}-${c}`} className={`go-tile enemy-tile${unit ? " has-enemy" : ""}`} style={{ width: TILE, height: TILE }}>
                       {def && (
-                        <div
-                          className={`sprite sprite--${def.cls} sprite-enemy sprite-idle`}
+                        <img
+                          className="sprite sprite-enemy"
+                          src={`/assets/units/${def.id}-sprite.png`}
+                          alt={def.name ?? def.id}
                           style={{ transform: "scale(0.55)", transformOrigin: "center" }}
                         />
                       )}
@@ -249,19 +253,14 @@ function spriteCSS() {
   return `
     .sprite {
       image-rendering: pixelated;
-      background-repeat: no-repeat;
+      object-fit: contain;
+      object-position: center bottom;
+      width: 48px;
+      height: 64px;
       flex-shrink: 0;
       display: block;
     }
     .sprite-ally { filter: none; }
     .sprite-enemy { filter: hue-rotate(180deg) saturate(1.3); }
-    .sprite--blade-knight { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/3/30/Blade_Knight.png'); width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--rune-archer  { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/d/dd/Rune_Archer.png');   width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--cleric       { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/a/a4/Cleric.png');        width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--guardian     { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/2/2b/Guardian.png');      width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--lancer       { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/e/e7/Lancer.png');        width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--hex-mage     { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/0/03/Hex_Mage.png');      width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--invoker      { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/5/50/Invoker.png');       width:48px; height:64px; background-size:contain; background-position:center bottom; }
-    .sprite--fell-duelist { background-image: url('https://rpg.hamsterrepublic.com/wiki-images/8/8c/Fell_Duelist.png');  width:48px; height:64px; background-size:contain; background-position:center bottom; }
   `;
 }

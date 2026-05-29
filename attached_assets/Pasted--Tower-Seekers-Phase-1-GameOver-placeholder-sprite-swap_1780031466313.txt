@@ -1,0 +1,111 @@
+# Tower Seekers — Phase 1: GameOver placeholder sprite swap
+
+## Goal
+
+`artifacts/game-client/src/pages/GameOver.tsx` currently renders unit sprites via a CSS-class system that points at external placeholder URLs on `rpg.hamsterrepublic.com`, keyed by an obsolete `def.cls` field that has duplicate values across the modern 12-class roster (e.g. knight + berserker both `cls: "blade-knight"`).
+
+Swap to the local sprite PNGs already in the repo, keyed by `def.id`.
+
+## Why
+
+- Drops 8 external HTTP image dependencies from the GameOver screen.
+- Aligns sprite keying with the rest of the codebase (`def.id`, not legacy `def.cls`).
+- Existing assets are ready: `artifacts/game-client/public/assets/units/<id>-sprite.png` for all 12 classes (knight, paladin, berserker, lancer, wanderer, rogue, archer, mage, cleric, warlock, bard, shaman).
+
+## Scope
+
+**Single file:** `artifacts/game-client/src/pages/GameOver.tsx`
+
+Do NOT touch other pages in this commit — Phases 2-5 will handle GatheringHub, PreSelection, Placement, BattleSelect separately.
+
+## Exact changes
+
+### 1. Ally tile sprite render (around line 195)
+
+Replace:
+
+```tsx
+<div
+  className={`sprite sprite--${def.cls} sprite-ally sprite-idle`}
+  style={{ transform: "scale(0.55)", transformOrigin: "center" }}
+/>
+```
+
+With:
+
+```tsx
+<img
+  className="sprite sprite-ally"
+  src={`/assets/units/${def.id}-sprite.png`}
+  alt={def.name ?? def.id}
+  style={{ transform: "scale(0.55)", transformOrigin: "center" }}
+/>
+```
+
+### 2. Enemy tile sprite render (around line 220)
+
+Replace:
+
+```tsx
+<div
+  className={`sprite sprite--${def.cls} sprite-enemy sprite-idle`}
+  style={{ transform: "scale(0.55)", transformOrigin: "center" }}
+/>
+```
+
+With:
+
+```tsx
+<img
+  className="sprite sprite-enemy"
+  src={`/assets/units/${def.id}-sprite.png`}
+  alt={def.name ?? def.id}
+  style={{ transform: "scale(0.55)", transformOrigin: "center" }}
+/>
+```
+
+### 3. Replace `spriteCSS()` (the function near the bottom of the file)
+
+Replace the entire `spriteCSS()` function body with:
+
+```ts
+function spriteCSS() {
+  // Local sprites at /assets/units/<class>-sprite.png; loaded by id (see units.ts).
+  // Class IDs: knight, paladin, berserker, lancer, wanderer, rogue, archer, mage, cleric, warlock, bard, shaman.
+  return `
+    .sprite {
+      image-rendering: pixelated;
+      object-fit: contain;
+      object-position: center bottom;
+      width: 48px;
+      height: 64px;
+      flex-shrink: 0;
+      display: block;
+    }
+    .sprite-ally { filter: none; }
+    .sprite-enemy { filter: hue-rotate(180deg) saturate(1.3); }
+  `;
+}
+```
+
+This drops:
+- `background-repeat: no-repeat` (not relevant for `<img>`)
+- All eight `.sprite--<old-cls>` background-image rules pointing at hamsterrepublic.com
+
+## Acceptance checks
+
+1. `grep -n "hamsterrepublic" artifacts/game-client/src/pages/GameOver.tsx` returns nothing.
+2. `grep -n "sprite--" artifacts/game-client/src/pages/GameOver.tsx` returns nothing.
+3. `grep -n "def.cls" artifacts/game-client/src/pages/GameOver.tsx` returns nothing.
+4. Two `<img className="sprite ...` tags exist (one ally, one enemy), both using `${def.id}-sprite.png`.
+5. App builds and the GameOver screen renders local sprites for both teams. The enemy team sprites get hue-rotated via the existing `.sprite-enemy` filter.
+
+## Commit message
+
+```
+GameOver: swap external placeholder sprites for local /assets/units/<id>-sprite.png
+
+- Replace CSS class-based sprite system (.sprite--blade-knight etc) with <img> tags using def.id
+- Drop external hamsterrepublic.com URLs (12 placeholder PNGs)
+- Aligns with current 12-class roster: knight/paladin/berserker/lancer/wanderer/rogue/archer/mage/cleric/warlock/bard/shaman
+```
