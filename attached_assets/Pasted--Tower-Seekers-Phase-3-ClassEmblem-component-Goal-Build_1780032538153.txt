@@ -1,0 +1,215 @@
+# Tower Seekers — Phase 3: ClassEmblem component
+
+## Goal
+
+Build a single reusable `<ClassEmblem>` component that composes the **silhouette** and **sigil** assets into the canonical "this is a class" visual. It's the workhorse for every later phase — GatheringHub, PreSelection, BattleSelect, GameOver roster summary, the dev preview page.
+
+## Why
+
+- We need ONE component that always renders class identity correctly. Otherwise every page reinvents the silhouette + sigil composition with subtle drift.
+- The component needs to express **state**: unlocked, locked, fallen (KO'd). Each state is a visual mode, not a different component.
+- The silhouettes ship with baked-in `fill="#000000"`. We tint them at runtime via CSS `mask-image` instead of editing 12 SVG files. This lets a Knight silhouette appear in deep steel blue (`#225172`) without touching the asset.
+
+## Scope
+
+**One new file:** `artifacts/game-client/src/components/ClassEmblem.tsx`
+**No other files modified.** This commit just adds the component. Phase 4+ will start using it.
+
+## Design
+
+```
+┌──────────────────────┐
+│              ┌───┐   │
+│              │SIG│   │  ← Sigil corner badge (top-right by default)
+│              └───┘   │
+│                      │
+│       ████           │
+│      ██████          │  ← Silhouette body, mask-tinted to class primary
+│      ██████          │     (or grey/desaturated when locked or fallen)
+│      ██  ██          │
+│      ██  ██          │
+│                      │
+└──────────────────────┘
+```
+
+- Silhouette is mask-tinted via `mask-image`, never a recolored asset.
+- Sigil overlays as a colored SVG `<img>` in a corner badge (no tinting — uses its native colors).
+- The whole composition lives inside a square frame the parent sizes.
+
+## Variants (the `state` prop)
+
+| state       | Silhouette tint                   | Sigil opacity | Used for                                |
+|-------------|-----------------------------------|---------------|-----------------------------------------|
+| `unlocked`  | Class primary color (full)        | 1.0           | Default state — owned/playable units    |
+| `locked`    | Pearl-mid `#aab2c2` at 50% alpha  | 0 (hidden)    | Pokédex-style undiscovered classes      |
+| `fallen`    | Class primary at 35% + desaturated| 0.4 (faded)   | KO'd units in GameOver roster summary   |
+
+`fallen` mixes the class color with desaturation so the unit is recognizable but visibly defeated.
+
+## Props
+
+```ts
+interface ClassEmblemProps {
+  // e.g. "knight" — drives both asset paths and palette
+  state?: "unlocked" | "locked" | "fallen";  // default "unlocked"
+  size?: number;              // square px, default 96
+  showSigil?: boolean;        // default true; some dense UI may want silhouette only
+  sigilCorner?: "tr" | "tl" | "br" | "bl";  // default "tr"
+  sigilSize?: number;         // square px for the sigil badge, default size * 0.32
+  className?: string;
+  style?: React.CSSProperties;
+  ariaLabel?: string;         // default "<classId> emblem"
+}
+```
+
+## Asset paths (already in repo)
+
+- Silhouette: `/assets/units/${classId}-silhouette.svg`
+- Sigil:      `/assets/units/${classId}-sigil.svg`
+
+## Exact implementation
+
+Create `artifacts/game-client/src/components/ClassEmblem.tsx`:
+
+```tsx
+import type { CSSProperties } from "react";
+import { getClassColors } from "@workspace/game-data";
+
+export type ClassEmblemState = "unlocked" | "locked" | "fallen";
+export type SigilCorner = "tr" | "tl" | "br" | "bl";
+
+export interface ClassEmblemProps {
+  classId: string;
+  state?: ClassEmblemState;
+  size?: number;
+  showSigil?: boolean;
+  sigilCorner?: SigilCorner;
+  sigilSize?: number;
+  className?: string;
+  style?: CSSProperties;
+  ariaLabel?: string;
+}
+
+const CORNER_STYLES: Record<SigilCorner, CSSProperties> = {
+  tr: { top: "4%", right: "4%" },
+  tl: { top: "4%", left: "4%" },
+  br: { bottom: "4%", right: "4%" },
+  bl: { bottom: "4%", left: "4%" },
+};
+
+export function ClassEmblem({
+  classId,
+  state = "unlocked",
+  size = 96,
+  showSigil = true,
+  sigilCorner = "tr",
+  sigilSize,
+  className,
+  style,
+  ariaLabel,
+}: ClassEmblemProps) {
+  const colors = getClassColors(classId);
+  const silhouetteUrl = `/assets/units/${classId}-silhouette.svg`;
+  const sigilUrl = `/assets/units/${classId}-sigil.svg`;
+  const resolvedSigilSize = sigilSize ?? Math.round(size * 0.32);
+
+  // Silhouette tint per state
+  let silhouetteBg: string;
+  let silhouetteOpacity = 1;
+  if (state === "unlocked") {
+    silhouetteBg = colors.primary;
+  } else if (state === "locked") {
+    silhouetteBg = "#aab2c2";
+    silhouetteOpacity = 0.5;
+  } else {
+    // fallen — mute the class color and dim
+    silhouetteBg = colors.primary;
+    silhouetteOpacity = 0.35;
+  }
+
+  const sigilOpacity =
+    !showSigil ? 0 :
+    state === "locked" ? 0 :
+    state === "fallen" ? 0.4 :
+    1;
+
+  // CSS mask-image lets us recolor the black-filled silhouette SVG at runtime.
+  const maskStyle: CSSProperties = {
+    width: "100%",
+    height: "100%",
+    backgroundColor: silhouetteBg,
+    opacity: silhouetteOpacity,
+    WebkitMask: `url(${silhouetteUrl}) center / contain no-repeat`,
+    mask: `url(${silhouetteUrl}) center / contain no-repeat`,
+    // fallen state gets a slight desaturation via filter for extra "defeated" feel
+    filter: state === "fallen" ? "saturate(0.5)" : undefined,
+  };
+
+  const sigilStyle: CSSProperties = {
+    position: "absolute",
+    width: resolvedSigilSize,
+    height: resolvedSigilSize,
+    objectFit: "contain",
+    opacity: sigilOpacity,
+    pointerEvents: "none",
+    filter: state === "fallen" ? "saturate(0.6)" : undefined,
+    ...CORNER_STYLES[sigilCorner],
+  };
+
+  return (
+    <div
+      className={className}
+      role="img"
+      aria-label={ariaLabel ?? `${classId} emblem`}
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        flexShrink: 0,
+        ...style,
+      }}
+    >
+      <div style={maskStyle} aria-hidden />
+      {showSigil && state !== "locked" && (
+        <img src={sigilUrl} alt="" aria-hidden style={sigilStyle} />
+      )}
+    </div>
+  );
+}
+
+export default ClassEmblem;
+```
+
+## Acceptance checks
+
+1. `artifacts/game-client/src/components/ClassEmblem.tsx` exists.
+2. App builds with no TypeScript errors.
+3. Importable as `import { ClassEmblem } from "@/components/ClassEmblem"`.
+4. **Visual smoke test (optional, do not commit):**
+
+   ```tsx
+   <div style={{ display: "flex", gap: 16, padding: 32, background: "#06040e" }}>
+     <ClassEmblem classId="knight" />
+     <ClassEmblem classId="paladin" />
+     <ClassEmblem classId="berserker" />
+     <ClassEmblem classId="warlock" state="locked" />
+     <ClassEmblem classId="archer" state="fallen" />
+   </div>
+   ```
+
+   Expected: Knight in deep steel blue, Paladin in heraldic gold, Berserker in crimson, Warlock as a dim grey silhouette with no sigil, Archer as a faded green silhouette with a desaturated sigil. Remove smoke test before committing.
+
+5. No existing files modified.
+
+## Commit message
+
+```
+feat(emblem): ClassEmblem component for silhouette + sigil composition
+
+- Composes <class>-silhouette.svg + <class>-sigil.svg into a square emblem
+- Silhouettes are mask-tinted at runtime to the canonical class primary color
+  from CLASS_PALETTE — no SVG asset edits needed
+- Three states: unlocked (full color) / locked (grey, no sigil) / fallen (muted, desaturated sigil)
+- Configurable size, sigil corner, sigil size, optional sigil hide
+- Foundation for upcoming GatheringHub / PreSelection / BattleSelect / GameOver swaps
+```
